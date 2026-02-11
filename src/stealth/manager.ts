@@ -26,8 +26,9 @@ export class StealthManager {
   }
 
   async apply(): Promise<void> {
-    // Set realistic User-Agent
-    this.session.setUserAgent(this.USER_AGENT);
+    // Don't override User-Agent globally — Electron's default UA works for Google login
+    // The UA override is only applied via onBeforeSendHeaders for non-Google sites
+    // this.session.setUserAgent(this.USER_AGENT);
 
     // Modify headers to look natural
     this.session.webRequest.onBeforeSendHeaders((details, callback) => {
