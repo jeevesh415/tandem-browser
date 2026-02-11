@@ -199,21 +199,25 @@
 - [x] `POST /tabs/open` met `source: "kees"` → tab krijgt kees indicator
 - [x] `POST /navigate` auto-marks tab als kees-controlled
 - [x] Activity log toont source per actie
-- [ ] Renderer UI: 🧀/👤 emoji in tab bar (needs shell/index.html update)
+- [x] Renderer UI: 🧀/👤 emoji in tab bar + activity source coloring
 
-### 3.7 PiP Mode — Always-on-top mini-venster
-- [ ] Klein floating venster (Electron BrowserWindow, alwaysOnTop)
-- [ ] Laatste activiteit + quick command + status
-- [ ] Drag anywhere op scherm
-- [ ] Toggle: Cmd+P of via menu
-- [ ] Minimaal: 300x200px
+### 3.7 PiP Mode — Always-on-top mini-venster ✅ DONE
+- [x] Klein floating venster (Electron BrowserWindow, alwaysOnTop, 350x250, frameless)
+- [x] Laatste activiteit (3 recente events) + quick command input + status indicators
+- [x] Drag anywhere op scherm (hele venster is drag area behalve input)
+- [x] Toggle: Cmd+P
+- [x] Sluit NIET als main window minimized wordt (apart BrowserWindow)
+- [x] API: `POST /pip/toggle`, `GET /pip/status`
+- [x] Communiceert via localhost API (niet IPC)
 
-### 3.8 Network Inspector — Kees begrijpt het verkeer
-- [ ] Request logging via Electron webRequest API (NIET in webview)
-- [ ] Per pagina: welke APIs, welke endpoints, welke responses
-- [ ] Automatische API discovery: "deze site gebruikt api.example.com/v2/"
-- [ ] Export: HAR format of JSON
-- [ ] API: `GET /network/log`, `GET /network/apis`
+### 3.8 Network Inspector — Kees begrijpt het verkeer ✅ DONE
+- [x] Request logging via Electron `session.webRequest` API (NIET in webview — veilig!)
+- [x] Per request: url, method, status, contentType, size, timestamp, initiator, domain
+- [x] Groepering per domein met request counts
+- [x] Automatische API discovery (JSON responses, /api/ paths, /v1-3/, /graphql, /rest/)
+- [x] In-memory (laatste 1000 requests) + flush naar `~/.tandem/network/{domain}.json`
+- [x] API: `GET /network/log`, `GET /network/apis`, `GET /network/domains`, `DELETE /network/clear`
+- [ ] Export: HAR format (later)
 
 ---
 

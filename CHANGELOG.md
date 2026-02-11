@@ -2,6 +2,26 @@
 
 ## [Unreleased] — 2026-02-11
 
+### 🖼️ Phase 3.7 — PiP Mode
+- Added `PiPManager` — always-on-top mini window (350x250, frameless, draggable)
+- `shell/pip.html` — mini dashboard: activity feed, status indicators (API/voice/learning), quick command input
+- API: `POST /pip/toggle`, `GET /pip/status`
+- Keyboard shortcut: Cmd+P to toggle
+- Communicates via localhost API (not IPC)
+
+### 🔍 Phase 3.8 — Network Inspector
+- Added `NetworkInspector` — logs network traffic via Electron `session.webRequest` API (main process, anti-detect safe)
+- Tracks: url, method, status, contentType, size, timestamp, initiator, domain
+- Auto-discovery of API endpoints (JSON, /api/, /v1-3/, /graphql patterns)
+- In-memory buffer (1000 requests) + flush to `~/.tandem/network/{domain}.json` on navigation
+- API: `GET /network/log`, `GET /network/apis`, `GET /network/domains`, `DELETE /network/clear`
+
+### 🎨 UI Improvements
+- Tab bar: 🧀/👤 emoji per tab showing robin vs kees control
+- Activity log: source indicator (robin/kees) per event with color coding
+- Screenshots tab: improved 2-column grid layout with hover effects
+- IPC: `onTabSourceChanged` bridge for real-time source updates
+
 ### 🧠 Phase 3.4 — Form Memory
 - New `FormMemoryManager` class (`src/memory/form-memory.ts`)
 - Tracks every form submission per domain in `~/.tandem/forms/{domain}.json`
