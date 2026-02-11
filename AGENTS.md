@@ -1,0 +1,138 @@
+# AGENTS.md — Tandem Browser Development Guide
+
+## Wie ben je?
+
+Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Kees (AI) browsen samen het web. Jij schrijft de code.
+
+## Het project
+
+- **Repo:** `hydro13/tandem-browser` (privé)
+- **Stack:** Electron + TypeScript + Express.js API (localhost:8765)
+- **Doel:** Browser waar een AI (via HTTP API) en een mens (via UI) samen browsen
+- **Filosofie:** Lokaal, privacy-first, geen cloud dependencies
+
+## Regels — WAT JE MOET DOEN
+
+### 1. Lees eerst, bouw dan
+- Lees ALTIJD `TODO.md` voor je begint — weet wat de huidige fase is
+- Lees ALTIJD de bestaande code in `src/` — snap de architectuur
+- Lees `PROJECT.md` voor de visie als je twijfelt over design keuzes
+
+### 2. Test je eigen code
+- **Compileer altijd:** `npx tsc` moet FOUTLOOS zijn voor je klaar bent
+- **Start de app:** `npm run dev` en verifieer dat het opstart zonder crashes
+- **Test API endpoints:** Gebruik `curl` om elke nieuwe/gewijzigde endpoint te testen
+- **Test UI:** Neem een screenshot en verifieer visueel dat het er goed uitziet
+- **Rapporteer:** Geef een samenvatting van wat je getest hebt en wat de resultaten waren
+
+### 3. Documentatie bijwerken
+- **TODO.md:** Vink af wat je gebouwd hebt `[x]`, voeg nieuwe items toe als je iets ontdekt
+- **README.md:** Update API docs als je endpoints toevoegt/wijzigt
+- **Code comments:** JSDoc voor publieke functies, inline comments voor complexe logica
+- **CHANGELOG.md:** Voeg een entry toe per fase/feature die je afrondt
+
+### 4. Git discipline
+- Commit na elke afgeronde sub-feature (niet één mega-commit)
+- Commit messages: emoji + korte beschrijving
+  - `🚲 feat: tab management met groups`
+  - `🛡️ fix: stealth UA mismatch`
+  - `📝 docs: API endpoints bijgewerkt`
+  - `🧪 test: curl tests voor /tabs endpoints`
+- Push naar `origin main` aan het eind
+
+### 5. Code kwaliteit
+- **TypeScript strict mode** — geen `any` tenzij echt nodig (en dan met comment waarom)
+- **Error handling** — elke API endpoint vangt errors, geeft JSON terug
+- **Geen hardcoded paths** — gebruik `path.join()`, `app.getPath()`, etc.
+- **Separation of concerns** — elk bestand heeft één verantwoordelijkheid
+- **Naming:** camelCase voor functies/variabelen, PascalCase voor classes, kebab-case voor bestanden
+
+## Regels — WAT JE NIET MAG DOEN
+
+### ❌ Absoluut niet
+- **Geen dependencies toevoegen** zonder het te vermelden — elk nieuw package moet goedgekeurd
+- **Geen bestaande endpoints breken** — backward compatibility behouden
+- **Geen data naar externe servers** sturen — alles blijft lokaal
+- **Geen `rm -rf`** of destructieve operaties op het filesystem
+- **Geen secrets/tokens hardcoden** — gebruik environment variables of config files
+- **Geen hele bestanden herschrijven** als een kleine edit volstaat
+
+### ⚠️ Voorzichtig mee
+- Electron security: `nodeIntegration: false`, `contextIsolation: true` behouden
+- Webview partition: altijd `persist:tandem` gebruiken
+- API alleen binden aan `127.0.0.1` — nooit `0.0.0.0`
+- Stealth patches: niet verwijderen of uitschakelen
+
+## Bestandsstructuur
+
+```
+src/
+├── main.ts                 # Electron main process — app lifecycle
+├── preload.ts              # Context bridge — renderer ↔ main
+├── api/
+│   └── server.ts           # Express API — alle HTTP endpoints
+├── stealth/
+│   └── manager.ts          # Anti-detect patches
+├── tabs/                   # Tab management (Phase 2.1)
+│   └── manager.ts
+├── panel/                  # Kees paneel (Phase 2.2)
+│   └── manager.ts
+├── draw/                   # Annotatie tool (Phase 2.3)
+│   └── overlay.ts
+├── voice/                  # Voice input (Phase 2.4)
+│   └── recognition.ts
+└── activity/               # Activity tracking (Phase 2.5)
+    └── tracker.ts
+
+shell/
+├── index.html              # Hoofd UI
+├── css/                    # Stylesheets (extract uit index.html als het groeit)
+└── js/                     # Client-side scripts (als nodig)
+```
+
+## Development Workflow
+
+```
+1. Lees TODO.md → kies de volgende sub-feature
+2. Lees bestaande code → snap de context
+3. Schrijf de code
+4. `npx tsc` → fix alle type errors
+5. `npm run dev` → test handmatig
+6. `curl` test voor API endpoints
+7. Update documentatie (TODO.md, README.md)
+8. Git commit + push
+9. Rapporteer aan Robin/Kees wat je gebouwd en getest hebt
+```
+
+## Hoe je rapporteert
+
+Na elke sessie, geef:
+
+```
+## Gebouwd
+- [feature 1]: wat het doet
+- [feature 2]: wat het doet
+
+## Getest
+- ✅ `npx tsc` — geen errors
+- ✅ `npm run dev` — app start, geen crashes
+- ✅ `curl localhost:8765/nieuwe-endpoint` — response OK
+- ⚠️ [eventuele issues gevonden]
+
+## Documentatie
+- TODO.md bijgewerkt: [x] items afgevinkt
+- README.md bijgewerkt: nieuwe endpoints gedocumenteerd
+
+## Volgende stap
+- [wat er nu aan de beurt is volgens TODO.md]
+```
+
+## Communicatie met Robin
+
+Robin is de opdrachtgever. Hij:
+- Beslist over design keuzes als er meerdere opties zijn
+- Moet geïnformeerd worden over nieuwe dependencies
+- Test de UI visueel — jij test de code
+- Praat Nederlands, code en docs zijn Engels
+
+Als je twijfelt → vraag. Liever één keer te veel gevraagd dan een verkeerde aanname.
