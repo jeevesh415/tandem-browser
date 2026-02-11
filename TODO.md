@@ -21,13 +21,16 @@
 ## Phase 2: Tandem Experience 🔄 ACTIEF
 > Dit is wat Tandem Tandem maakt. Zonder dit is het gewoon weer een browser.
 
-### 2.1 Tabs & Tab Groups
-- [ ] Meerdere tabs openen/sluiten/wisselen
-- [ ] Tab bar met favicon + titel
-- [ ] Tab groups met kleuren (bijv. 🔵 Werk, 🟢 Research)
-- [ ] API: `POST /tabs/open`, `POST /tabs/close`, `GET /tabs/list`
-- [ ] API: `POST /tabs/group` — tabs groeperen
-- [ ] Keyboard shortcuts: Cmd+T (nieuw), Cmd+W (sluit), Cmd+1-9 (wissel)
+### 2.1 Tabs & Tab Groups ✅ DONE
+- [x] Meerdere tabs openen/sluiten/wisselen
+- [x] Tab bar met favicon + titel
+- [x] Tab groups met kleuren (bijv. 🔵 Werk, 🟢 Research)
+- [x] API: `POST /tabs/open`, `POST /tabs/close`, `GET /tabs/list`
+- [x] API: `POST /tabs/group` — tabs groeperen
+- [x] API: `POST /tabs/focus` — tab activeren
+- [x] Keyboard shortcuts: Cmd+T (nieuw), Cmd+W (sluit), Cmd+1-9 (wissel)
+- [x] Click/type herschreven naar sendInputEvent (Event.isTrusted = true)
+- [x] Humanized delays: gaussian random timing (80-300ms click, 30-120ms typing)
 
 ### 2.2 Split Window + Kees Paneel
 - [ ] Rechter paneel: Kees control panel (resizable)
