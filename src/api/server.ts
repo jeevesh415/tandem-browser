@@ -27,6 +27,10 @@ import { HistoryManager } from '../history/manager';
 import { DownloadManager } from '../downloads/manager';
 import { AudioCaptureManager } from '../audio/capture';
 import { ExtensionLoader } from '../extensions/loader';
+import { ClaroNoteManager } from '../claronote/manager';
+import { ContentExtractor } from '../content/extractor';
+import { WorkflowEngine } from '../workflow/engine';
+import { LoginManager } from '../auth/login-manager';
 
 export class TandemAPI {
   private app: express.Application;
@@ -53,8 +57,12 @@ export class TandemAPI {
   private downloadManager: DownloadManager;
   private audioCaptureManager: AudioCaptureManager;
   private extensionLoader: ExtensionLoader;
+  private claroNoteManager: ClaroNoteManager;
+  private contentExtractor: ContentExtractor;
+  private workflowEngine: WorkflowEngine;
+  private loginManager: LoginManager;
 
-  constructor(win: BrowserWindow, port: number = 8765, tabManager: TabManager, panelManager: PanelManager, drawManager: DrawOverlayManager, activityTracker: ActivityTracker, voiceManager: VoiceManager, behaviorObserver: BehaviorObserver, configManager: ConfigManager, siteMemory: SiteMemoryManager, watchManager: WatchManager, headlessManager: HeadlessManager, formMemory: FormMemoryManager, contextBridge: ContextBridge, pipManager: PiPManager, networkInspector: NetworkInspector, chromeImporter: ChromeImporter, bookmarkManager: BookmarkManager, historyManager: HistoryManager, downloadManager: DownloadManager, audioCaptureManager: AudioCaptureManager, extensionLoader: ExtensionLoader) {
+  constructor(win: BrowserWindow, port: number = 8765, tabManager: TabManager, panelManager: PanelManager, drawManager: DrawOverlayManager, activityTracker: ActivityTracker, voiceManager: VoiceManager, behaviorObserver: BehaviorObserver, configManager: ConfigManager, siteMemory: SiteMemoryManager, watchManager: WatchManager, headlessManager: HeadlessManager, formMemory: FormMemoryManager, contextBridge: ContextBridge, pipManager: PiPManager, networkInspector: NetworkInspector, chromeImporter: ChromeImporter, bookmarkManager: BookmarkManager, historyManager: HistoryManager, downloadManager: DownloadManager, audioCaptureManager: AudioCaptureManager, extensionLoader: ExtensionLoader, claroNoteManager: ClaroNoteManager) {
     this.win = win;
     this.port = port;
     this.tabManager = tabManager;
@@ -77,6 +85,13 @@ export class TandemAPI {
     this.downloadManager = downloadManager;
     this.audioCaptureManager = audioCaptureManager;
     this.extensionLoader = extensionLoader;
+    this.claroNoteManager = claroNoteManager;
+    
+    // Initialize new Phase 5 managers
+    this.contentExtractor = new ContentExtractor();
+    this.workflowEngine = new WorkflowEngine();
+    this.loginManager = new LoginManager();
+    
     this.app = express();
     this.app.use(cors());
     this.app.use(express.json());
@@ -1252,6 +1267,110 @@ export class TandemAPI {
     });
 
     // ═══════════════════════════════════════════════
+    // CLARONOTE — Voice-to-text integration
+    // ═══════════════════════════════════════════════
+
+    // Authentication
+    this.app.post('/claronote/login', async (req: Request, res: Response) => {
+      try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+          res.status(400).json({ error: 'Email and password required' });
+          return;
+        }
+        
+        const result = await this.claroNoteManager.login(email, password);
+        if (result.success) {
+          res.json({ success: true, user: this.claroNoteManager.getAuth()?.user });
+        } else {
+          res.status(401).json({ success: false, error: result.error });
+        }
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/claronote/logout', async (_req: Request, res: Response) => {
+      try {
+        await this.claroNoteManager.logout();
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/claronote/me', async (_req: Request, res: Response) => {
+      try {
+        const user = await this.claroNoteManager.getMe();
+        res.json({ user });
+      } catch (e: any) {
+        res.status(401).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/claronote/status', (_req: Request, res: Response) => {
+      try {
+        const auth = this.claroNoteManager.getAuth();
+        res.json({
+          authenticated: !!auth,
+          user: auth?.user || null,
+          recording: this.claroNoteManager.getRecordingStatus()
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Recording
+    this.app.post('/claronote/record/start', async (_req: Request, res: Response) => {
+      try {
+        const result = await this.claroNoteManager.startRecording();
+        if (result.success) {
+          res.json({ success: true });
+        } else {
+          res.status(400).json({ success: false, error: result.error });
+        }
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/claronote/record/stop', async (_req: Request, res: Response) => {
+      try {
+        const result = await this.claroNoteManager.stopRecording();
+        if (result.success) {
+          res.json({ success: true, noteId: result.noteId });
+        } else {
+          res.status(400).json({ success: false, error: result.error });
+        }
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Notes
+    this.app.get('/claronote/notes', async (req: Request, res: Response) => {
+      try {
+        const limitParam = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+        const limit = parseInt(limitParam as string || '10') || 10;
+        const notes = await this.claroNoteManager.getNotes(limit);
+        res.json({ notes });
+      } catch (e: any) {
+        res.status(401).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/claronote/notes/:id', async (req: Request, res: Response) => {
+      try {
+        const noteId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const note = await this.claroNoteManager.getNote(noteId);
+        res.json({ note });
+      } catch (e: any) {
+        res.status(404).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
     // DATA — Export, Import, Wipe
     // ═══════════════════════════════════════════════
 
@@ -1277,6 +1396,232 @@ export class TandemAPI {
         }
 
         res.json({ ok: true, wiped: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // CONTENT EXTRACTION (Phase 5)
+    // ═══════════════════════════════════════════════
+
+    this.app.post('/content/extract', async (_req: Request, res: Response) => {
+      try {
+        const wc = await this.getActiveWC();
+        if (!wc) {
+          res.status(500).json({ error: 'No active tab' });
+          return;
+        }
+
+        const content = await this.contentExtractor.extractCurrentPage(this.win);
+        res.json(content);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/content/extract/url', async (req: Request, res: Response) => {
+      try {
+        const { url } = req.body;
+        if (!url) {
+          res.status(400).json({ error: 'url required' });
+          return;
+        }
+
+        const content = await this.contentExtractor.extractFromURL(url, this.headlessManager);
+        res.json(content);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // WORKFLOW ENGINE (Phase 5)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/workflows', async (_req: Request, res: Response) => {
+      try {
+        const workflows = await this.workflowEngine.getWorkflows();
+        res.json({ workflows });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/workflows', async (req: Request, res: Response) => {
+      try {
+        const { name, description, steps, variables } = req.body;
+        if (!name || !steps) {
+          res.status(400).json({ error: 'name and steps required' });
+          return;
+        }
+
+        const id = await this.workflowEngine.saveWorkflow({
+          name,
+          description,
+          steps,
+          variables
+        });
+
+        res.json({ id });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.delete('/workflows/:id', async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        await this.workflowEngine.deleteWorkflow(id);
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/workflow/run', async (req: Request, res: Response) => {
+      try {
+        const { workflowId, variables } = req.body;
+        if (!workflowId) {
+          res.status(400).json({ error: 'workflowId required' });
+          return;
+        }
+
+        const wc = await this.getActiveWC();
+        if (!wc) {
+          res.status(500).json({ error: 'No active tab' });
+          return;
+        }
+
+        const executionId = await this.workflowEngine.runWorkflow(
+          workflowId,
+          this.win,
+          variables || {}
+        );
+
+        res.json({ executionId });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/workflow/status/:executionId', async (req: Request, res: Response) => {
+      try {
+        const { executionId } = req.params;
+        if (Array.isArray(executionId)) {
+          res.status(400).json({ error: 'Invalid executionId' });
+          return;
+        }
+        const status = await this.workflowEngine.getExecutionStatus(executionId);
+        
+        if (!status) {
+          res.status(404).json({ error: 'Execution not found' });
+          return;
+        }
+
+        res.json(status);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/workflow/stop', async (req: Request, res: Response) => {
+      try {
+        const { executionId } = req.body;
+        if (!executionId) {
+          res.status(400).json({ error: 'executionId required' });
+          return;
+        }
+
+        await this.workflowEngine.stopWorkflow(executionId);
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/workflow/running', async (_req: Request, res: Response) => {
+      try {
+        const executions = await this.workflowEngine.getRunningExecutions();
+        res.json({ executions });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // LOGIN STATE MANAGER (Phase 5)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/auth/states', async (_req: Request, res: Response) => {
+      try {
+        const states = await this.loginManager.getAllStates();
+        res.json({ states });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/auth/state/:domain', async (req: Request, res: Response) => {
+      try {
+        const { domain } = req.params;
+        const state = await this.loginManager.getLoginState(domain);
+        res.json(state);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/auth/check', async (_req: Request, res: Response) => {
+      try {
+        const wc = await this.getActiveWC();
+        if (!wc) {
+          res.status(500).json({ error: 'No active tab' });
+          return;
+        }
+
+        const state = await this.loginManager.checkCurrentPage(this.win);
+        res.json(state);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/auth/is-login-page', async (_req: Request, res: Response) => {
+      try {
+        const wc = await this.getActiveWC();
+        if (!wc) {
+          res.status(500).json({ error: 'No active tab' });
+          return;
+        }
+
+        const isLoginPage = await this.loginManager.isLoginPage(this.win);
+        res.json({ isLoginPage });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/auth/update', async (req: Request, res: Response) => {
+      try {
+        const { domain, status, username } = req.body;
+        if (!domain || !status) {
+          res.status(400).json({ error: 'domain and status required' });
+          return;
+        }
+
+        await this.loginManager.updateLoginState(domain, status, username);
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.delete('/auth/state/:domain', async (req: Request, res: Response) => {
+      try {
+        const { domain } = req.params;
+        await this.loginManager.clearLoginState(domain);
+        res.json({ ok: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

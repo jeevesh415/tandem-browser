@@ -7,6 +7,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
+    /* Dark theme (default) */
     :root {
       --bg: #1a1a2e;
       --surface: #16213e;
@@ -19,6 +20,38 @@
       --tab-bg: #111a30;
       --tab-active: #16213e;
       --tab-hover: #1a2744;
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --accent: #e94560;
+      --text: #1e293b;
+      --text-dim: #64748b;
+      --input-bg: #f1f5f9;
+      --success: #059669;
+      --warning: #d97706;
+      --tab-bg: #e2e8f0;
+      --tab-active: #ffffff;
+      --tab-hover: #f1f5f9;
+    }
+
+    /* System preference detection */
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --accent: #e94560;
+        --text: #1e293b;
+        --text-dim: #64748b;
+        --input-bg: #f1f5f9;
+        --success: #059669;
+        --warning: #d97706;
+        --tab-bg: #e2e8f0;
+        --tab-active: #ffffff;
+        --tab-hover: #f1f5f9;
+      }
     }
 
     body {
@@ -672,6 +705,7 @@
         <button class="panel-tab active" data-panel-tab="activity">Activity</button>
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
+        <button class="panel-tab" data-panel-tab="claronote">🎙️</button>
       </div>
       <div class="panel-body" id="panel-body">
         <!-- Activity tab -->
@@ -698,6 +732,69 @@
         <div class="panel-content" id="panel-screenshots" style="display:none;flex-direction:column;flex:1;">
           <div class="screenshot-preview" id="screenshot-list">
             <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Nog geen screenshots. Gebruik Cmd+D → 📸</p>
+          </div>
+        </div>
+        
+        <!-- ClaroNote tab -->
+        <div class="panel-content" id="panel-claronote" style="display:none;flex-direction:column;flex:1;">
+          <!-- Login screen (shown when not authenticated) -->
+          <div class="claronote-login" id="claronote-login" style="display:none;">
+            <div style="padding:20px;text-align:center;">
+              <h3 style="margin-bottom:15px;color:var(--text);">🎙️ ClaroNote</h3>
+              <p style="font-size:12px;color:var(--text-dim);margin-bottom:20px;">Log in met je ClaroNote account</p>
+              
+              <form id="claronote-login-form" style="display:flex;flex-direction:column;gap:12px;">
+                <input type="email" id="claronote-email" placeholder="Email" required
+                       style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
+                <input type="password" id="claronote-password" placeholder="Wachtwoord" required
+                       style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
+                <button type="submit" id="claronote-login-btn"
+                        style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;transition:opacity 0.15s;">
+                  Inloggen
+                </button>
+              </form>
+              
+              <div class="claronote-error" id="claronote-error" style="display:none;margin-top:10px;color:var(--warning);font-size:11px;"></div>
+            </div>
+          </div>
+          
+          <!-- Main interface (shown when authenticated) -->
+          <div class="claronote-main" id="claronote-main" style="display:none;flex:1;flex-direction:column;">
+            <!-- Recording interface -->
+            <div class="claronote-recording" style="padding:15px;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div class="recording-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                <button id="claronote-record-btn" 
+                        style="background:var(--accent);border:none;color:#fff;border-radius:50%;width:44px;height:44px;cursor:pointer;font-size:20px;transition:all 0.15s;">
+                  🎙️
+                </button>
+                <div class="recording-status" id="claronote-status">
+                  <div style="font-size:12px;color:var(--text);" id="claronote-status-text">Klaar om op te nemen</div>
+                  <div style="font-size:10px;color:var(--text-dim);" id="claronote-timer"></div>
+                </div>
+              </div>
+              
+              <!-- Waveform visualization placeholder -->
+              <div class="recording-waveform" id="claronote-waveform" 
+                   style="display:none;height:30px;background:rgba(233,69,96,0.1);border-radius:4px;margin-top:8px;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--accent);">
+                  Recording...
+                </div>
+              </div>
+            </div>
+            
+            <!-- Notes list -->
+            <div class="claronote-notes" style="flex:1;overflow-y:auto;">
+              <div style="padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;">
+                <span>Recente notities</span>
+                <button id="claronote-refresh" 
+                        style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:2px 6px;border-radius:3px;">
+                  🔄
+                </button>
+              </div>
+              <div id="claronote-notes-list">
+                <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Laden...</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1010,13 +1107,121 @@
           toggleFindBar(true);
         } else if (action === 'open-history') {
           openHistoryPage();
+        } else if (action === 'show-shortcuts') {
+          showShortcutsOverlay();
+        } else if (action === 'zoom-in') {
+          changeZoom('in');
+        } else if (action === 'zoom-out') {
+          changeZoom('out');
+        } else if (action === 'zoom-reset') {
+          changeZoom('reset');
         } else if (action.startsWith('focus-tab-')) {
           const index = parseInt(action.replace('focus-tab-', ''), 10);
           window.tandem.focusTabByIndex(index);
+        } else if (action === 'claronote-record') {
+          // Switch to ClaroNote tab and toggle recording
+          document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
+          document.querySelector('[data-panel-tab="claronote"]').classList.add('active');
+          document.getElementById('panel-activity').style.display = 'none';
+          document.getElementById('panel-chat').style.display = 'none';
+          document.getElementById('panel-screenshots').style.display = 'none';
+          document.getElementById('panel-claronote').style.display = 'flex';
+          
+          // Open panel if closed
+          if (!document.getElementById('kees-panel').classList.contains('open')) {
+            document.getElementById('kees-panel').classList.add('open');
+          }
+          
+          // Initialize and toggle recording
+          initClaroNote().then(() => {
+            toggleClaroNoteRecording();
+          });
         }
       });
     }
 
+    // ═══════════════════════════════════════════════
+    // Zoom functionality
+    // ═══════════════════════════════════════════════
+
+    let tabZoomLevels = new Map(); // Store zoom levels per tab
+    let zoomIndicatorTimeout = null;
+
+    function changeZoom(direction) {
+      const entry = tabs.get(activeTabId);
+      if (!entry) return;
+
+      const currentZoom = tabZoomLevels.get(activeTabId) || 0;
+      let newZoom = currentZoom;
+
+      if (direction === 'in') {
+        newZoom = Math.min(currentZoom + 1, 5); // Max zoom in
+      } else if (direction === 'out') {
+        newZoom = Math.max(currentZoom - 1, -5); // Max zoom out
+      } else if (direction === 'reset') {
+        newZoom = 0;
+      }
+
+      if (newZoom !== currentZoom) {
+        tabZoomLevels.set(activeTabId, newZoom);
+        entry.webview.setZoomLevel(newZoom);
+        showZoomIndicator(newZoom);
+      }
+    }
+
+    function showZoomIndicator(zoomLevel) {
+      // Create or get zoom indicator
+      let indicator = document.getElementById('zoom-indicator');
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'zoom-indicator';
+        indicator.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          z-index: 9999;
+          pointer-events: none;
+          backdrop-filter: blur(4px);
+          transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(indicator);
+      }
+
+      const percentage = Math.round(Math.pow(1.2, zoomLevel) * 100);
+      indicator.textContent = `${percentage}%`;
+      indicator.style.opacity = '1';
+
+      // Clear previous timeout
+      if (zoomIndicatorTimeout) {
+        clearTimeout(zoomIndicatorTimeout);
+      }
+
+      // Hide after 2 seconds
+      zoomIndicatorTimeout = setTimeout(() => {
+        indicator.style.opacity = '0';
+      }, 2000);
+    }
+
+    // Restore zoom level when switching tabs
+    const _prevActivateTab = activateTab;
+    activateTab = function(tabId) {
+      _prevActivateTab(tabId);
+      
+      // Apply stored zoom level
+      const entry = tabs.get(tabId);
+      if (entry) {
+        const zoomLevel = tabZoomLevels.get(tabId) || 0;
+        entry.webview.setZoomLevel(zoomLevel);
+      }
+    };
+
+    // ═══════════════════════════════════════════════
     // Kees badge → right-click or long-press → open settings
     const keesBadge = document.querySelector('.kees-badge');
     keesBadge.addEventListener('contextmenu', (e) => {
@@ -1070,6 +1275,12 @@
         document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
         document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
+        document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
+        
+        // Initialize ClaroNote if switching to that tab
+        if (tab === 'claronote') {
+          initClaroNote();
+        }
       });
     });
 
@@ -1902,6 +2113,716 @@
         listEl.prepend(div);
       });
     }
+
+    // ═══════════════════════════════════════════════
+    // ClaroNote Integration
+    // ═══════════════════════════════════════════════
+
+    let claroNoteInitialized = false;
+    let claroNoteRecording = false;
+    let claroNoteTimer = null;
+    let claroNoteStartTime = 0;
+
+    async function initClaroNote() {
+      if (claroNoteInitialized) return;
+      
+      try {
+        // Check authentication status
+        const response = await fetch('http://localhost:8765/claronote/status');
+        const data = await response.json();
+        
+        if (data.authenticated) {
+          showClaroNoteMain(data.user);
+          await loadClaroNoteNotes();
+        } else {
+          showClaroNoteLogin();
+        }
+        
+        claroNoteInitialized = true;
+        setupClaroNoteEventListeners();
+      } catch (error) {
+        console.error('Failed to initialize ClaroNote:', error);
+        showClaroNoteError('Verbindingsfout met ClaroNote API');
+      }
+    }
+
+    function showClaroNoteLogin() {
+      document.getElementById('claronote-login').style.display = 'block';
+      document.getElementById('claronote-main').style.display = 'none';
+    }
+
+    function showClaroNoteMain(user) {
+      document.getElementById('claronote-login').style.display = 'none';
+      document.getElementById('claronote-main').style.display = 'flex';
+    }
+
+    function showClaroNoteError(message) {
+      const errorEl = document.getElementById('claronote-error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => {
+        errorEl.style.display = 'none';
+      }, 5000);
+    }
+
+    function setupClaroNoteEventListeners() {
+      // Login form
+      const loginForm = document.getElementById('claronote-login-form');
+      if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await handleClaroNoteLogin();
+        });
+      }
+
+      // Record button
+      const recordBtn = document.getElementById('claronote-record-btn');
+      if (recordBtn) {
+        recordBtn.addEventListener('click', toggleClaroNoteRecording);
+      }
+
+      // Refresh button
+      const refreshBtn = document.getElementById('claronote-refresh');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadClaroNoteNotes);
+      }
+    }
+
+    async function handleClaroNoteLogin() {
+      const email = document.getElementById('claronote-email').value;
+      const password = document.getElementById('claronote-password').value;
+      const loginBtn = document.getElementById('claronote-login-btn');
+      
+      if (!email || !password) return;
+      
+      loginBtn.textContent = 'Inloggen...';
+      loginBtn.disabled = true;
+      
+      try {
+        const response = await fetch('http://localhost:8765/claronote/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showClaroNoteMain(data.user);
+          await loadClaroNoteNotes();
+        } else {
+          showClaroNoteError(data.error || 'Inloggen mislukt');
+        }
+      } catch (error) {
+        showClaroNoteError('Netwerk fout');
+      } finally {
+        loginBtn.textContent = 'Inloggen';
+        loginBtn.disabled = false;
+      }
+    }
+
+    async function toggleClaroNoteRecording() {
+      if (claroNoteRecording) {
+        await stopClaroNoteRecording();
+      } else {
+        await startClaroNoteRecording();
+      }
+    }
+
+    async function startClaroNoteRecording() {
+      try {
+        const response = await fetch('http://localhost:8765/claronote/record/start', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          claroNoteRecording = true;
+          claroNoteStartTime = Date.now();
+          updateRecordingUI();
+          startRecordingTimer();
+        } else {
+          showClaroNoteError(data.error || 'Kon opname niet starten');
+        }
+      } catch (error) {
+        showClaroNoteError('Fout bij starten opname');
+      }
+    }
+
+    async function stopClaroNoteRecording() {
+      try {
+        const response = await fetch('http://localhost:8765/claronote/record/stop', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          claroNoteRecording = false;
+          updateRecordingUI();
+          stopRecordingTimer();
+          
+          // Show processing status
+          document.getElementById('claronote-status-text').textContent = 'Uploaden en verwerken...';
+          
+          // Start polling for note status if we got a note ID
+          if (data.noteId) {
+            pollNoteStatus(data.noteId);
+          }
+          
+          // Refresh notes list
+          setTimeout(() => loadClaroNoteNotes(), 1000);
+        } else {
+          showClaroNoteError(data.error || 'Kon opname niet stoppen');
+        }
+      } catch (error) {
+        showClaroNoteError('Fout bij stoppen opname');
+        claroNoteRecording = false;
+        updateRecordingUI();
+        stopRecordingTimer();
+      }
+    }
+
+    function updateRecordingUI() {
+      const recordBtn = document.getElementById('claronote-record-btn');
+      const statusText = document.getElementById('claronote-status-text');
+      const waveform = document.getElementById('claronote-waveform');
+      
+      if (claroNoteRecording) {
+        recordBtn.style.background = 'var(--warning)';
+        recordBtn.textContent = '⏹️';
+        statusText.textContent = 'Opname bezig...';
+        waveform.style.display = 'block';
+      } else {
+        recordBtn.style.background = 'var(--accent)';
+        recordBtn.textContent = '🎙️';
+        statusText.textContent = 'Klaar om op te nemen';
+        waveform.style.display = 'none';
+      }
+    }
+
+    function startRecordingTimer() {
+      claroNoteTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - claroNoteStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('claronote-timer').textContent = 
+          `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }, 1000);
+    }
+
+    function stopRecordingTimer() {
+      if (claroNoteTimer) {
+        clearInterval(claroNoteTimer);
+        claroNoteTimer = null;
+        document.getElementById('claronote-timer').textContent = '';
+      }
+    }
+
+    async function loadClaroNoteNotes() {
+      try {
+        const response = await fetch('http://localhost:8765/claronote/notes?limit=10');
+        const data = await response.json();
+        
+        if (data.notes) {
+          displayClaroNoteNotes(data.notes);
+        }
+      } catch (error) {
+        console.error('Failed to load notes:', error);
+      }
+    }
+
+    function displayClaroNoteNotes(notes) {
+      const listEl = document.getElementById('claronote-notes-list');
+      
+      if (notes.length === 0) {
+        listEl.innerHTML = '<p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Nog geen notities opgenomen</p>';
+        return;
+      }
+      
+      listEl.innerHTML = '';
+      
+      notes.forEach(note => {
+        const noteEl = document.createElement('div');
+        noteEl.style.cssText = 'padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:background 0.15s;';
+        
+        // Status indicator
+        let statusColor = 'var(--text-dim)';
+        let statusText = note.status;
+        if (note.status === 'READY') { statusColor = 'var(--success)'; statusText = 'Klaar'; }
+        else if (note.status === 'PROCESSING') { statusColor = 'var(--warning)'; statusText = 'Verwerken...'; }
+        else if (note.status === 'UPLOADING') { statusColor = 'var(--accent)'; statusText = 'Uploaden...'; }
+        else if (note.status === 'ERROR') { statusColor = 'var(--warning)'; statusText = 'Fout'; }
+        
+        noteEl.innerHTML = `
+          <div style="display:flex;justify-content:between;align-items:flex-start;gap:8px;">
+            <div style="flex:1;">
+              <div style="font-size:12px;color:var(--text);margin-bottom:4px;font-weight:500;">
+                ${note.title || 'Notitie'}
+              </div>
+              ${note.summary ? `
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.3;">
+                  ${note.summary.length > 100 ? note.summary.substring(0, 100) + '...' : note.summary}
+                </div>
+              ` : ''}
+              <div style="font-size:10px;color:var(--text-dim);display:flex;gap:8px;">
+                <span>${Math.floor(note.duration / 60)}:${(note.duration % 60).toString().padStart(2, '0')}</span>
+                <span>•</span>
+                <span>${new Date(note.createdAt).toLocaleDateString('nl-NL')}</span>
+              </div>
+            </div>
+            <div style="flex-shrink:0;font-size:10px;color:${statusColor};">
+              ${statusText}
+            </div>
+          </div>
+        `;
+        
+        noteEl.addEventListener('mouseenter', () => {
+          noteEl.style.background = 'rgba(255,255,255,0.03)';
+        });
+        
+        noteEl.addEventListener('mouseleave', () => {
+          noteEl.style.background = '';
+        });
+        
+        noteEl.addEventListener('click', () => {
+          showNoteDetails(note);
+        });
+        
+        listEl.appendChild(noteEl);
+      });
+    }
+
+    function showNoteDetails(note) {
+      // Create a simple modal/overlay to show full transcript
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.1);
+      `;
+      
+      content.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <h3 style="margin:0;color:var(--text);">${note.title || 'Notitie'}</h3>
+          <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                  style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;">✕</button>
+        </div>
+        
+        <div style="margin-bottom:15px;font-size:11px;color:var(--text-dim);display:flex;gap:12px;">
+          <span>Duur: ${Math.floor(note.duration / 60)}:${(note.duration % 60).toString().padStart(2, '0')}</span>
+          <span>Datum: ${new Date(note.createdAt).toLocaleString('nl-NL')}</span>
+        </div>
+        
+        ${note.summary ? `
+          <div style="margin-bottom:15px;">
+            <h4 style="margin:0 0 8px 0;font-size:12px;color:var(--accent);">Samenvatting</h4>
+            <div style="font-size:12px;line-height:1.4;">${note.summary}</div>
+          </div>
+        ` : ''}
+        
+        ${note.transcript ? `
+          <div>
+            <h4 style="margin:0 0 8px 0;font-size:12px;color:var(--accent);">Transcript</h4>
+            <div style="font-size:12px;line-height:1.5;white-space:pre-wrap;">${note.transcript}</div>
+          </div>
+        ` : '<div style="font-size:12px;color:var(--text-dim);">Transcript nog niet beschikbaar</div>'}
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Close on backdrop click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      });
+    }
+
+    async function pollNoteStatus(noteId) {
+      try {
+        const response = await fetch(`http://localhost:8765/claronote/notes/${noteId}`);
+        const data = await response.json();
+        
+        if (data.note && data.note.status === 'PROCESSING') {
+          // Still processing, poll again in 2 seconds
+          setTimeout(() => pollNoteStatus(noteId), 2000);
+        } else {
+          // Done processing, update UI
+          document.getElementById('claronote-status-text').textContent = 'Klaar om op te nemen';
+          await loadClaroNoteNotes();
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        document.getElementById('claronote-status-text').textContent = 'Klaar om op te nemen';
+      }
+    }
+  </script>
+
+  <!-- Keyboard Shortcuts Overlay -->
+  <div id="shortcuts-overlay" class="shortcuts-overlay">
+    <div class="shortcuts-content">
+      <div class="shortcuts-header">
+        <h2>⌨️ Keyboard Shortcuts</h2>
+        <button class="shortcuts-close" onclick="hideShortcutsOverlay()">✕</button>
+      </div>
+      
+      <div class="shortcuts-search">
+        <input type="text" id="shortcuts-search" placeholder="Zoek shortcuts..." autocomplete="off">
+      </div>
+      
+      <div class="shortcuts-grid">
+        <div class="shortcut-group">
+          <h3>Navigatie</h3>
+          <div class="shortcut-item" data-search="nieuwe tab new tab open">
+            <span class="shortcut-desc">Nieuwe tab</span>
+            <kbd class="shortcut">Cmd+T</kbd>
+          </div>
+          <div class="shortcut-item" data-search="close tab sluiten">
+            <span class="shortcut-desc">Tab sluiten</span>
+            <kbd class="shortcut">Cmd+W</kbd>
+          </div>
+          <div class="shortcut-item" data-search="tab switch wissel 1 2 3 4 5 6 7 8 9">
+            <span class="shortcut-desc">Naar tab 1-9</span>
+            <kbd class="shortcut">Cmd+1-9</kbd>
+          </div>
+          <div class="shortcut-item" data-search="history geschiedenis">
+            <span class="shortcut-desc">Geschiedenis</span>
+            <kbd class="shortcut">Cmd+Y</kbd>
+          </div>
+          <div class="shortcut-item" data-search="find zoek search pagina">
+            <span class="shortcut-desc">Zoeken op pagina</span>
+            <kbd class="shortcut">Cmd+F</kbd>
+          </div>
+        </div>
+
+        <div class="shortcut-group">
+          <h3>Kees</h3>
+          <div class="shortcut-item" data-search="kees panel toggle">
+            <span class="shortcut-desc">Kees panel toggle</span>
+            <kbd class="shortcut">Cmd+K</kbd>
+          </div>
+          <div class="shortcut-item" data-search="voice input spraak microfoon">
+            <span class="shortcut-desc">Voice input</span>
+            <kbd class="shortcut">Cmd+M</kbd>
+          </div>
+          <div class="shortcut-item" data-search="picture pip overlay mini window">
+            <span class="shortcut-desc">Picture-in-Picture</span>
+            <kbd class="shortcut">Cmd+P</kbd>
+          </div>
+        </div>
+
+        <div class="shortcut-group">
+          <h3>Tools</h3>
+          <div class="shortcut-item" data-search="bookmark bladwijzer save opslaan">
+            <span class="shortcut-desc">Bookmark pagina</span>
+            <kbd class="shortcut">Cmd+D</kbd>
+          </div>
+          <div class="shortcut-item" data-search="draw teken annotatie pen">
+            <span class="shortcut-desc">Teken mode</span>
+            <kbd class="shortcut">Cmd+Shift+D</kbd>
+          </div>
+          <div class="shortcut-item" data-search="screenshot foto snap picture">
+            <span class="shortcut-desc">Screenshot</span>
+            <kbd class="shortcut">Cmd+Shift+S</kbd>
+          </div>
+          <div class="shortcut-item" data-search="audio record opname geluid">
+            <span class="shortcut-desc">Audio opnemen</span>
+            <kbd class="shortcut">Cmd+R</kbd>
+          </div>
+        </div>
+
+        <div class="shortcut-group">
+          <h3>Browser</h3>
+          <div class="shortcut-item" data-search="settings instellingen config">
+            <span class="shortcut-desc">Instellingen</span>
+            <kbd class="shortcut">Cmd+,</kbd>
+          </div>
+          <div class="shortcut-item" data-search="help shortcuts hulp">
+            <span class="shortcut-desc">Help & shortcuts</span>
+            <kbd class="shortcut">Cmd+?</kbd>
+          </div>
+          <div class="shortcut-item" data-search="zoom in inzoomen groter">
+            <span class="shortcut-desc">Zoom in</span>
+            <kbd class="shortcut">Cmd+=</kbd>
+          </div>
+          <div class="shortcut-item" data-search="zoom out uitzoomen kleiner">
+            <span class="shortcut-desc">Zoom uit</span>
+            <kbd class="shortcut">Cmd+-</kbd>
+          </div>
+          <div class="shortcut-item" data-search="zoom reset normale grootte">
+            <span class="shortcut-desc">Reset zoom</span>
+            <kbd class="shortcut">Cmd+0</kbd>
+          </div>
+        </div>
+      </div>
+      
+      <div class="shortcuts-footer">
+        <p>💡 Tip: Typ om te zoeken • Druk <kbd>Esc</kbd> om te sluiten</p>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .shortcuts-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 10000;
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .shortcuts-overlay.visible {
+      display: flex;
+    }
+    
+    .shortcuts-content {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 900px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      animation: shortcutsFadeIn 0.3s ease-out;
+    }
+    
+    @keyframes shortcutsFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .shortcuts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .shortcuts-header h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .shortcuts-close {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+    
+    .shortcuts-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .shortcuts-search {
+      padding: 16px 32px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .shortcuts-search input {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .shortcuts-search input::placeholder {
+      color: var(--text-dim);
+    }
+    
+    .shortcuts-search input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .shortcuts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      padding: 32px;
+    }
+    
+    .shortcut-group h3 {
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .shortcut-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: opacity 0.2s ease;
+    }
+    
+    .shortcut-item:last-child {
+      border-bottom: none;
+    }
+    
+    .shortcut-item.hidden {
+      display: none;
+    }
+    
+    .shortcut-desc {
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .shortcut {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--success);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    
+    .shortcuts-footer {
+      padding: 16px 32px;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+    
+    .shortcuts-footer kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+  </style>
+
+  <script>
+    // Shortcuts overlay functionality
+    function showShortcutsOverlay() {
+      const overlay = document.getElementById('shortcuts-overlay');
+      overlay.classList.add('visible');
+      document.getElementById('shortcuts-search').focus();
+      
+      // Clear search
+      document.getElementById('shortcuts-search').value = '';
+      filterShortcuts('');
+    }
+    
+    function hideShortcutsOverlay() {
+      const overlay = document.getElementById('shortcuts-overlay');
+      overlay.classList.remove('visible');
+    }
+    
+    function filterShortcuts(query) {
+      const items = document.querySelectorAll('.shortcut-item');
+      const lowerQuery = query.toLowerCase();
+      
+      items.forEach(item => {
+        const searchText = item.getAttribute('data-search') || '';
+        const descText = item.querySelector('.shortcut-desc')?.textContent || '';
+        const combined = (searchText + ' ' + descText).toLowerCase();
+        
+        if (!query || combined.includes(lowerQuery)) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+    }
+    
+    // Search functionality
+    document.getElementById('shortcuts-search').addEventListener('input', (e) => {
+      filterShortcuts(e.target.value);
+    });
+    
+    // Close overlay with Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideShortcutsOverlay();
+      }
+    });
+    
+    // Close on backdrop click
+    document.getElementById('shortcuts-overlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        hideShortcutsOverlay();
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // Theme management
+    // ═══════════════════════════════════════════════
+
+    async function loadThemeFromConfig() {
+      try {
+        const response = await fetch('http://localhost:8765/config');
+        if (response.ok) {
+          const config = await response.json();
+          const theme = config.theme || 'dark';
+          applyTheme(theme);
+        }
+      } catch (error) {
+        console.log('Failed to load theme config, using default dark theme');
+      }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else if (theme === 'system') {
+        document.documentElement.setAttribute('data-theme', 'system');
+      } else {
+        document.documentElement.removeAttribute('data-theme'); // Default dark
+      }
+    }
+
+    // Load theme on startup
+    setTimeout(loadThemeFromConfig, 100);
   </script>
 </body>
 </html>

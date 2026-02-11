@@ -116,6 +116,18 @@
 - [x] Data export/import/wipe met bevestiging
 
 ### 2.9 Custom New Tab — Kees.ai 🧀 ✅ DONE
+
+### 2.10 ClaroNote Integration 🎙️ ✅ DONE
+- [x] ClaroNote API client (ClaroNoteManager class)
+- [x] Authentication flow: login, logout, auth status
+- [x] Recording interface in Kees Panel (new tab)
+- [x] API proxy routes in Express server (/claronote/*)
+- [x] Native UI integration (login screen, recording controls, notes list)
+- [x] Keyboard shortcut: Cmd+Shift+C for quick-record toggle
+- [x] Notes listing with status tracking (UPLOADING→PROCESSING→READY)
+- [x] Note detail modal with transcript and summary
+- [x] Auth token storage in ~/.tandem/claronote-auth.json
+- [x] Recording status polling and UI updates
 - [x] Custom new-tab page (shell/newtab.html) in plaats van DuckDuckGo
 - [x] Kees chat widget in new-tab (bottom-right, collapsible)
 - [x] Zoekbalk: DuckDuckGo zoeken of URL navigatie

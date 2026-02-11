@@ -2,6 +2,20 @@
 
 ## [Unreleased] — 2026-02-11
 
+### 🎙️ ClaroNote Integration — Native Voice-to-Text
+
+#### Core Integration (2.10)
+- **ClaroNoteManager class**: complete API client with auth, recording, and notes management
+- **Kees Panel integration**: new 🎙️ tab for ClaroNote interface
+- **Authentication**: login screen with email/password, JWT storage in ~/.tandem/claronote-auth.json
+- **Recording interface**: start/stop recording with visual feedback and timer
+- **Notes management**: list recent notes with status tracking (UPLOADING→PROCESSING→READY)
+- **Note viewer**: modal with full transcript and AI summary
+- **API endpoints**: complete REST API proxy (/claronote/*) for all ClaroNote operations
+- **Keyboard shortcut**: Cmd+Shift+C for quick-record toggle (auto-opens ClaroNote tab)
+- **Status polling**: automatic refresh after upload, real-time processing status
+- **Error handling**: graceful auth token expiry and network error management
+
 ### 🔒🎵 Phase 5 — Advanced Stealth + Audio Capture
 
 #### Fingerprint Protection (5.1-5.5)

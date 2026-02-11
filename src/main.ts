@@ -24,6 +24,7 @@ import { HistoryManager } from './history/manager';
 import { DownloadManager } from './downloads/manager';
 import { AudioCaptureManager } from './audio/capture';
 import { ExtensionLoader } from './extensions/loader';
+import { ClaroNoteManager } from './claronote/manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -50,6 +51,7 @@ let historyManager: HistoryManager | null = null;
 let downloadManager: DownloadManager | null = null;
 let audioCaptureManager: AudioCaptureManager | null = null;
 let extensionLoader: ExtensionLoader | null = null;
+let claroNoteManager: ClaroNoteManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -120,6 +122,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   downloadManager = new DownloadManager();
   audioCaptureManager = new AudioCaptureManager();
   extensionLoader = new ExtensionLoader();
+  claroNoteManager = new ClaroNoteManager();
 
   // Hook download manager into session
   const partition = 'persist:tandem';
@@ -131,7 +134,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     console.warn('⚠️ Failed to load some extensions:', err);
   });
 
-  api = new TandemAPI(win, API_PORT, tabManager, panelManager, drawManager, activityTracker, voiceManager, behaviorObserver, configManager, siteMemory, watchManager, headlessManager, formMemory, contextBridge, pipManager, networkInspector, chromeImporter, bookmarkManager, historyManager, downloadManager, audioCaptureManager, extensionLoader);
+  api = new TandemAPI(win, API_PORT, tabManager, panelManager, drawManager, activityTracker, voiceManager, behaviorObserver, configManager, siteMemory, watchManager, headlessManager, formMemory, contextBridge, pipManager, networkInspector, chromeImporter, bookmarkManager, historyManager, downloadManager, audioCaptureManager, extensionLoader, claroNoteManager);
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
 
@@ -394,12 +397,37 @@ function registerShortcuts(): void {
     }
   });
 
+  // Cmd+? — show keyboard shortcuts overlay
+  globalShortcut.register('CommandOrControl+?', () => {
+    mainWindow?.webContents.send('shortcut', 'show-shortcuts');
+  });
+
+  // Cmd+= — zoom in
+  globalShortcut.register('CommandOrControl+=', () => {
+    mainWindow?.webContents.send('shortcut', 'zoom-in');
+  });
+
+  // Cmd+- — zoom out  
+  globalShortcut.register('CommandOrControl+-', () => {
+    mainWindow?.webContents.send('shortcut', 'zoom-out');
+  });
+
+  // Cmd+0 — reset zoom
+  globalShortcut.register('CommandOrControl+0', () => {
+    mainWindow?.webContents.send('shortcut', 'zoom-reset');
+  });
+
   // Cmd+1-9 — switch tabs
   for (let i = 1; i <= 9; i++) {
     globalShortcut.register(`CommandOrControl+${i}`, () => {
       mainWindow?.webContents.send('shortcut', `focus-tab-${i - 1}`);
     });
   }
+
+  // Cmd+Shift+C — ClaroNote quick record toggle
+  globalShortcut.register('CommandOrControl+Shift+C', () => {
+    mainWindow?.webContents.send('shortcut', 'claronote-record');
+  });
 }
 
 // Copilot alert — notify Robin when Kees needs help

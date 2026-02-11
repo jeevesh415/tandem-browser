@@ -6,6 +6,8 @@
   <title>Tandem — Instellingen</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    /* Dark theme (default) */
     :root {
       --bg: #1a1a2e;
       --surface: #16213e;
@@ -18,6 +20,38 @@
       --warning: #f0a500;
       --border: rgba(255,255,255,0.08);
       --danger: #e94560;
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --accent: #e94560;
+      --text: #1e293b;
+      --text-dim: #64748b;
+      --input-bg: #f1f5f9;
+      --success: #059669;
+      --warning: #d97706;
+      --border: rgba(0,0,0,0.08);
+      --danger: #e94560;
+    }
+
+    /* System preference detection */
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface2: #f1f5f9;
+        --accent: #e94560;
+        --text: #1e293b;
+        --text-dim: #64748b;
+        --input-bg: #f1f5f9;
+        --success: #059669;
+        --warning: #d97706;
+        --border: rgba(0,0,0,0.08);
+        --danger: #e94560;
+      }
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -283,6 +317,7 @@
     <a href="#general" class="active" data-section="general">⚙️ Algemeen</a>
     <a href="#screenshots" data-section="screenshots">📸 Screenshots</a>
     <a href="#voice" data-section="voice">🎙️ Voice</a>
+    <a href="#appearance" data-section="appearance">🎨 Thema</a>
     <a href="#stealth" data-section="stealth">🛡️ Stealth</a>
     <a href="#behavior" data-section="behavior">🧬 Behavioral Learning</a>
     <a href="#data" data-section="data">💾 Data</a>
@@ -452,6 +487,34 @@
       </div>
     </div>
 
+    <!-- ═══ Appearance ═══ -->
+    <div class="section" id="appearance">
+      <h2>🎨 Thema</h2>
+      <p class="section-desc">Kleurschema en visuele instellingen</p>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Kleurschema</div>
+          <div class="field-desc">Kies tussen donker, licht of systeem voorkeur</div>
+        </div>
+        <select id="cfg-theme">
+          <option value="dark">🌙 Donker</option>
+          <option value="light">☀️ Licht</option>
+          <option value="system">🔄 Systeem voorkeur</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Help link</div>
+          <div class="field-desc">Snel toegang tot help en shortcuts</div>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="openHelpPage()">
+          📖 Open Help Pagina
+        </button>
+      </div>
+    </div>
+
     <!-- ═══ Stealth ═══ -->
     <div class="section" id="stealth">
       <h2>🛡️ Stealth</h2>
@@ -607,12 +670,16 @@
       const g = config.general || {};
       const s = config.screenshots || {};
       const v = config.voice || {};
+      const a = config.appearance || {};
       const st = config.stealth || {};
       const b = config.behavior || {};
 
       // General
       setVal('cfg-startPage', g.startPage || 'kees');
       setVal('cfg-customStartUrl', g.customStartUrl || '');
+
+      // Appearance/Theme
+      setVal('cfg-theme', a.theme || 'dark');
       setVal('cfg-language', g.language || 'nl-BE');
       setVal('cfg-keesPanelPosition', g.keesPanelPosition || 'right');
       setChecked('cfg-keesPanelDefaultOpen', !!g.keesPanelDefaultOpen);
@@ -698,6 +765,7 @@
     wire('cfg-localFolderPath', 'screenshots.localFolderPath');
     wire('cfg-voiceLanguage', 'voice.inputLanguage');
     wire('cfg-autoSendOnSilence', 'voice.autoSendOnSilence');
+    wire('cfg-theme', 'appearance.theme');
     wire('cfg-userAgent', 'stealth.userAgent');
     wire('cfg-customUserAgent', 'stealth.customUserAgent');
     wire('cfg-stealthLevel', 'stealth.stealthLevel');
@@ -834,6 +902,26 @@
         } catch { showToast('Wissen mislukt ✕'); }
       });
     });
+
+    // ═══ Theme and Help Functions ═══
+    function openHelpPage() {
+      window.open('help.html', '_blank');
+    }
+
+    // Handle theme changes
+    document.getElementById('cfg-theme').addEventListener('change', (e) => {
+      applyTheme(e.target.value);
+    });
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else if (theme === 'system') {
+        document.documentElement.setAttribute('data-theme', 'system');
+      } else {
+        document.documentElement.removeAttribute('data-theme'); // Default dark
+      }
+    }
 
     // ═══ Init ═══
     loadConfig();

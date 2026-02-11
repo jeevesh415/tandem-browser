@@ -6,6 +6,8 @@
   <title>Nieuwe Tab — Tandem</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    /* Dark theme (default) */
     :root {
       --bg: #1a1a2e;
       --surface: #16213e;
@@ -14,6 +16,30 @@
       --text-dim: #888;
       --input-bg: #0f3460;
       --success: #4ecca3;
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --accent: #e94560;
+      --text: #1e293b;
+      --text-dim: #64748b;
+      --input-bg: #f1f5f9;
+      --success: #059669;
+    }
+
+    /* System preference detection */
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --accent: #e94560;
+        --text: #1e293b;
+        --text-dim: #64748b;
+        --input-bg: #f1f5f9;
+        --success: #059669;
+      }
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -453,6 +479,33 @@
         }
       } catch {}
     }, 2000);
+
+    // Load theme from config
+    async function loadThemeFromConfig() {
+      try {
+        const response = await fetch('http://localhost:8765/config');
+        if (response.ok) {
+          const config = await response.json();
+          const theme = (config.appearance && config.appearance.theme) || 'dark';
+          applyTheme(theme);
+        }
+      } catch (error) {
+        console.log('Failed to load theme config, using default dark theme');
+      }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else if (theme === 'system') {
+        document.documentElement.setAttribute('data-theme', 'system');
+      } else {
+        document.documentElement.removeAttribute('data-theme'); // Default dark
+      }
+    }
+
+    // Load theme on startup
+    setTimeout(loadThemeFromConfig, 100);
   </script>
 </body>
 </html>
