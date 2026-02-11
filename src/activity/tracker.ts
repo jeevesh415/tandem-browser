@@ -24,7 +24,7 @@ export class ActivityTracker {
   private log: ActivityEntry[] = [];
   private counter = 0;
   private maxEntries = 1000;
-  private autoSnapshotEnabled = true;
+  private autoSnapshotEnabled = false; // Disabled until stable
 
   constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager) {
     this.win = win;
@@ -51,12 +51,16 @@ export class ActivityTracker {
       data as Record<string, unknown>
     );
 
-    // Auto-snapshot on navigation
-    if (this.autoSnapshotEnabled && data.type === 'did-navigate' && data.url) {
-      // Delay snapshot to let page render
-      setTimeout(() => {
-        this.win.webContents.send('auto-snapshot-request', { url: data.url });
-      }, 2000);
+    // Auto-snapshot on navigation (skip initial loads and internal pages)
+    if (this.autoSnapshotEnabled && data.type === 'did-navigate' && data.url && this.counter > 5) {
+      const url = data.url as string;
+      if (url.startsWith('http') && !url.includes('duckduckgo.com')) {
+        setTimeout(() => {
+          try {
+            this.win.webContents.send('auto-snapshot-request', { url });
+          } catch { /* window may be closed */ }
+        }, 3000);
+      }
     }
   }
 
