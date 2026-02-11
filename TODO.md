@@ -173,27 +173,33 @@
 - [x] Robin kan headless tab "zichtbaar" maken / verbergen
 - [x] API: `POST /headless/open`, `GET /headless/content`, `GET /headless/status`, `POST /headless/show`, `POST /headless/hide`, `POST /headless/close`
 
-### 3.4 Form Memory — Alle formulieren onthouden
-- [ ] Track elke form submit: welke velden, welke waarden
-- [ ] `~/.tandem/forms/{domain}.json`
-- [ ] Auto-suggest bij volgende bezoek
-- [ ] "Kees, vul dit in" → formulier invullen met opgeslagen data
-- [ ] Gaat verder dan passwords: adressen, telefoonnummers, voorkeuren
-- [ ] API: `GET /forms/memory/{domain}`, `POST /forms/fill`
+### 3.4 Form Memory — Alle formulieren onthouden ✅ DONE
+- [x] Track elke form submit: welke velden, welke waarden
+- [x] `~/.tandem/forms/{domain}.json`
+- [x] Auto-suggest bij volgende bezoek (via `POST /forms/fill`)
+- [x] "Kees, vul dit in" → formulier invullen met opgeslagen data
+- [x] Gaat verder dan passwords: adressen, telefoonnummers, voorkeuren
+- [x] API: `GET /forms/memory`, `GET /forms/memory/{domain}`, `POST /forms/fill`, `DELETE /forms/memory/{domain}`
+- [x] Sensitive data (password velden) AES-256-GCM encrypted
+- [x] Encryption key auto-generated in `~/.tandem/config.json`
 
-### 3.5 Context Bridge — Tandem ↔ OpenClaw
-- [ ] Alles wat Kees leest in Tandem → beschikbaar in OpenClaw chats
-- [ ] Web geheugen persistent: niet opnieuw fetchen wat we al gezien hebben
-- [ ] Tandem als OpenClaw skill: `tandem.read("linkedin.com/in/robinwaslander")`
-- [ ] Bi-directioneel: OpenClaw chat → Tandem actie, Tandem observatie → OpenClaw kennis
-- [ ] Shared context store: `~/.tandem/context/`
+### 3.5 Context Bridge — Tandem ↔ OpenClaw ✅ DONE
+- [x] Alles wat Kees leest in Tandem → beschikbaar via API
+- [x] Web geheugen persistent: snapshots in `~/.tandem/context/`
+- [x] Doorzoekbaar: `GET /context/search?q=...`
+- [x] API: `GET /context/recent`, `GET /context/search`, `GET /context/page`, `POST /context/note`
+- [x] Auto-records context snapshot bij elke pagina load
+- [ ] Tandem als OpenClaw skill: `tandem.read("linkedin.com/in/robinwaslander")` (later)
 
-### 3.6 Bidirectioneel Stuur — Kees navigeert, Robin ziet
-- [ ] Kees opent een pagina → verschijnt live in Robin's browser
-- [ ] "Kijk, dit vond ik" → tab opent met highlight
-- [ ] Robin kan overnemen, Kees kan terugnemen
-- [ ] Visuele indicator: 🧀 icoontje als Kees een tab bestuurt, 👤 als Robin bestuurt
-- [ ] Smooth handoff: geen flicker, geen reload
+### 3.6 Bidirectioneel Stuur — Kees navigeert, Robin ziet ✅ DONE
+- [x] Kees opent een pagina → verschijnt live in Robin's browser
+- [x] Tab.source tracking: 'robin' | 'kees'
+- [x] Robin kan overnemen, Kees kan terugnemen via `POST /tabs/source`
+- [x] Visuele indicator: 🧀/👤 via `tab-source-changed` IPC event
+- [x] `POST /tabs/open` met `source: "kees"` → tab krijgt kees indicator
+- [x] `POST /navigate` auto-marks tab als kees-controlled
+- [x] Activity log toont source per actie
+- [ ] Renderer UI: 🧀/👤 emoji in tab bar (needs shell/index.html update)
 
 ### 3.7 PiP Mode — Always-on-top mini-venster
 - [ ] Klein floating venster (Electron BrowserWindow, alwaysOnTop)

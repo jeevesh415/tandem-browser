@@ -2,6 +2,29 @@
 
 ## [Unreleased] — 2026-02-11
 
+### 🧠 Phase 3.4 — Form Memory
+- New `FormMemoryManager` class (`src/memory/form-memory.ts`)
+- Tracks every form submission per domain in `~/.tandem/forms/{domain}.json`
+- AES-256-GCM encryption for sensitive fields (type=password)
+- Auto-generates encryption key in `~/.tandem/config.json`
+- API: `GET /forms/memory`, `GET /forms/memory/:domain`, `POST /forms/fill`, `DELETE /forms/memory/:domain`
+- Merge logic: returns most recent values per field for auto-fill
+
+### 🌉 Phase 3.5 — Context Bridge
+- New `ContextBridge` class (`src/bridge/context-bridge.ts`)
+- Auto-records context snapshot on every page load: URL, title, summary (1000 chars), headings, links count
+- Persistent searchable store in `~/.tandem/context/_index.json` (max 5000 entries)
+- API: `GET /context/recent`, `GET /context/search?q=...`, `GET /context/page?url=...`, `POST /context/note`
+- OpenClaw can query Tandem's web knowledge via curl
+
+### 🧀 Phase 3.6 — Bidirectional Steering
+- Tab source tracking: `Tab.source` field (`'robin'` | `'kees'`)
+- `POST /tabs/open` supports `source` parameter
+- `POST /tabs/source` to change tab controller
+- `POST /navigate` auto-marks tab as kees-controlled
+- `tab-source-changed` IPC event for renderer source indicators
+- Activity log tracks source of each action
+
 ### 🧠 Phase 3.1 — Site Memory
 - New `SiteMemoryManager` class (`src/memory/site-memory.ts`)
 - Auto-extract page data on every visit: title, URL, meta description, headings, forms/links count, text preview (500 chars)
