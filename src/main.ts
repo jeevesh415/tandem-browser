@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
 import { TabManager } from './tabs/manager';
@@ -8,6 +9,7 @@ import { PanelManager } from './panel/manager';
 import { DrawOverlayManager } from './draw/overlay';
 import { ActivityTracker } from './activity/tracker';
 import { VoiceManager } from './voice/recognition';
+import { BehaviorObserver } from './behavior/observer';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -19,6 +21,7 @@ let panelManager: PanelManager | null = null;
 let drawManager: DrawOverlayManager | null = null;
 let activityTracker: ActivityTracker | null = null;
 let voiceManager: VoiceManager | null = null;
+let behaviorObserver: BehaviorObserver | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -49,6 +52,7 @@ async function createWindow(): Promise<BrowserWindow> {
   mainWindow.on('closed', () => {
     mainWindow = null;
     tabManager = null;
+    if (behaviorObserver) behaviorObserver.destroy();
   });
 
   return mainWindow;
@@ -60,7 +64,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   drawManager = new DrawOverlayManager(win);
   activityTracker = new ActivityTracker(win, panelManager, drawManager);
   voiceManager = new VoiceManager(win, panelManager);
-  api = new TandemAPI(win, API_PORT, tabManager, panelManager, drawManager, activityTracker, voiceManager);
+  behaviorObserver = new BehaviorObserver(win);
+  api = new TandemAPI(win, API_PORT, tabManager, panelManager, drawManager, activityTracker, voiceManager, behaviorObserver);
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
 
@@ -98,6 +103,19 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     }
   });
 
+  // ═══ Quick Screenshot (no draw mode) ═══
+  ipcMain.handle('quick-screenshot', async () => {
+    try {
+      const activeTab = tabManager?.getActiveTab();
+      if (!activeTab) return { ok: false, error: 'No active tab' };
+
+      const result = await drawManager!.captureQuickScreenshot(activeTab.webContentsId, activeTab.url);
+      return result;
+    } catch (e: any) {
+      return { ok: false, error: e.message };
+    }
+  });
+
   // ═══ Voice IPC ═══
   ipcMain.on('voice-transcript', (_event, data: { text: string; isFinal: boolean }) => {
     if (voiceManager) {
@@ -116,6 +134,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (activityTracker) {
       activityTracker.onWebviewEvent(data);
     }
+    // Also record in behavioral observer
+    if (behaviorObserver && data.type === 'did-navigate' && data.url) {
+      behaviorObserver.recordNavigation(data.url, data.tabId);
+    }
   });
 
   // Tab management IPC for renderer shortcuts
@@ -128,6 +150,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   });
 
   ipcMain.handle('tab-focus', async (_event, tabId: string) => {
+    if (behaviorObserver) behaviorObserver.recordTabSwitch(tabId);
     return tabManager?.focusTab(tabId);
   });
 
@@ -166,6 +189,11 @@ function registerShortcuts(): void {
     voiceManager?.toggleVoice();
   });
 
+  // Cmd+Shift+S — quick screenshot (no draw mode)
+  globalShortcut.register('CommandOrControl+Shift+S', () => {
+    mainWindow?.webContents.send('shortcut', 'quick-screenshot');
+  });
+
   // Cmd+1-9 — switch tabs
   for (let i = 1; i <= 9; i++) {
     globalShortcut.register(`CommandOrControl+${i}`, () => {
@@ -199,6 +227,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
+  if (behaviorObserver) behaviorObserver.destroy();
   if (process.platform !== 'darwin') {
     app.quit();
   }

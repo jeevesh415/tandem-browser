@@ -350,9 +350,10 @@
       max-width: 85%;
       word-break: break-word;
     }
-    .chat-msg.robin { background: var(--input-bg); align-self: flex-end; color: var(--text); }
-    .chat-msg.kees { background: rgba(233,69,96,0.15); align-self: flex-start; color: var(--text); }
+    .chat-msg.robin { background: rgba(78, 204, 163, 0.2); border: 1px solid rgba(78, 204, 163, 0.3); align-self: flex-end; color: var(--text); }
+    .chat-msg.kees { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); }
     .chat-msg .msg-from { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
+    .chat-msg .msg-time { font-size: 9px; opacity: 0.35; margin-top: 3px; text-align: right; }
 
     .chat-input-wrap {
       display: flex;
@@ -387,30 +388,64 @@
     }
     .chat-send-btn:hover { opacity: 0.85; }
 
-    /* Voice indicator */
+    /* Voice indicator — large, prominent */
     .voice-indicator {
       display: none;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      background: rgba(233, 69, 96, 0.2);
-      border: 1px solid var(--accent);
-      border-radius: 8px;
-      font-size: 11px;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(233, 69, 96, 0.25);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      font-size: 13px;
       color: var(--accent);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      font-weight: 600;
     }
     .voice-indicator.active { display: flex; }
     .voice-dot {
-      width: 8px; height: 8px;
+      width: 16px; height: 16px;
       border-radius: 50%;
       background: var(--accent);
-      animation: pulse 1s infinite;
+      animation: voicePulse 0.8s ease-in-out infinite;
+      flex-shrink: 0;
     }
+    @keyframes voicePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.5; }
+    }
+    .voice-label { white-space: nowrap; }
     .voice-transcript-live {
       flex: 1;
       font-style: italic;
       opacity: 0.8;
+      font-weight: 400;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .typing-indicator.active { display: flex; }
+    .typing-dots span {
+      display: inline-block;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin: 0 1px;
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
     }
 
     /* Screenshots section */
@@ -479,6 +514,7 @@
     <button id="btn-forward" title="Vooruit">→</button>
     <button id="btn-reload" title="Herladen">⟳</button>
     <input class="url-bar" id="url-bar" type="text" placeholder="Voer URL in of zoek..." value="">
+    <button id="btn-screenshot" title="Screenshot (⌘⇧S)">📸</button>
     <div class="status-dot" id="status-dot" title="Verbonden met Kees API"></div>
     <span class="kees-badge">🧀 Kees</span>
   </div>
@@ -523,10 +559,14 @@
         <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;">
           <div class="voice-indicator" id="voice-indicator">
             <span class="voice-dot"></span>
-            <span>🎙️ Luistert...</span>
+            <span class="voice-label">🎙️ Spreek nu...</span>
             <span class="voice-transcript-live" id="voice-live-text"></span>
           </div>
           <div class="chat-messages" id="chat-messages"></div>
+          <div class="typing-indicator" id="kees-typing">
+            <span class="typing-dots"><span></span><span></span><span></span></span>
+            <span>Kees denkt...</span>
+          </div>
           <div class="chat-input-wrap">
             <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
             <button class="chat-send-btn" id="btn-chat-send">→</button>
@@ -834,12 +874,19 @@
           window.tandem.newTab();
         } else if (action === 'close-tab') {
           if (activeTabId) window.tandem.closeTab(activeTabId);
+        } else if (action === 'quick-screenshot') {
+          window.tandem.quickScreenshot();
         } else if (action.startsWith('focus-tab-')) {
           const index = parseInt(action.replace('focus-tab-', ''), 10);
           window.tandem.focusTabByIndex(index);
         }
       });
     }
+
+    // Screenshot toolbar button
+    document.getElementById('btn-screenshot').addEventListener('click', () => {
+      if (window.tandem) window.tandem.quickScreenshot();
+    });
 
     // ═══════════════════════════════════════════════
     // Copilot alerts
@@ -908,13 +955,31 @@
       });
 
       // Chat messages
-      window.tandem.onChatMessage((msg) => {
+      const renderedMsgIds = new Set();
+      function renderChatMessage(msg) {
+        if (renderedMsgIds.has(msg.id)) return;
+        renderedMsgIds.add(msg.id);
         const messagesEl = document.getElementById('chat-messages');
         const div = document.createElement('div');
         div.className = `chat-msg ${msg.from}`;
-        div.innerHTML = `<div class="msg-from">${msg.from === 'robin' ? '🧑 Robin' : '🧀 Kees'}</div>${msg.text}`;
+        const time = new Date(msg.timestamp).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `<div class="msg-from">${msg.from === 'robin' ? '🧑 Robin' : '🧀 Kees'}</div>${msg.text}<div class="msg-time">${time}</div>`;
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      window.tandem.onChatMessage((msg) => {
+        renderChatMessage(msg);
+      });
+
+      // Kees typing indicator
+      window.tandem.onKeesTyping((data) => {
+        const el = document.getElementById('kees-typing');
+        if (data.typing) {
+          el.classList.add('active');
+        } else {
+          el.classList.remove('active');
+        }
       });
 
       // Screenshot notifications
@@ -1362,6 +1427,43 @@
         window.tandem.snapForKees();
       });
     }
+
+    // ═══════════════════════════════════════════════
+    // Chat polling — fetch new messages every 2 seconds
+    // Ensures messages sent via API (POST /chat) appear immediately
+    // ═══════════════════════════════════════════════
+    let lastKnownMsgId = 0;
+    async function pollChatMessages() {
+      try {
+        const resp = await fetch(`http://localhost:8765/chat?since_id=${lastKnownMsgId}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.messages && data.messages.length > 0) {
+            for (const msg of data.messages) {
+              renderChatMessage(msg);
+              if (msg.id > lastKnownMsgId) lastKnownMsgId = msg.id;
+            }
+          }
+        }
+      } catch { /* API not ready yet */ }
+    }
+    // Initial load of chat history
+    setTimeout(async () => {
+      try {
+        const resp = await fetch('http://localhost:8765/chat?limit=100');
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.messages) {
+            for (const msg of data.messages) {
+              renderChatMessage(msg);
+              if (msg.id > lastKnownMsgId) lastKnownMsgId = msg.id;
+            }
+          }
+        }
+      } catch { /* API not ready yet */ }
+    }, 1500);
+    // Poll every 2 seconds
+    setInterval(pollChatMessages, 2000);
 
     // ═══════════════════════════════════════════════
     // Screenshot preview with actual images in panel

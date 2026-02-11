@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('screenshot-taken', (_event, data) => callback(data));
   },
   snapForKees: () => ipcRenderer.invoke('snap-for-kees'),
+  quickScreenshot: () => ipcRenderer.invoke('quick-screenshot'),
 
   // Voice
   onVoiceToggle: (callback: (data: { listening: boolean }) => void) => {
@@ -87,5 +88,10 @@ contextBridge.exposeInMainWorld('tandem', {
   },
   onAutoSnapshotRequest: (callback: (data: { url: string }) => void) => {
     ipcRenderer.on('auto-snapshot-request', (_event, data) => callback(data));
+  },
+
+  // Kees typing indicator
+  onKeesTyping: (callback: (data: { typing: boolean }) => void) => {
+    ipcRenderer.on('kees-typing', (_event, data) => callback(data));
   },
 });

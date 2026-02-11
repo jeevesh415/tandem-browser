@@ -60,6 +60,8 @@
 - [x] Visuele indicator: 🔴 pulserende dot wanneer actief
 - [ ] Combi: voice + annotated screenshot = één bericht naar Kees
 - [x] API: `POST /voice/start`, `POST /voice/stop`, `GET /voice/status`
+- [x] Bugfix: voice auto-restart na onend (continuous listening 10s+)
+- [x] Verbeterde visuele feedback: grotere pulserende indicator, "Spreek nu..."
 - [ ] Later: Whisper lokaal als offline fallback
 
 ### 2.5 Live Co-Pilot Feed 👁️ 🔄 STARTED
@@ -71,8 +73,12 @@
 
 ### 2.6 Kees Chat Koppeling 💬
 - [ ] Chat paneel berichten doorsturen naar OpenClaw (via webhook of polling)
-- [ ] Kees kan antwoorden terugsturen via `POST /chat` → verschijnt in paneel
-- [ ] Chat history persistent (overleven restart)
+- [x] Kees kan antwoorden terugsturen via `POST /chat` → verschijnt in paneel
+- [x] Chat history persistent (overleven restart) — ~/.tandem/chat-history.json
+- [x] Chat UI: Robin rechts (groen), Kees links (accent), timestamps
+- [x] Typing indicator als Kees "denkt" — `POST /chat/typing`
+- [x] Chat auto-refresh polling (elke 2 seconden)
+- [x] Auto-scroll naar nieuwste bericht
 - [ ] Combi: annotated screenshot + voice/tekst = één bericht naar Kees
 - [ ] Notificatie als Kees antwoordt terwijl paneel dicht is
 
@@ -110,8 +116,9 @@
 - [ ] Tandem branding + Robin's voorkeuren
 
 ### 2.8 Behavioral Learning 🧬
-- [ ] Observation layer: track mouse, clicks, scroll, keypress via Electron events
-- [ ] Raw data opslag: `~/.tandem/behavior/raw/`
+- [x] Observation layer: track mouse, clicks, scroll, keypress via Electron events
+- [x] Raw data opslag: `~/.tandem/behavior/raw/{date}.jsonl`
+- [x] API: `GET /behavior/stats` — basis statistieken
 - [ ] Profiel compiler: statistische analyse na ~1 week data
 - [ ] Typing bigram timing model (per toets-paar interval)
 - [ ] Mouse path Bézier curve templates

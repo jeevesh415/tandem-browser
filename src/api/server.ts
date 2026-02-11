@@ -8,6 +8,7 @@ import { PanelManager } from '../panel/manager';
 import { DrawOverlayManager } from '../draw/overlay';
 import { ActivityTracker } from '../activity/tracker';
 import { VoiceManager } from '../voice/recognition';
+import { BehaviorObserver } from '../behavior/observer';
 import { humanizedClick, humanizedType } from '../input/humanized';
 
 export class TandemAPI {
@@ -20,8 +21,9 @@ export class TandemAPI {
   private drawManager: DrawOverlayManager;
   private activityTracker: ActivityTracker;
   private voiceManager: VoiceManager;
+  private behaviorObserver: BehaviorObserver;
 
-  constructor(win: BrowserWindow, port: number = 8765, tabManager: TabManager, panelManager: PanelManager, drawManager: DrawOverlayManager, activityTracker: ActivityTracker, voiceManager: VoiceManager) {
+  constructor(win: BrowserWindow, port: number = 8765, tabManager: TabManager, panelManager: PanelManager, drawManager: DrawOverlayManager, activityTracker: ActivityTracker, voiceManager: VoiceManager, behaviorObserver: BehaviorObserver) {
     this.win = win;
     this.port = port;
     this.tabManager = tabManager;
@@ -29,6 +31,7 @@ export class TandemAPI {
     this.drawManager = drawManager;
     this.activityTracker = activityTracker;
     this.voiceManager = voiceManager;
+    this.behaviorObserver = behaviorObserver;
     this.app = express();
     this.app.use(cors());
     this.app.use(express.json());
@@ -236,6 +239,7 @@ export class TandemAPI {
           deltaY,
         });
         this.panelManager.logActivity('scroll', { direction, amount });
+        this.behaviorObserver.recordScroll(deltaY);
         res.json({ ok: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -333,7 +337,6 @@ export class TandemAPI {
     // TAB MANAGEMENT
     // ═══════════════════════════════════════════════
 
-    /** Open a new tab */
     this.app.post('/tabs/open', async (req: Request, res: Response) => {
       const { url = 'about:blank', groupId } = req.body;
       try {
@@ -344,7 +347,6 @@ export class TandemAPI {
       }
     });
 
-    /** Close a tab */
     this.app.post('/tabs/close', async (req: Request, res: Response) => {
       const { tabId } = req.body;
       if (!tabId) { res.status(400).json({ error: 'tabId required' }); return; }
@@ -356,7 +358,6 @@ export class TandemAPI {
       }
     });
 
-    /** List all tabs */
     this.app.get('/tabs/list', async (_req: Request, res: Response) => {
       try {
         const tabs = this.tabManager.listTabs();
@@ -367,7 +368,6 @@ export class TandemAPI {
       }
     });
 
-    /** Focus a tab */
     this.app.post('/tabs/focus', async (req: Request, res: Response) => {
       const { tabId } = req.body;
       if (!tabId) { res.status(400).json({ error: 'tabId required' }); return; }
@@ -379,7 +379,6 @@ export class TandemAPI {
       }
     });
 
-    /** Group tabs */
     this.app.post('/tabs/group', async (req: Request, res: Response) => {
       const { groupId, name, color = '#4285f4', tabIds } = req.body;
       if (!groupId || !name || !tabIds) {
@@ -398,7 +397,6 @@ export class TandemAPI {
     // PANEL — Kees side panel
     // ═══════════════════════════════════════════════
 
-    /** Toggle panel */
     this.app.post('/panel/toggle', (req: Request, res: Response) => {
       try {
         const { open } = req.body;
@@ -409,12 +407,18 @@ export class TandemAPI {
       }
     });
 
-    /** Get chat messages */
+    /** Get chat messages (supports ?since_id= for polling) */
     this.app.get('/chat', (req: Request, res: Response) => {
       try {
-        const limit = parseInt(req.query.limit as string) || 50;
-        const messages = this.panelManager.getChatMessages(limit);
-        res.json({ messages });
+        const sinceId = parseInt(req.query.since_id as string);
+        if (sinceId && !isNaN(sinceId)) {
+          const messages = this.panelManager.getChatMessagesSince(sinceId);
+          res.json({ messages });
+        } else {
+          const limit = parseInt(req.query.limit as string) || 50;
+          const messages = this.panelManager.getChatMessages(limit);
+          res.json({ messages });
+        }
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
@@ -432,11 +436,21 @@ export class TandemAPI {
       }
     });
 
+    /** Set Kees typing indicator */
+    this.app.post('/chat/typing', (req: Request, res: Response) => {
+      try {
+        const { typing = true } = req.body;
+        this.panelManager.setKeesTyping(typing);
+        res.json({ ok: true, typing });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // DRAW — Annotated screenshots
     // ═══════════════════════════════════════════════
 
-    /** Get last annotated screenshot */
     this.app.get('/screenshot/annotated', (_req: Request, res: Response) => {
       try {
         const png = this.drawManager.getLastScreenshot();
@@ -450,7 +464,6 @@ export class TandemAPI {
       }
     });
 
-    /** Take annotated screenshot */
     this.app.post('/screenshot/annotated', async (_req: Request, res: Response) => {
       try {
         const activeTab = this.tabManager.getActiveTab();
@@ -466,7 +479,6 @@ export class TandemAPI {
       }
     });
 
-    /** Toggle draw mode */
     this.app.post('/draw/toggle', (req: Request, res: Response) => {
       try {
         const { enabled } = req.body;
@@ -477,7 +489,6 @@ export class TandemAPI {
       }
     });
 
-    /** List recent screenshots */
     this.app.get('/screenshots', (req: Request, res: Response) => {
       try {
         const limit = parseInt(req.query.limit as string) || 10;
@@ -492,7 +503,6 @@ export class TandemAPI {
     // VOICE — Speech recognition control
     // ═══════════════════════════════════════════════
 
-    /** Start voice input */
     this.app.post('/voice/start', (_req: Request, res: Response) => {
       try {
         this.voiceManager.start();
@@ -502,7 +512,6 @@ export class TandemAPI {
       }
     });
 
-    /** Stop voice input */
     this.app.post('/voice/stop', (_req: Request, res: Response) => {
       try {
         this.voiceManager.stop();
@@ -512,7 +521,6 @@ export class TandemAPI {
       }
     });
 
-    /** Get voice status */
     this.app.get('/voice/status', (_req: Request, res: Response) => {
       try {
         const status = this.voiceManager.getStatus();
@@ -526,13 +534,25 @@ export class TandemAPI {
     // ACTIVITY LOG — Live co-pilot feed
     // ═══════════════════════════════════════════════
 
-    /** Get detailed activity log with timestamps */
     this.app.get('/activity-log', (req: Request, res: Response) => {
       try {
         const limit = parseInt(req.query.limit as string) || 100;
         const since = req.query.since ? parseInt(req.query.since as string) : undefined;
         const entries = this.activityTracker.getLog(limit, since);
         res.json({ entries, count: entries.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // BEHAVIORAL LEARNING — Stats endpoint
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/behavior/stats', (_req: Request, res: Response) => {
+      try {
+        const stats = this.behaviorObserver.getStats();
+        res.json(stats);
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

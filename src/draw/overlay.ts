@@ -162,6 +162,52 @@ export class DrawOverlayManager {
     }
   }
 
+  /**
+   * Quick screenshot: capture webview ONLY (no draw overlay), copy to clipboard + save.
+   * Works independently of draw mode.
+   */
+  async captureQuickScreenshot(activeWebContentsId: number, currentUrl: string): Promise<{ ok: boolean; path?: string; error?: string }> {
+    try {
+      const wc = webContents.fromId(activeWebContentsId);
+      if (!wc) {
+        return { ok: false, error: 'WebContents not found' };
+      }
+
+      // Capture webview only
+      const nativeImg = await wc.capturePage();
+      const buffer = nativeImg.toPNG();
+      const image = nativeImage.createFromBuffer(buffer);
+
+      // Copy to clipboard
+      clipboard.writeImage(image);
+
+      // Save to ~/Pictures/Tandem/
+      const slug = this.urlToSlug(currentUrl);
+      const timestamp = Date.now();
+      const filename = `tandem-${slug}-${timestamp}.png`;
+      const picturesPath = path.join(this.picturesDir, filename);
+      fs.writeFileSync(picturesPath, buffer);
+
+      // Also save to app screenshots dir
+      const appPath = path.join(this.screenshotDir, filename);
+      fs.writeFileSync(appPath, buffer);
+      this.lastScreenshotPath = appPath;
+
+      // Notify renderer
+      const base64 = buffer.toString('base64');
+      this.win.webContents.send('screenshot-taken', {
+        path: picturesPath,
+        appPath,
+        filename,
+        base64,
+      });
+
+      return { ok: true, path: picturesPath };
+    } catch (e: any) {
+      return { ok: false, error: e.message };
+    }
+  }
+
   /** Get last annotated screenshot as PNG buffer */
   getLastScreenshot(): Buffer | null {
     if (!this.lastScreenshotPath || !fs.existsSync(this.lastScreenshotPath)) {
