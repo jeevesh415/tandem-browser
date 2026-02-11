@@ -1266,6 +1266,17 @@
     const keesPanel = document.getElementById('kees-panel');
     const panelBody = document.getElementById('panel-body');
 
+    // Listen for Cmd+K panel toggle from main process
+    if (window.tandem && window.tandem.onPanelToggle) {
+      window.tandem.onPanelToggle((data) => {
+        if (data.open) {
+          keesPanel.classList.add('open');
+        } else {
+          keesPanel.classList.remove('open');
+        }
+      });
+    }
+
     // Panel tab switching
     document.querySelectorAll('.panel-tab').forEach(btn => {
       btn.addEventListener('click', () => {
