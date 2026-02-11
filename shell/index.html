@@ -1319,8 +1319,9 @@
       // Chat messages
       const renderedMsgIds = new Set();
       function renderChatMessage(msg) {
-        if (renderedMsgIds.has(msg.id)) return;
-        renderedMsgIds.add(msg.id);
+        const numId = Number(msg.id);
+        if (renderedMsgIds.has(numId)) return;
+        renderedMsgIds.add(numId);
         const messagesEl = document.getElementById('chat-messages');
         const div = document.createElement('div');
         div.className = `chat-msg ${msg.from}`;
@@ -1842,7 +1843,7 @@
           if (data.messages && data.messages.length > 0) {
             for (const msg of data.messages) {
               renderChatMessage(msg);
-              if (msg.id > lastKnownMsgId) lastKnownMsgId = msg.id;
+              if (Number(msg.id) > lastKnownMsgId) lastKnownMsgId = Number(msg.id);
             }
           }
         }
@@ -1857,7 +1858,7 @@
           if (data.messages) {
             for (const msg of data.messages) {
               renderChatMessage(msg);
-              if (msg.id > lastKnownMsgId) lastKnownMsgId = msg.id;
+              if (Number(msg.id) > lastKnownMsgId) lastKnownMsgId = Number(msg.id);
             }
           }
         }
