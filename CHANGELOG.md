@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] — 2026-02-11 — Phase 2.2 & 2.3: Kees Panel + Draw Tool
+
+### Added
+- **Kees Panel** (`src/panel/manager.ts`) — side panel for AI-human communication
+  - Activity log: real-time feed of navigation, clicks, scrolls, input events
+  - Chat interface: Robin ↔ Kees messaging
+  - Screenshot preview section
+  - Resizable panel with Cmd+K toggle
+- **Draw/Annotatie Tool** (`src/draw/overlay.ts`) — annotation overlay
+  - Transparent canvas overlay ABOVE webview (anti-detect: shell layer)
+  - Tools: arrows, circles, rectangles, freehand lines, text
+  - Colors: red (default), yellow, green, blue
+  - "📸 Snap voor Kees" — composite screenshot (webview + annotations) → PNG
+  - Auto-clear annotations after snap
+  - Screenshots stored in app userData/screenshots/
+  - Cmd+D toggle draw mode
+- **New API endpoints**: `GET /activity-log`, `POST /panel/toggle`, `GET/POST /chat`, `GET/POST /screenshot/annotated`, `POST /draw/toggle`, `GET /screenshots`
+- **New IPC channels**: panel-toggle, activity-event, chat-message, chat-send, draw-mode, draw-clear, screenshot-taken, snap-for-kees
+- Activity tracking on all API actions (navigate, click, type, scroll)
+
+### Security
+- Panel and draw overlay are in the Electron shell layer — invisible to website JavaScript
+- No DOM injection into webview — websites cannot detect Kees' presence
+
 ## [0.2.0] — 2026-02-11 — Phase 2.1: Tabs & Anti-Detect Input
 
 ### Added

@@ -32,24 +32,25 @@
 - [x] Click/type herschreven naar sendInputEvent (Event.isTrusted = true)
 - [x] Humanized delays: gaussian random timing (80-300ms click, 30-120ms typing)
 
-### 2.2 Split Window + Kees Paneel
-- [ ] Rechter paneel: Kees control panel (resizable)
-- [ ] Activity log — real-time feed van Robin's acties (navigatie, clicks, scrolls)
-- [ ] Chat interface — Robin typt/praat, Kees antwoordt
-- [ ] Screenshot preview — laatste snapshots met annotaties
-- [ ] Toggle: Cmd+K paneel open/dicht
-- [ ] API: `GET /activity-log` — stream van user events
-- [ ] API: `POST /panel/toggle`, `POST /panel/resize`
+### 2.2 Split Window + Kees Paneel ✅ DONE
+- [x] Rechter paneel: Kees control panel (resizable)
+- [x] Activity log — real-time feed van Robin's acties (navigatie, clicks, scrolls)
+- [x] Chat interface — Robin typt/praat, Kees antwoordt
+- [x] Screenshot preview — laatste snapshots met annotaties
+- [x] Toggle: Cmd+K paneel open/dicht
+- [x] API: `GET /activity-log` — stream van user events
+- [x] API: `POST /panel/toggle`, `GET/POST /chat`
 
-### 2.3 Draw/Annotatie Tool 🖍️
-- [ ] Transparante canvas overlay bovenop webview
-- [ ] Tools: pijlen, cirkels, rechthoeken, vrije lijn, tekst labels
-- [ ] Kleuren: rood (default), geel, groen, blauw
-- [ ] Toggle: Cmd+D draw mode aan/uit
-- [ ] "📸 Snap voor Kees" knop — screenshot MET annotaties
-- [ ] Annotaties verdwijnen na snap (of handmatig wissen)
-- [ ] API: `GET /screenshot/annotated` — laatste geannoteerde screenshot
-- [ ] Opslag: `~/.tandem/screenshots/` met timestamp
+### 2.3 Draw/Annotatie Tool 🖍️ ✅ DONE
+- [x] Transparante canvas overlay bovenop webview
+- [x] Tools: pijlen, cirkels, rechthoeken, vrije lijn, tekst labels
+- [x] Kleuren: rood (default), geel, groen, blauw
+- [x] Toggle: Cmd+D draw mode aan/uit
+- [x] "📸 Snap voor Kees" knop — screenshot MET annotaties
+- [x] Annotaties verdwijnen na snap (of handmatig wissen)
+- [x] API: `GET /screenshot/annotated` — laatste geannoteerde screenshot
+- [x] API: `POST /screenshot/annotated`, `POST /draw/toggle`, `GET /screenshots`
+- [x] Opslag: app userData/screenshots/ met timestamp
 
 ### 2.4 Voice Input 🎙️
 - [ ] Web Speech API integratie (nl-BE)

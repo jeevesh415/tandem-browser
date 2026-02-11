@@ -105,6 +105,38 @@ curl -X POST localhost:8765/tabs/group -H 'Content-Type: application/json' -d '{
 curl -X POST localhost:8765/copilot-alert -H 'Content-Type: application/json' -d '{"title":"Captcha!","body":"Er staat een captcha op LinkedIn, kun je die even oplossen?"}'
 ```
 
+### Kees Panel
+
+```bash
+# Get activity log
+curl localhost:8765/activity-log
+
+# Toggle panel
+curl -X POST localhost:8765/panel/toggle -H 'Content-Type: application/json' -d '{}'
+
+# Send chat message as Kees
+curl -X POST localhost:8765/chat -H 'Content-Type: application/json' -d '{"text":"Hey Robin, check deze pagina eens!"}'
+
+# Get chat history
+curl localhost:8765/chat
+```
+
+### Draw/Annotatie Tool
+
+```bash
+# Toggle draw mode
+curl -X POST localhost:8765/draw/toggle -H 'Content-Type: application/json' -d '{}'
+
+# Take annotated screenshot
+curl -X POST localhost:8765/screenshot/annotated
+
+# Get last annotated screenshot (PNG)
+curl localhost:8765/screenshot/annotated -o screenshot.png
+
+# List recent screenshots
+curl localhost:8765/screenshots
+```
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
@@ -112,6 +144,8 @@ curl -X POST localhost:8765/copilot-alert -H 'Content-Type: application/json' -d
 | Cmd+T | New tab |
 | Cmd+W | Close tab |
 | Cmd+1-9 | Switch to tab 1-9 |
+| Cmd+K | Toggle Kees panel |
+| Cmd+D | Toggle draw mode |
 
 ## Architecture
 
@@ -119,6 +153,8 @@ curl -X POST localhost:8765/copilot-alert -H 'Content-Type: application/json' -d
 Tandem Browser (Electron)
 ├── Tab Bar ← Multiple tabs with favicons, groups, colors
 ├── Browser UI (Chromium webviews) ← Robin sees and navigates
+├── Kees Panel (shell layer) ← Activity log, chat, screenshots
+├── Draw Overlay (shell layer) ← Annotations on top of webview
 ├── Tandem API (localhost:8765) ← Kees sends commands
 ├── Input Layer ← sendInputEvent (OS-level, Event.isTrusted=true)
 ├── Stealth Layer ← Anti-detection (UA, headers, navigator)
