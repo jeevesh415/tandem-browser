@@ -398,18 +398,6 @@ export class TandemAPI {
     // PANEL — Kees side panel
     // ═══════════════════════════════════════════════
 
-    /** Get activity log */
-    this.app.get('/activity-log', (req: Request, res: Response) => {
-      try {
-        const limit = parseInt(req.query.limit as string) || 50;
-        const type = req.query.type as string | undefined;
-        const events = this.panelManager.getActivityLog(limit, type);
-        res.json({ events });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
     /** Toggle panel */
     this.app.post('/panel/toggle', (req: Request, res: Response) => {
       try {
