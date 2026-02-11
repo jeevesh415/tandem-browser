@@ -388,7 +388,14 @@ function buildAppMenu(): void {
     {
       label: 'Kees',
       submenu: [
-        { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => panelManager?.togglePanel() },
+        { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
+          panelManager?.togglePanel();
+          // Also directly toggle via shell JS as fallback (IPC may not reach shell)
+          mainWindow?.webContents.executeJavaScript(`
+            const p = document.getElementById('kees-panel');
+            if (p) p.classList.toggle('open');
+          `).catch(() => {});
+        }},
         { label: 'Voice Input', accelerator: 'CmdOrCtrl+Shift+M', click: () => voiceManager?.toggleVoice() },
         { label: 'PiP Mode', accelerator: 'CmdOrCtrl+Shift+P', click: () => pipManager?.toggle() },
         { type: 'separator' },
