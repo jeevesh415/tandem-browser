@@ -1863,7 +1863,8 @@
         }
       } catch { /* API not ready yet */ }
     }, 1500);
-    // Poll every 2 seconds
+    // Poll every 2 seconds — only for messages sent via API (Kees), not IPC
+    // IPC handles real-time messages from Robin's input
     setInterval(pollChatMessages, 2000);
 
     // ═══════════════════════════════════════════════

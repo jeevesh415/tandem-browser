@@ -324,64 +324,71 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   });
 }
 
+function registerShortcut(accelerator: string, callback: () => void): void {
+  const success = globalShortcut.register(accelerator, callback);
+  if (!success) {
+    console.warn(`⚠️ Failed to register shortcut: ${accelerator}`);
+  }
+}
+
 function registerShortcuts(): void {
   // Cmd+T — new tab
-  globalShortcut.register('CommandOrControl+T', () => {
+  registerShortcut('CommandOrControl+T', () => {
     mainWindow?.webContents.send('shortcut', 'new-tab');
   });
 
   // Cmd+W — close tab
-  globalShortcut.register('CommandOrControl+W', () => {
+  registerShortcut('CommandOrControl+W', () => {
     mainWindow?.webContents.send('shortcut', 'close-tab');
   });
 
   // Cmd+K — toggle Kees panel
-  globalShortcut.register('CommandOrControl+K', () => {
+  registerShortcut('CommandOrControl+K', () => {
     panelManager?.togglePanel();
   });
 
   // Cmd+Shift+D — toggle draw mode (was Cmd+D, moved for bookmarks)
-  globalShortcut.register('CommandOrControl+Shift+D', () => {
+  registerShortcut('CommandOrControl+Shift+D', () => {
     drawManager?.toggleDrawMode();
   });
 
   // Cmd+D — bookmark current page
-  globalShortcut.register('CommandOrControl+D', () => {
+  registerShortcut('CommandOrControl+D', () => {
     mainWindow?.webContents.send('shortcut', 'bookmark-page');
   });
 
   // Cmd+F — find in page
-  globalShortcut.register('CommandOrControl+F', () => {
+  registerShortcut('CommandOrControl+F', () => {
     mainWindow?.webContents.send('shortcut', 'find-in-page');
   });
 
   // Cmd+Y — open history page
-  globalShortcut.register('CommandOrControl+Y', () => {
+  registerShortcut('CommandOrControl+Y', () => {
     mainWindow?.webContents.send('shortcut', 'open-history');
   });
 
-  // Cmd+M — toggle voice input
-  globalShortcut.register('CommandOrControl+M', () => {
+  // Cmd+Shift+M — toggle voice input (Shift+M to avoid macOS Cmd+M minimize conflict)
+  registerShortcut('CommandOrControl+Shift+M', () => {
     voiceManager?.toggleVoice();
   });
 
   // Cmd+Shift+S — quick screenshot (no draw mode)
-  globalShortcut.register('CommandOrControl+Shift+S', () => {
+  registerShortcut('CommandOrControl+Shift+S', () => {
     mainWindow?.webContents.send('shortcut', 'quick-screenshot');
   });
 
   // Cmd+P — toggle PiP
-  globalShortcut.register('CommandOrControl+P', () => {
+  registerShortcut('CommandOrControl+P', () => {
     pipManager?.toggle();
   });
 
   // Cmd+, — open settings
-  globalShortcut.register('CommandOrControl+,', () => {
+  registerShortcut('CommandOrControl+,', () => {
     mainWindow?.webContents.send('shortcut', 'open-settings');
   });
 
   // Cmd+R — toggle audio recording of current tab
-  globalShortcut.register('CommandOrControl+R', () => {
+  registerShortcut('CommandOrControl+R', () => {
     if (audioCaptureManager) {
       if (audioCaptureManager.isRecording()) {
         audioCaptureManager.stopRecording();
@@ -397,37 +404,41 @@ function registerShortcuts(): void {
     }
   });
 
-  // Cmd+? — show keyboard shortcuts overlay
-  globalShortcut.register('CommandOrControl+?', () => {
+  // Cmd+Shift+/ — show keyboard shortcuts overlay (Cmd+? is actually Cmd+Shift+/ on macOS)
+  registerShortcut('CommandOrControl+Shift+/', () => {
     mainWindow?.webContents.send('shortcut', 'show-shortcuts');
   });
 
   // Cmd+= — zoom in
-  globalShortcut.register('CommandOrControl+=', () => {
+  registerShortcut('CommandOrControl+=', () => {
     mainWindow?.webContents.send('shortcut', 'zoom-in');
   });
 
   // Cmd+- — zoom out  
-  globalShortcut.register('CommandOrControl+-', () => {
+  registerShortcut('CommandOrControl+-', () => {
     mainWindow?.webContents.send('shortcut', 'zoom-out');
   });
 
   // Cmd+0 — reset zoom
-  globalShortcut.register('CommandOrControl+0', () => {
+  registerShortcut('CommandOrControl+0', () => {
     mainWindow?.webContents.send('shortcut', 'zoom-reset');
   });
 
   // Cmd+1-9 — switch tabs
   for (let i = 1; i <= 9; i++) {
-    globalShortcut.register(`CommandOrControl+${i}`, () => {
+    registerShortcut(`CommandOrControl+${i}`, () => {
       mainWindow?.webContents.send('shortcut', `focus-tab-${i - 1}`);
     });
   }
 
   // Cmd+Shift+C — ClaroNote quick record toggle
-  globalShortcut.register('CommandOrControl+Shift+C', () => {
+  registerShortcut('CommandOrControl+Shift+C', () => {
     mainWindow?.webContents.send('shortcut', 'claronote-record');
   });
+}
+
+function unregisterShortcuts(): void {
+  globalShortcut.unregisterAll();
 }
 
 // Copilot alert — notify Robin when Kees needs help
@@ -443,6 +454,16 @@ app.whenReady().then(async () => {
   await startAPI(win);
   registerShortcuts();
 
+  // Only capture global shortcuts when our window is focused
+  win.on('focus', () => {
+    if (!globalShortcut.isRegistered('CommandOrControl+T')) {
+      registerShortcuts();
+    }
+  });
+  win.on('blur', () => {
+    unregisterShortcuts();
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow().then(w => {
@@ -451,6 +472,10 @@ app.whenReady().then(async () => {
       });
     }
   });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

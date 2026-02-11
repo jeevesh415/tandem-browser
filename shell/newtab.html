@@ -351,7 +351,7 @@
       `;
       a.addEventListener('click', () => {
         // Navigate via postMessage to parent shell
-        window.parent.postMessage({ type: 'tandem-newtab-navigate', url: link.url }, '*');
+        fetch('http://localhost:8765/navigate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: link.url }) }).catch(() => {});
       });
       quickLinksEl.appendChild(a);
     }
@@ -370,7 +370,7 @@
         } else {
           url = 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
         }
-        window.parent.postMessage({ type: 'tandem-newtab-navigate', url }, '*');
+        fetch('http://localhost:8765/navigate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }).catch(() => {});
       }
     });
 
@@ -397,7 +397,11 @@
             <span class="ri-url">${hostname}</span>
           `;
           item.addEventListener('click', () => {
-            window.parent.postMessage({ type: 'tandem-newtab-navigate', url: tab.url }, '*');
+            fetch('http://localhost:8765/navigate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: tab.url })
+            }).catch(() => {});
           });
           recentList.appendChild(item);
         }
