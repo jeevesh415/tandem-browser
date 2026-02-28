@@ -79,12 +79,14 @@ export class SidebarManager {
   private load(): SidebarConfig {
     try {
       if (fs.existsSync(this.storageFile)) {
-        const raw = JSON.parse(fs.readFileSync(this.storageFile, 'utf8'));
-        // Merge with defaults to handle new items added in future versions
-        return { ...DEFAULT_CONFIG, ...raw };
+        const raw = JSON.parse(fs.readFileSync(this.storageFile, "utf8"));
+        const savedIds = new Set((raw.items || []).map((i: SidebarItem) => i.id));
+        const missingItems = DEFAULT_CONFIG.items.filter(i => !savedIds.has(i.id));
+        const mergedItems = [...(raw.items || []), ...missingItems];
+        return { ...DEFAULT_CONFIG, ...raw, items: mergedItems };
       }
     } catch { /* use defaults */ }
-    return { ...DEFAULT_CONFIG };
+    return { ...DEFAULT_CONFIG, items: [...DEFAULT_CONFIG.items] };
   }
 
   private save(): void {
