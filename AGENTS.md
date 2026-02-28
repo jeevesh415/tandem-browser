@@ -35,6 +35,12 @@ tandem-browser/
 ├── shell/                        # Browser UI (~10,190 regels HTML/JS)
 ├── cli/                          # tandem CLI (@hydro13/tandem-cli)
 ├── docs/
+│   ├── ROADMAP.md                # ← Sprint planning + feature backlog (Kees beheert)
+│   ├── STATUS.md                 # ← Dagelijkse standup: wat loopt, wat geblokkeerd
+│   ├── templates/                # Templates voor nieuwe features
+│   │   ├── design-template.md    # Template voor design docs (plans/)
+│   │   ├── LEES-MIJ-EERST-template.md  # Template voor implementatie-trajecten
+│   │   └── fase-template.md      # Template voor fase-documenten
 │   ├── implementations/          # Voltooide implementatie-plannen
 │   │   ├── ai-integratie/        # MCP, EventStream, ChatRouter, Autonomie
 │   │   ├── agent-browser-gaps/   # Snapshot, mock, sessions, CLI
@@ -43,7 +49,8 @@ tandem-browser/
 │   │   ├── context-menu/         # Context Menu plannen
 │   │   ├── copilot-vision/       # Copilot Vision plannen
 │   │   └── liquid-glass/         # Liquid Glass Lite docs
-│   ├── plans/                    # Niet-geïmplementeerde plannen
+│   ├── plans/                    # Niet-geïmplementeerde plannen (design docs)
+│   ├── research/                 # Opera gap analyse + feature inventories
 │   ├── archive/                  # Historische documenten
 │   ├── Browser-extensions/       # Extension systeem (10 phases)
 │   ├── agent-tools/              # Agent tools (3 phases + phase 4 TBD)
@@ -96,6 +103,13 @@ tandem-browser/
 - **Geen hardcoded paths** — gebruik `path.join()`, `app.getPath()`, etc.
 - **Separation of concerns** — elk bestand heeft één verantwoordelijkheid
 - **Naming:** camelCase voor functies/variabelen, PascalCase voor classes, kebab-case voor bestanden
+
+### 6. Verwijzingen naar code — ALTIJD functienamen, NOOIT regelnummers
+- ❌ **Verboden:** "zie server.ts regel 287" — regelnummers veranderen bij elke commit
+- ✅ **Verplicht:** "zie `function startAPI()` in main.ts"
+- ✅ **Verplicht:** "voeg toe aan `class TandemAPI`, `TandemAPIOptions` interface"
+- ✅ **Verplicht:** "zoek naar `// === SECTIE NAAM ===` in shell/index.html"
+- Gebruik `grep -n "function naam" bestand.ts` om de locatie te vinden als je hem niet kent
 
 ## Regels — WAT JE NIET MAG DOEN
 
@@ -221,19 +235,28 @@ Dit moet na elke `npm install` of als Electron opnieuw gedownload wordt. Bouw di
 
 ## Development Workflow
 
+> Voor nieuwe features: Kees schrijft de docs, Claude Code voert uit.
+> Zie `docs/ROADMAP.md` voor de actuele sprint en backlog.
+
 ```
-1. Lees TODO.md → kies de volgende feature
-2. Check docs/implementations/ en docs/plans/ voor context
-3. Lees bestaande code → snap de architectuur
+1. Lees het fase-bestand voor deze sessie (docs/implementations/{feature}/fase-N.md)
+2. Lees LEES-MIJ-EERST.md in dezelfde map
+3. Lees ALLEEN de bestanden die in het fase-bestand staan — niet meer
 4. Schrijf de code
 5. `npx tsc` → fix alle type errors
 6. `npx vitest run` → alle tests moeten slagen
-7. `npm run dev` → test handmatig
-8. `curl` test voor API endpoints
-9. Update documentatie (TODO.md, CHANGELOG.md)
-10. Git commit + push
-11. Rapporteer aan Robin wat je gebouwd en getest hebt
+7. `npm start` → test handmatig (niet npm run dev!)
+8. `curl` test elke nieuwe endpoint (zie acceptatiecriteria in fase-bestand)
+9. Update CHANGELOG.md
+10. Git commit (emoji + feat/fix/docs: beschrijving)
+11. Git push
+12. Rapport: gebouwd / getest / problemen / volgende stap
 ```
+
+**Sessie-discipline:**
+- Lees ALLEEN wat het fase-bestand zegt — niet wandelen door de codebase
+- Verwijs naar **functienamen**, nooit naar regelnummers
+- Gebruik `grep` om functies te vinden als je de locatie niet weet
 
 ## Hoe je rapporteert
 
