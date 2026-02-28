@@ -497,20 +497,40 @@
     // === WEBVIEW MODULE ===
     const webviewCache = new Map();
 
+    // Google services share the same session partition so one login covers all
+    const WEBVIEW_PARTITIONS = {
+      calendar: 'persist:gmail',  // Calendar + Gmail = same Google account
+    };
+
+    // URL patterns that must open as real popup windows (auth flows)
+    // Keep these specific to avoid blocking in-app navigation in messengers
+    const AUTH_URL_PATTERNS = [
+      'accounts.google.com',
+      'google.com/o/oauth2',
+      'google.com/ServiceLogin',
+      'google.com/accounts',
+      'appleid.apple.com',
+      'login.microsoftonline.com',
+      'github.com/login/oauth',
+    ];
+
     function getOrCreateWebview(id) {
       if (webviewCache.has(id)) return webviewCache.get(id);
       const url = WEBVIEW_URLS[id];
       if (!url) return null;
       const wv = document.createElement('webview');
       wv.src = url;
-      wv.partition = `persist:${id}`;
+      wv.partition = WEBVIEW_PARTITIONS[id] || `persist:${id}`;
       wv.className = 'sidebar-webview';
       wv.setAttribute('allowpopups', '');
       // Override user agent for apps that need Chrome
       const chromeUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
       wv.useragent = chromeUA;
-      // Prevent new-window events from escaping to main browser — load inside webview
+      // Route new-window events: auth URLs → real popup (via setWindowOpenHandler in main.ts)
+      //                          everything else → load inside webview
       wv.addEventListener('new-window', (e) => {
+        const isAuth = e.url && AUTH_URL_PATTERNS.some(p => e.url.includes(p));
+        if (isAuth) return; // don't preventDefault → main.ts setWindowOpenHandler handles it
         e.preventDefault();
         if (e.url && e.url.startsWith('http')) wv.loadURL(e.url);
       });
@@ -776,6 +796,11 @@
         window.tandem.onReloadSidebarWebview((id) => {
           const wv = webviewCache.get(id);
           if (wv) wv.reload();
+          // If Gmail partition reloads, also reload Calendar (they share persist:gmail session)
+          if (id === 'gmail') {
+            const calendarWv = webviewCache.get('calendar');
+            if (calendarWv) calendarWv.reload();
+          }
         });
       }
     }
