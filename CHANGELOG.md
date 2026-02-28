@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.17.2] - 2026-02-28
+
+- fix: sidebar icon sizing — smaller icons, more breathing room
+
 ## [v0.17.1] - 2026-02-28
 
 - fix: sidebar polish + lamp icon + config migration
