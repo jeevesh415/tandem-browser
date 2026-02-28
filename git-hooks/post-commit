@@ -1,5 +1,5 @@
 #!/bin/bash
-# Auto-bump version + update CHANGELOG on every commit
+# Auto-bump version + update CHANGELOG + update about.html on every commit
 
 # Get last commit message
 COMMIT_MSG=$(git log -1 --pretty=%B)
@@ -58,8 +58,14 @@ TEMP_CHANGELOG=$(mktemp)
 
 mv "$TEMP_CHANGELOG" "$CHANGELOG"
 
+# Update shell/about.html version
+if [ -f "shell/about.html" ]; then
+  sed -i.bak "s/id=\"version\">v[0-9.]*</id=\"version\">v$NEW_VERSION</" shell/about.html
+  rm -f shell/about.html.bak
+fi
+
 # Stage changes
-git add package.json package-lock.json CHANGELOG.md
+git add package.json package-lock.json CHANGELOG.md shell/about.html
 
 # Amend or create new commit?
 # New commit is safer (avoids rewriting history)

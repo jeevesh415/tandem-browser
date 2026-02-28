@@ -42,7 +42,6 @@ export function buildAppMenu(deps: MenuDeps): void {
               maximizable: false,
               minimizable: false,
               webPreferences: {
-                preload: path.join(__dirname, '..', 'preload-about.js'),
                 nodeIntegration: false,
                 contextIsolation: true,
               },
