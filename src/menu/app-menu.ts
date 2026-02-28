@@ -1,5 +1,6 @@
 import type { BrowserWindow} from 'electron';
-import { app, Menu } from 'electron';
+import { app, Menu, BrowserWindow as BW } from 'electron';
+import path from 'path';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';
@@ -29,7 +30,26 @@ export function buildAppMenu(deps: MenuDeps): void {
     {
       label: app.name,
       submenu: [
-        { role: 'about' },
+        {
+          label: 'About Tandem Browser',
+          click: () => {
+            const aboutWindow = new BW({
+              width: 600,
+              height: 500,
+              modal: true,
+              parent: deps.mainWindow || undefined,
+              resizable: false,
+              maximizable: false,
+              minimizable: false,
+              webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+              },
+            });
+            aboutWindow.setMenu(null);
+            void aboutWindow.loadFile(path.join(__dirname, '..', 'shell', 'about.html'));
+          },
+        },
         { type: 'separator' },
         { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => send('open-settings') },
         { type: 'separator' },
