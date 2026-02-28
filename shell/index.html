@@ -486,6 +486,36 @@
       toggleBtn.title = config.state === 'wide' ? 'Inklappen' : 'Uitklappen';
     }
 
+    // === WEBVIEW MODULE ===
+    const webviewCache = new Map();
+
+    function getOrCreateWebview(id) {
+      if (webviewCache.has(id)) return webviewCache.get(id);
+      const url = WEBVIEW_URLS[id];
+      if (!url) return null;
+      const wv = document.createElement('webview');
+      wv.src = url;
+      wv.partition = `persist:${id}`;
+      wv.className = 'sidebar-webview';
+      if (id === 'whatsapp') {
+        wv.useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      }
+      webviewCache.set(id, wv);
+      return wv;
+    }
+
+    function loadWebviewInPanel(id) {
+      const content = document.getElementById('sidebar-panel-content');
+      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      const wv = getOrCreateWebview(id);
+      if (!wv) return;
+      if (!content.contains(wv)) {
+        content.appendChild(wv);
+      }
+      wv.style.display = 'flex';
+      content.classList.add('webview-mode');
+    }
+
     async function activateItem(id) {
       await fetch(`http://localhost:8765/sidebar/items/${id}/activate`, {
         method: 'POST', headers: { Authorization: `Bearer ${TOKEN}` }
@@ -494,6 +524,14 @@
       const newActive = config.activeItemId === id ? null : id;
       config.activeItemId = newActive;
       render();
+
+      if (newActive && COMMUNICATION_IDS.includes(newActive)) {
+        loadWebviewInPanel(newActive);
+      } else {
+        webviewCache.forEach(wv => { wv.style.display = 'none'; });
+        const content = document.getElementById('sidebar-panel-content');
+        content.classList.remove('webview-mode');
+      }
     }
 
     async function toggleState() {
@@ -534,6 +572,10 @@
       config.activeItemId = null;
       titleEl.textContent = 'Sidebar Setup';
       panel.classList.add('open');
+
+      // Detach cached webviews before innerHTML wipe (preserve login state)
+      webviewCache.forEach(wv => { wv.style.display = 'none'; if (content.contains(wv)) content.removeChild(wv); });
+      content.classList.remove('webview-mode');
 
       const rows = SETUP_SECTIONS.map((section, si) => {
         const itemRows = section.ids.map(id => {
@@ -609,7 +651,14 @@
       document.getElementById('sidebar-panel-close').addEventListener('click', () => {
         const panel = document.getElementById('sidebar-panel');
         panel.classList.remove('open');
-        document.getElementById('sidebar-panel-content').innerHTML = '';
+        // Hide webviews but don't remove them (preserve login state)
+        webviewCache.forEach(wv => { wv.style.display = 'none'; });
+        const content = document.getElementById('sidebar-panel-content');
+        content.classList.remove('webview-mode');
+        // Remove non-webview content
+        Array.from(content.children).forEach(child => {
+          if (!child.classList.contains('sidebar-webview')) child.remove();
+        });
         document.getElementById('sidebar-panel-title').textContent = '';
         isSetupPanelOpen = false;
         config.activeItemId = null;

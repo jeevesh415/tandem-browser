@@ -1042,7 +1042,7 @@
       box-shadow: 4px 0 16px rgba(0,0,0,0.3);
     }
     .sidebar-panel.open {
-      width: 280px;
+      width: 340px;
     }
     /* Panel — pinned mode (push) */
     .sidebar-panel.pinned {
@@ -1102,6 +1102,19 @@
     }
     .sidebar-panel-content::-webkit-scrollbar-thumb:hover {
       background: rgba(255,255,255,0.22);
+    }
+    .sidebar-panel-content.webview-mode {
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-webview {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
     }
 
     /* === SIDEBAR SETUP PANEL === */
