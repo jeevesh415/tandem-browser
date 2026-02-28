@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.20.1] - 2026-02-28
+
+- fix: sidebar webviews navigate freely — prevent Telegram from opening in new tab
+
 ## [v0.20.0] - 2026-02-28
 
 - feat: Telegram (and all messenger) webview panels with persistent sessions
