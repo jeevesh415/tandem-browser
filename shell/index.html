@@ -641,8 +641,8 @@
 
     // === PANEL RESIZE ===
     const DEFAULT_PANEL_WIDTH = 340;
-    const MIN_PANEL_WIDTH = 220;
-    const MAX_PANEL_WIDTH = 600;
+    const MIN_PANEL_WIDTH = 180;
+    const MAX_PANEL_WIDTH = 900;
 
     function getPanelWidth(id) {
       return (config.panelWidths && config.panelWidths[id]) || DEFAULT_PANEL_WIDTH;
@@ -672,6 +672,11 @@
 
     const resizeHandle = document.getElementById('sidebar-panel-resize');
 
+    // Drag cover: transparent full-screen div that blocks webviews from eating mouse events
+    const dragCover = document.createElement('div');
+    dragCover.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;display:none;';
+    document.body.appendChild(dragCover);
+
     resizeHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       resizeDragging = true;
@@ -680,8 +685,8 @@
       resizeStartWidth = panel.offsetWidth;
       resizeActiveId = config.activeItemId;
       resizeHandle.classList.add('dragging');
-      document.body.style.cursor = 'ew-resize';
       document.body.style.userSelect = 'none';
+      dragCover.style.display = 'block'; // block webview mouse capture
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -695,8 +700,8 @@
       if (!resizeDragging) return;
       resizeDragging = false;
       resizeHandle.classList.remove('dragging');
-      document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      dragCover.style.display = 'none'; // restore webview interaction
       if (resizeActiveId) {
         const panel = document.getElementById('sidebar-panel');
         await savePanelWidth(resizeActiveId, panel.offsetWidth);

@@ -1106,12 +1106,12 @@
     /* Resize handle */
     .sidebar-panel-resize {
       position: absolute;
-      right: -3px;
+      right: 0;
       top: 0;
       width: 6px;
       height: 100%;
       cursor: ew-resize;
-      z-index: 10;
+      z-index: 100;
       background: transparent;
       transition: background 0.15s;
     }
