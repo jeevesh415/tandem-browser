@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.22.0] - 2026-02-28
+
+- feat: frosted glass overlay panel, smooth animation, closed on startup
+
 ## [v0.21.3] - 2026-02-28
 
 - fix: clear inline panel width on close so panel actually collapses
