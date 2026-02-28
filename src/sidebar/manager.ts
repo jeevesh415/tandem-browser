@@ -3,26 +3,32 @@ import * as path from 'path';
 import { tandemDir, ensureDir } from '../utils/paths';
 import type { SidebarConfig, SidebarItem, SidebarState } from './types';
 
-// Elke messenger krijgt eigen slot in de sidebar (zoals Opera)
-// Utility items bovenaan, messenger items onderaan (met separator in UI)
+// Sidebar items in 3 secties (zoals Opera):
+// Sectie 1: Workspaces (bovenaan)
+// Sectie 2: Communicatie — Google Calendar, Gmail, dan chat apps
+// Sectie 3: Browser utilities — Pinboards, Bookmarks, History, Downloads, Personal News
+// Vaste bodem (hardcoded in UI, niet in items): Tips (💡) + Setup (⚙️)
 const DEFAULT_CONFIG: SidebarConfig = {
   state: 'narrow',
   activeItemId: null,
   items: [
-    // Utility panels (outline icon, grijs)
-    { id: 'workspaces', label: 'Workspaces',   icon: '', type: 'panel',   enabled: true, order: 0 },
-    { id: 'news',       label: 'Personal News', icon: '', type: 'panel',   enabled: true, order: 1 },
-    { id: 'pinboards',  label: 'Pinboards',    icon: '', type: 'panel',   enabled: true, order: 2 },
-    { id: 'bookmarks',  label: 'Bookmarks',    icon: '', type: 'panel',   enabled: true, order: 3 },
-    { id: 'history',    label: 'History',      icon: '', type: 'panel',   enabled: true, order: 4 },
-    { id: 'downloads',  label: 'Downloads',    icon: '', type: 'panel',   enabled: true, order: 5 },
-    // Messenger webviews (brand colored icon, eigen persist: partition)
-    { id: 'whatsapp',   label: 'WhatsApp',     icon: '', type: 'webview', enabled: true, order: 6 },
-    { id: 'telegram',   label: 'Telegram',     icon: '', type: 'webview', enabled: true, order: 7 },
-    { id: 'discord',    label: 'Discord',      icon: '', type: 'webview', enabled: true, order: 8 },
-    { id: 'slack',      label: 'Slack',        icon: '', type: 'webview', enabled: true, order: 9 },
-    { id: 'instagram',  label: 'Instagram',    icon: '', type: 'webview', enabled: true, order: 10 },
-    { id: 'x',          label: 'X (Twitter)',  icon: '', type: 'webview', enabled: true, order: 11 },
+    // === SECTIE 1: Workspaces ===
+    { id: 'workspaces', label: 'Workspaces',      icon: '', type: 'panel',   enabled: true, order: 0 },
+    // === SECTIE 2: Communicatie ===
+    { id: 'calendar',   label: 'Google Calendar', icon: '', type: 'webview', enabled: true, order: 10 },
+    { id: 'gmail',      label: 'Gmail',           icon: '', type: 'webview', enabled: true, order: 11 },
+    { id: 'whatsapp',   label: 'WhatsApp',        icon: '', type: 'webview', enabled: true, order: 12 },
+    { id: 'telegram',   label: 'Telegram',        icon: '', type: 'webview', enabled: true, order: 13 },
+    { id: 'discord',    label: 'Discord',         icon: '', type: 'webview', enabled: true, order: 14 },
+    { id: 'slack',      label: 'Slack',           icon: '', type: 'webview', enabled: true, order: 15 },
+    { id: 'instagram',  label: 'Instagram',       icon: '', type: 'webview', enabled: true, order: 16 },
+    { id: 'x',          label: 'X (Twitter)',     icon: '', type: 'webview', enabled: true, order: 17 },
+    // === SECTIE 3: Browser utilities ===
+    { id: 'pinboards',  label: 'Pinboards',       icon: '', type: 'panel',   enabled: true, order: 20 },
+    { id: 'bookmarks',  label: 'Bookmarks',       icon: '', type: 'panel',   enabled: true, order: 21 },
+    { id: 'history',    label: 'History',         icon: '', type: 'panel',   enabled: true, order: 22 },
+    { id: 'downloads',  label: 'Downloads',       icon: '', type: 'panel',   enabled: true, order: 23 },
+    { id: 'news',       label: 'Personal News',   icon: '', type: 'panel',   enabled: true, order: 24 },
   ]
 };
 

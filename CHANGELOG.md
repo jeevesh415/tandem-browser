@@ -2,6 +2,24 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.16.1] - 2026-02-28
+
+- feat: sidebar 3-sectie layout + Google Calendar + Gmail
+
+Aangepaste bestanden:
+- shell/index.html: ocSidebar bijgewerkt
+  - ICONS uitgebreid met Google Calendar (blauw) en Gmail (rood)
+  - WEBVIEW_URLS map toegevoegd voor alle webview items
+  - render() toont nu 3 secties: Workspaces / Communicatie / Utilities
+  - Separators tussen de 3 secties
+  - calendar + gmail krijgen brand-icon stijl (zoals messengers)
+- src/sidebar/manager.ts: DEFAULT_CONFIG heeft 14 items in 3 secties
+
+Getest:
+- npx tsc: zero errors
+- npm start: 3 secties zichtbaar met separators
+- npx vitest run: alle tests slagen (pre-existing supertest failures ongewijzigd)
+
 ## [v0.16.0] - 2026-02-28
 
 - feat: sidebar shell UI — icon strip, panel, narrow/wide/hidden, brand icons, Cmd+Shift+B
