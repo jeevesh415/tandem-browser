@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.23.1] - 2026-03-01
+
+- fix: Calendar auth popup and shared Google session partition
+
+- Calendar webview now uses persist:gmail partition so one Google login
+  covers both Calendar and Gmail (same account, same session)
+- Fix new-window handler to NOT preventDefault on auth URLs — lets
+  setWindowOpenHandler in main.ts open real popup windows for Google auth
+  (previously auth was loaded inside the webview where Google blocks it)
+- Auth URL patterns are specific (accounts.google.com etc.) to avoid
+  interfering with in-app navigation in Telegram/Discord/etc.
+- Reload handler propagates gmail reload to calendar (shared partition)
+
 ## [v0.23.0] - 2026-03-01
 
 - feat: panel reload button + auto-reload sidebar webview after Google auth
