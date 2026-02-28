@@ -68,15 +68,17 @@ Met open sidebar panel (bijv. Bookmarks):
 
 ## Sidebar Items (definitieve lijst, besloten 2026-02-28)
 
-| # | Item | Type | Panel inhoud |
-|---|------|------|-------------|
-| 1 | Workspaces | Panel | Lijst van workspaces, switch/create/delete |
-| 2 | Messengers | Webview | WhatsApp/Telegram/Discord/Slack/Instagram/X (sub-iconen) |
-| 3 | Personal News | Panel | RSS/Atom feeds, geconfigureerde bronnen |
-| 4 | Pinboards | Panel | Pinboard manager (borden + items) |
-| 5 | Bookmarks | Panel | Bookmark tree, quick access |
-| 6 | History | Panel | Zoekbare browse history |
-| 7 | Downloads | Panel | Download manager lijst |
+| # | Item | Type | SVG icon (Heroicons/Lucide) | Panel inhoud |
+|---|------|------|---------------------------|-------------|
+| 1 | Workspaces | Panel | `squares-2x2` (grid) | Lijst van workspaces, switch/create/delete |
+| 2 | Messengers | Webview | `chat-bubble-left-right` | WhatsApp/Telegram/Discord/Slack/Instagram/X (sub-iconen) |
+| 3 | Personal News | Panel | `newspaper` | RSS/Atom feeds, geconfigureerde bronnen |
+| 4 | Pinboards | Panel | `squares-plus` (of `view-boards`) | Pinboard manager (borden + items) |
+| 5 | Bookmarks | Panel | `bookmark` | Bookmark tree, quick access |
+| 6 | History | Panel | `clock` | Zoekbare browse history |
+| 7 | Downloads | Panel | `arrow-down-tray` | Download manager lijst |
+
+> Icons: Heroicons outline set (MIT licentie, consistent met Tandem stijl). Inline SVG in HTML.
 
 **Niet in sidebar:** Copilot AI Panel (blijft rechts, eigen toggle knop)
 
@@ -98,9 +100,11 @@ interface SidebarItem {
   order: number;
 }
 
+type SidebarState = 'hidden' | 'narrow' | 'wide';
+
 interface SidebarConfig {
   items: SidebarItem[];
-  narrowMode: boolean;  // alleen iconen zichtbaar (geen labels)
+  state: SidebarState;  // 'narrow' = default
   activeItemId: string | null; // welk panel staat open
 }
 ```
@@ -141,13 +145,15 @@ interface SidebarConfig {
 
 ## Shell UI Gedrag
 
-### Icon strip (altijd zichtbaar, 48px breed)
+### Icon strip — 3 standen
 
-- Verticale lijst van enabled sidebar items als icon knoppen
-- Active item: gemarkeerd met accent kleur
+**Hidden (0px):** volledig verborgen, toggle via ⌘⇧B
+**Narrow (48px, standaard):** alleen SVG icoon, tooltip on hover, toggle knop onderaan
+**Wide (~180px):** SVG icoon + label naast elkaar, uitklappen via pijl ▶ onderaan of hover
+
+- Active item: gemarkeerd met accent kleur links border + lichte achtergrond
 - Klikken = toggle panel open/dicht
-- Narrow mode: alleen icoon + tooltip on hover
-- Onderaan: ⚙️ knop voor sidebar customization (drag-to-reorder, enable/disable)
+- Onderaan: ▶/◀ knop voor narrow↔wide, ⚙️ voor customization (drag-to-reorder, enable/disable)
 
 ### Panel container (uitschuifbaar, 240px)
 
@@ -191,11 +197,27 @@ Na Fase 3 is het fundament klaar en bouwen we per feature een panel (Workspaces,
 - [x] Items: Workspaces, Messengers, Personal News, Pinboards, Bookmarks, History, Downloads
 - [x] Personal News: WEL bouwen (Robin's keuze 2026-02-28)
 - [x] Rechter copilot panel blijft intact — apart systeem
-- [x] Narrow mode (48px icon-only): ja
+- [x] Narrow mode (48px icon-only) als **standaard** — uitklapbaar naar breed (met labels)
+- [x] Sidebar verbergbaar (collapsed = 0px) via toggle knop + keyboard shortcut
+- [x] SVG icons (geen emoji)
 - [x] Drag-to-reorder in customization mode: ja
+
+### Sidebar states (3 standen)
+
+```
+hidden (0px)  →  narrow (48px, iconen)  →  wide (48px + label, ~180px)
+     ↑ toggle shortcut ↓                       ↑ pijltje / hover ↓
+```
+
+- **Hidden:** sidebar volledig weg, browser content pakt volledige breedte
+- **Narrow:** standaard — alleen SVG iconen, tooltip on hover
+- **Wide:** icon + label naast elkaar, uitklapbaar via pijl of hover
+
+### Keyboard shortcut
+
+Shortcut voor toggle hidden↔narrow: **Cmd+Shift+B** (⌘⇧B)
+(Cmd+B is al Bookmarks toggle in de meeste browsers — ⌘⇧B is vrij in Tandem)
 
 ## Open vragen voor Robin
 
-- [ ] Sidebar altijd zichtbaar (zelfs als alle panels dicht zijn)? Of verberg de 48px strip ook via toggle?
-- [ ] Narrow mode als default, of breed (met labels) als default?
-- [ ] Welk icoon voor elk item? (emoji voldoende of SVG gewenst?)
+- [ ] Shortcut akkoord? Voorstel: **⌘⇧B** (toggle sidebar zichtbaar/verborgen)
