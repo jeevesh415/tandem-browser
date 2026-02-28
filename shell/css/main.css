@@ -1106,11 +1106,12 @@
     .sidebar-panel-content.webview-mode {
       padding: 0;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      position: relative;
+      min-height: 0;
     }
     .sidebar-webview {
-      flex: 1;
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       border: none;

@@ -172,6 +172,13 @@ async function createWindow(): Promise<BrowserWindow> {
 
   // Apply stealth patches to every webview's webContents on creation
   app.on('web-contents-created', (_event, contents) => {
+    // Sidebar webview sessions — these navigate freely, no interception
+    const SIDEBAR_PARTITIONS = ['persist:telegram','persist:whatsapp','persist:discord',
+      'persist:slack','persist:instagram','persist:x','persist:calendar','persist:gmail'];
+    const isSidebarWebview = SIDEBAR_PARTITIONS.some(
+      p => contents.session === session.fromPartition(p)
+    );
+
     if (contents.getType() === 'webview') {
       contents.on('dom-ready', () => {
         // Skip stealth injection on Google auth pages — our patches break their login detection
@@ -194,6 +201,8 @@ async function createWindow(): Promise<BrowserWindow> {
 
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
+        // Sidebar webviews handle their own popups (e.g. Telegram auth)
+        if (isSidebarWebview) return { action: 'deny' };
         // OAuth/auth popups need window.opener — allow as real popup with proper config
         const isAuth = AUTH_POPUP_PATTERNS.some(p => url.includes(p));
         if (isAuth) {
@@ -227,6 +236,7 @@ async function createWindow(): Promise<BrowserWindow> {
     // Skip popup BrowserWindows (type 'window') — they handle their own OAuth flows.
     if (contents.getType() !== 'window') {
       contents.on('will-navigate', (_e, url) => {
+        if (isSidebarWebview) return; // let sidebar webviews navigate freely
         if (tabManager && !tabManager.hasWebContents(contents.id) && mainWindow && url && url !== 'about:blank') {
           mainWindow.webContents.send('open-url-in-new-tab', url);
           contents.stop();
