@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.22.1] - 2026-02-28
+
+- fix: stronger frosted glass — more transparent panel, header shows blur clearly
+
 ## [v0.22.0] - 2026-02-28
 
 - feat: frosted glass overlay panel, smooth animation, closed on startup
