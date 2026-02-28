@@ -1,6 +1,6 @@
 # Tandem Browser
 
-**Version 0.9.0** · Human-AI symbiotic browser with built-in security intelligence
+**Version 0.15.0** · Human-AI symbiotic browser with built-in security intelligence
 
 > The browser where you and your AI work as one — and where external content is hostile by default.
 
@@ -48,6 +48,27 @@ npm install
 npm run compile
 ./scripts/run-linux.sh
 ```
+
+## Development Setup
+
+**First time setup:**
+```bash
+./setup-dev.sh
+```
+
+This configures:
+- ✅ Auto-versioning git hook (bumps version + updates CHANGELOG on every `feat:`/`fix:` commit)
+- ✅ Git author config (Robin Waslander <r.waslander@gmail.com>)
+- ✅ Dependency checks
+
+**Commit convention:**
+- `fix: ...` → patch bump (0.15.0 → 0.15.1)
+- `feat: ...` → minor bump (0.15.0 → 0.16.0)
+- `feat!: ...` → major bump (0.15.0 → 1.0.0)
+- Other types (`chore:`, `docs:`, `test:`, etc.) → no version bump
+
+---
+
 
 **Linux notes:**
 - Uses `--no-sandbox` flag (required for many Linux setups)
