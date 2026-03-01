@@ -968,7 +968,7 @@
         </div>`;
 
       try {
-        const res = await fetch('http://localhost:8765/pinboards');
+        const res = await fetch('http://localhost:8765/pinboards', { headers: { Authorization: `Bearer ${TOKEN}` } });
         const data = await res.json();
         pbRenderBoardList(data.boards || []);
       } catch {
@@ -1004,7 +1004,7 @@
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const boardId = btn.dataset.boardId;
-          await fetch(`http://localhost:8765/pinboards/${boardId}`, { method: 'DELETE' });
+          await fetch(`http://localhost:8765/pinboards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` } });
           loadPinboardPanel();
         });
       });
@@ -1042,7 +1042,7 @@
       });
 
       try {
-        const res = await fetch(`http://localhost:8765/pinboards/${boardId}/items`);
+        const res = await fetch(`http://localhost:8765/pinboards/${boardId}/items`, { headers: { Authorization: `Bearer ${TOKEN}` } });
         const data = await res.json();
         pbRenderItems(data.items || []);
       } catch {
@@ -1052,7 +1052,7 @@
 
     async function pbUpdateBoardSwitcher(currentId) {
       try {
-        const res = await fetch('http://localhost:8765/pinboards');
+        const res = await fetch('http://localhost:8765/pinboards', { headers: { Authorization: `Bearer ${TOKEN}` } });
         const data = await res.json();
         const select = document.getElementById('pb-board-switcher');
         if (!select) return;
@@ -1143,7 +1143,7 @@
           card.style.opacity = '0';
           card.style.transform = 'scale(0.9)';
         }
-        await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, { method: 'DELETE' });
+        await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` } });
         setTimeout(() => {
           if (card) card.remove();
           if (container.querySelectorAll('.pb-card').length === 0) {
@@ -1199,7 +1199,7 @@
         const newOrder = [...container.querySelectorAll('.pb-card')].map(c => c.dataset.itemId);
         await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/reorder`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
           body: JSON.stringify({ itemIds: newOrder })
         });
         container.querySelectorAll('.pb-drag-over').forEach(el => el.classList.remove('pb-drag-over'));
@@ -1207,12 +1207,12 @@
     }
 
     async function pbCreateBoard() {
-      const name = prompt('Board name:');
+      const name = await showPrompt('New board', 'Board name…');
       if (!name) return;
-      const emoji = prompt('Emoji (optional):', '📌') || '📌';
+      const emoji = await showPrompt('Board emoji (optional)', 'e.g. 📌', '📌') || '📌';
       await fetch('http://localhost:8765/pinboards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
         body: JSON.stringify({ name, emoji })
       });
       loadPinboardPanel();
