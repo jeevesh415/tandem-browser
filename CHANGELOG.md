@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.0] - 2026-03-02
+
+- feat: two-way sync — read shared data from Google Drive on startup
+
 ## [v0.40.0] - 2026-03-02
 
 - feat: crash-safe session restore — continuous tab state persistence
