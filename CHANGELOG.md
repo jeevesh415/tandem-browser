@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.38.0] - 2026-03-01
+
+- feat: pinboard appearance panel + masonry layout + inline editing
+
 ## [v0.37.0] - 2026-03-01
 
 - feat: pin hover Edit/Remove actions + edit modal + Hydra Editor vendor bundle
