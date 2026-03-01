@@ -60,6 +60,24 @@ export class PinboardManager {
 
   setSyncManager(sm: SyncManager): void {
     this.syncManager = sm;
+    this.mergeFromSync();
+  }
+
+  private mergeFromSync(): void {
+    if (!this.syncManager?.isConfigured()) return;
+    try {
+      const shared = this.syncManager.readShared<PinboardStore>('pinboards.json');
+      if (!shared) return;
+      const localTime = new Date(this.store.lastModified).getTime() || 0;
+      const sharedTime = new Date(shared.lastModified).getTime() || 0;
+      if (sharedTime > localTime) {
+        this.store = shared;
+        this.save();
+        log.info('Pinboards loaded from sync (newer version found)');
+      }
+    } catch (e) {
+      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : e);
+    }
   }
 
   private load(): PinboardStore {

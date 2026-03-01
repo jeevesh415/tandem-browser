@@ -20,6 +20,7 @@ export interface Workspace {
 interface WorkspacesFile {
   activeId: string;
   workspaces: Workspace[];
+  lastModified?: string;
 }
 
 const STORAGE_PATH = tandemDir('workspaces.json');
@@ -29,6 +30,7 @@ const DEFAULT_COLORS = ['#4285f4', '#4ecca3', '#e94560', '#f0a500', '#9b59b6', '
 export class WorkspaceManager {
   private workspaces: Map<string, Workspace> = new Map();
   private activeId: string = '';
+  private lastModified: string | undefined;
   private mainWindow: BrowserWindow | null = null;
   private syncManager: SyncManager | null = null;
 
@@ -42,6 +44,32 @@ export class WorkspaceManager {
 
   setSyncManager(sm: SyncManager): void {
     this.syncManager = sm;
+    this.mergeFromSync();
+  }
+
+  private mergeFromSync(): void {
+    if (!this.syncManager?.isConfigured()) return;
+    try {
+      const shared = this.syncManager.readShared<WorkspacesFile>('workspaces.json');
+      if (!shared) return;
+      const localTime = this.lastModified ? new Date(this.lastModified).getTime() : 0;
+      const sharedTime = shared.lastModified ? new Date(shared.lastModified).getTime() : 0;
+      if (sharedTime > localTime) {
+        this.workspaces.clear();
+        for (const ws of shared.workspaces) {
+          this.workspaces.set(ws.id, ws);
+        }
+        this.activeId = shared.activeId;
+        this.lastModified = shared.lastModified;
+        if (!this.workspaces.has(this.activeId)) {
+          this.activeId = this.getDefaultWorkspace()?.id || '';
+        }
+        this.saveToDisk();
+        log.info('Workspaces loaded from sync (newer version found)');
+      }
+    } catch (e) {
+      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : e);
+    }
   }
 
   private loadFromDisk(): void {
@@ -49,6 +77,7 @@ export class WorkspaceManager {
       if (fs.existsSync(STORAGE_PATH)) {
         const raw = fs.readFileSync(STORAGE_PATH, 'utf-8');
         const data: WorkspacesFile = JSON.parse(raw);
+        this.lastModified = data.lastModified;
         for (const ws of data.workspaces) {
           // Migrate old emoji field to icon slug
           if (!ws.icon && (ws as any).emoji) {
@@ -92,9 +121,11 @@ export class WorkspaceManager {
     try {
       const dir = tandemDir();
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      this.lastModified = new Date().toISOString();
       const data: WorkspacesFile = {
         activeId: this.activeId,
         workspaces: this.list(),
+        lastModified: this.lastModified,
       };
       fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
       if (this.syncManager?.isConfigured()) {
