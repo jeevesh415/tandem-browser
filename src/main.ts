@@ -58,6 +58,7 @@ import { DeviceEmulator } from './device/emulator';
 import { SidebarManager } from './sidebar/manager';
 import { WorkspaceManager } from './workspaces/manager';
 import { SyncManager } from './sync/manager';
+import { PinboardManager } from './pinboards/manager';
 import { ContentExtractor } from './content/extractor';
 import { WorkflowEngine } from './workflow/engine';
 import { LoginManager } from './auth/login-manager';
@@ -114,6 +115,7 @@ let deviceEmulator: DeviceEmulator | null = null;
 let sidebarManager: SidebarManager | null = null;
 let workspaceManager: WorkspaceManager | null = null;
 let syncManager: SyncManager | null = null;
+let pinboardManager: PinboardManager | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 /** Queue tab-register IPC when it arrives before tabManager is ready */
@@ -378,6 +380,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   if (deviceSyncConfig.enabled && deviceSyncConfig.syncRoot) {
     syncManager.init(deviceSyncConfig);
   }
+  pinboardManager = new PinboardManager();
+  pinboardManager.setSyncManager(syncManager);
   tabManager.setSyncManager(syncManager);
   historyManager.setSyncManager(syncManager);
   workspaceManager.setSyncManager(syncManager);
@@ -394,6 +398,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     historyManager: historyManager!,
     panelManager: panelManager!,
     downloadManager: downloadManager!,
+    pinboardManager: pinboardManager!,
   });
 
   // Drain any webview webContents that were created before contextMenuManager was ready
@@ -494,6 +499,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     sidebarManager: sidebarManager!,
     workspaceManager: workspaceManager!,
     syncManager: syncManager!,
+    pinboardManager: pinboardManager!,
   };
 
   api = new TandemAPI({ win, port: API_PORT, registry });
@@ -635,6 +641,7 @@ app.on('will-quit', () => {
   if (historyManager) historyManager.destroy();
   if (sidebarManager) sidebarManager.destroy();
   if (workspaceManager) workspaceManager.destroy();
+  if (pinboardManager) pinboardManager.destroy();
   if (syncManager) syncManager.destroy();
 });
 

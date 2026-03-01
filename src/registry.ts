@@ -45,6 +45,7 @@ import type { DeviceEmulator } from './device/emulator';
 import type { SidebarManager } from './sidebar/manager';
 import type { WorkspaceManager } from './workspaces/manager';
 import type { SyncManager } from './sync/manager';
+import type { PinboardManager } from './pinboards/manager';
 
 export interface ManagerRegistry {
   tabManager: TabManager;
@@ -88,4 +89,5 @@ export interface ManagerRegistry {
   sidebarManager: SidebarManager;
   workspaceManager: WorkspaceManager;
   syncManager: SyncManager;
+  pinboardManager: PinboardManager;
 }

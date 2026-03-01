@@ -620,6 +620,8 @@
         loadBookmarkPanel();
       } else if (newActive === 'history') {
         loadHistoryPanel();
+      } else if (newActive === 'pinboards') {
+        loadPinboardPanel();
       } else {
         webviewCache.forEach(wv => { wv.style.display = 'none'; });
         const content = document.getElementById('sidebar-panel-content');
@@ -937,6 +939,283 @@
       } catch {
         section.style.display = 'none';
       }
+    }
+
+    // === PINBOARD PANEL MODULE ===
+    const pbState = { currentBoardId: null, currentBoardName: '', currentBoardEmoji: '' };
+
+    function pbEscape(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    async function loadPinboardPanel() {
+      const content = document.getElementById('sidebar-panel-content');
+      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      content.classList.remove('webview-mode');
+      pbState.currentBoardId = null;
+
+      content.innerHTML = `
+        <div class="pb-panel">
+          <div class="pb-header">
+            <span class="pb-title">Pinboards</span>
+            <button class="pb-new-btn" id="pb-new-btn" title="New board">+</button>
+          </div>
+          <div class="pb-board-list" id="pb-board-list">
+            <div class="bm-empty">Loading...</div>
+          </div>
+        </div>`;
+
+      try {
+        const res = await fetch('http://localhost:8765/pinboards');
+        const data = await res.json();
+        pbRenderBoardList(data.boards || []);
+      } catch {
+        document.getElementById('pb-board-list').innerHTML = '<div class="bm-empty">Failed to load boards</div>';
+      }
+
+      document.getElementById('pb-new-btn')?.addEventListener('click', pbCreateBoard);
+    }
+
+    function pbRenderBoardList(boards) {
+      const container = document.getElementById('pb-board-list');
+      if (!container) return;
+      if (boards.length === 0) {
+        container.innerHTML = '<div class="bm-empty">No boards yet. Click + to create one.</div>';
+        return;
+      }
+      container.innerHTML = boards.map(b => `
+        <div class="pb-board-item" data-board-id="${b.id}" data-name="${pbEscape(b.name)}" data-emoji="${pbEscape(b.emoji)}">
+          <span class="pb-board-emoji">${pbEscape(b.emoji)}</span>
+          <span class="pb-board-name">${pbEscape(b.name)}</span>
+          <span class="pb-board-count">${b.itemCount}</span>
+          <button class="pb-board-delete" data-board-id="${b.id}" title="Delete board">&times;</button>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.pb-board-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.classList.contains('pb-board-delete')) return;
+          pbOpenBoard(el.dataset.boardId, el.dataset.name, el.dataset.emoji);
+        });
+      });
+      container.querySelectorAll('.pb-board-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const boardId = btn.dataset.boardId;
+          await fetch(`http://localhost:8765/pinboards/${boardId}`, { method: 'DELETE' });
+          loadPinboardPanel();
+        });
+      });
+    }
+
+    async function pbOpenBoard(boardId, name, emoji) {
+      pbState.currentBoardId = boardId;
+      pbState.currentBoardName = name;
+      pbState.currentBoardEmoji = emoji;
+      const content = document.getElementById('sidebar-panel-content');
+
+      content.innerHTML = `
+        <div class="pb-panel">
+          <div class="pb-items-header">
+            <button class="pb-back-btn" id="pb-back-btn">&larr;</button>
+            <select class="pb-board-switcher" id="pb-board-switcher"></select>
+          </div>
+          <div class="pb-item-list" id="pb-item-list">
+            <div class="bm-empty">Loading...</div>
+          </div>
+        </div>`;
+
+      await pbUpdateBoardSwitcher(boardId);
+
+      document.getElementById('pb-back-btn')?.addEventListener('click', () => {
+        loadPinboardPanel();
+      });
+      document.getElementById('pb-board-switcher')?.addEventListener('change', (e) => {
+        const sel = e.target;
+        const opt = sel.selectedOptions[0];
+        if (opt) {
+          const text = opt.textContent;
+          pbOpenBoard(sel.value, text.slice(2).replace(/\s*\(\d+\)$/, ''), text.charAt(0));
+        }
+      });
+
+      try {
+        const res = await fetch(`http://localhost:8765/pinboards/${boardId}/items`);
+        const data = await res.json();
+        pbRenderItems(data.items || []);
+      } catch {
+        document.getElementById('pb-item-list').innerHTML = '<div class="bm-empty">Failed to load items</div>';
+      }
+    }
+
+    async function pbUpdateBoardSwitcher(currentId) {
+      try {
+        const res = await fetch('http://localhost:8765/pinboards');
+        const data = await res.json();
+        const select = document.getElementById('pb-board-switcher');
+        if (!select) return;
+        select.innerHTML = '';
+        (data.boards || []).forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = `${b.emoji} ${b.name} (${b.itemCount})`;
+          if (b.id === currentId) opt.selected = true;
+          select.appendChild(opt);
+        });
+      } catch { /* ignore */ }
+    }
+
+    function pbRenderItems(items) {
+      const container = document.getElementById('pb-item-list');
+      if (!container) return;
+      container.className = 'pb-grid';
+
+      if (items.length === 0) {
+        container.className = 'pb-items-empty';
+        container.innerHTML = `
+          <div class="bm-empty">
+            <div style="font-size:48px;margin-bottom:12px;">📌</div>
+            <p>No items on this board yet.</p>
+            <p>Right-click on a page, link, image, or text selection &rarr; "Save to Pinboard".</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => {
+        const title = pbEscape(item.title || item.url || (item.content ? item.content.substring(0, 50) : '') || 'Untitled');
+        const date = new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const typeIcons = { link: '🔗', image: '🖼️', text: '📝', quote: '💬' };
+
+        let preview = '';
+        switch (item.type) {
+          case 'image':
+            preview = `<img src="${pbEscape(item.url || item.thumbnail || '')}" alt="${title}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🖼️</span>'">`;
+            break;
+          case 'link': {
+            if (item.thumbnail) {
+              preview = `<img src="${pbEscape(item.thumbnail)}" alt="${title}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🔗</span>'">`;
+            } else {
+              let domain = '';
+              try { domain = new URL(item.url).hostname; } catch { /* ignore */ }
+              preview = domain
+                ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="" style="width:32px;height:32px;object-fit:contain;" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🔗</span>'">`
+                : '<span class="pb-card-type-icon">🔗</span>';
+            }
+            break;
+          }
+          case 'quote':
+            preview = `<div class="pb-card-text-preview">"${pbEscape((item.content || '').substring(0, 150))}"</div>`;
+            break;
+          case 'text':
+            preview = `<div class="pb-card-text-preview">${pbEscape((item.content || '').substring(0, 150))}</div>`;
+            break;
+          default:
+            preview = `<span class="pb-card-type-icon">${typeIcons[item.type] || '📄'}</span>`;
+        }
+
+        return `
+          <div class="pb-card" draggable="true" data-item-id="${item.id}" ${item.url ? 'data-has-url="true"' : ''} data-url="${pbEscape(item.url || '')}">
+            <button class="pb-card-delete" data-item-id="${item.id}" title="Delete">&times;</button>
+            <div class="pb-card-preview">${preview}</div>
+            <div class="pb-card-info">
+              <div class="pb-card-title">${title}</div>
+              ${item.note ? `<div class="pb-card-note">${pbEscape(item.note)}</div>` : ''}
+              <div class="pb-card-meta">
+                <span class="pb-card-type">${typeIcons[item.type] || ''} ${item.type}</span>
+                <span class="pb-card-date">${date}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Delete handler with fade-out
+      container.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.pb-card-delete');
+        if (!deleteBtn) return;
+        e.stopPropagation();
+        const itemId = deleteBtn.dataset.itemId;
+        if (!itemId || !pbState.currentBoardId) return;
+        const card = deleteBtn.closest('.pb-card');
+        if (card) {
+          card.style.transition = 'opacity 0.2s, transform 0.2s';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.9)';
+        }
+        await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, { method: 'DELETE' });
+        setTimeout(() => {
+          if (card) card.remove();
+          if (container.querySelectorAll('.pb-card').length === 0) {
+            container.className = 'pb-items-empty';
+            container.innerHTML = '<div class="bm-empty"><div style="font-size:48px;margin-bottom:12px;">📌</div><p>All items removed.</p></div>';
+          }
+        }, 250);
+      });
+
+      // Click on link/image cards opens URL in new tab
+      container.querySelectorAll('.pb-card[data-has-url="true"]').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.pb-card-delete')) return;
+          const url = card.dataset.url;
+          if (url && window.tandem) window.tandem.newTab(url);
+        });
+      });
+
+      // Drag-and-drop reorder
+      pbSetupDragAndDrop(container);
+    }
+
+    function pbSetupDragAndDrop(container) {
+      let draggedCard = null;
+      container.addEventListener('dragstart', (e) => {
+        draggedCard = e.target.closest('.pb-card');
+        if (!draggedCard) return;
+        draggedCard.classList.add('pb-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedCard.dataset.itemId);
+      });
+      container.addEventListener('dragend', () => {
+        if (draggedCard) { draggedCard.classList.remove('pb-dragging'); draggedCard = null; }
+        container.querySelectorAll('.pb-drag-over').forEach(el => el.classList.remove('pb-drag-over'));
+      });
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = e.target.closest('.pb-card');
+        if (target && target !== draggedCard) {
+          container.querySelectorAll('.pb-drag-over').forEach(el => el.classList.remove('pb-drag-over'));
+          target.classList.add('pb-drag-over');
+        }
+      });
+      container.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const target = e.target.closest('.pb-card');
+        if (!target || !draggedCard || target === draggedCard) return;
+        const cards = [...container.querySelectorAll('.pb-card')];
+        const draggedIdx = cards.indexOf(draggedCard);
+        const targetIdx = cards.indexOf(target);
+        if (draggedIdx < targetIdx) { target.after(draggedCard); } else { target.before(draggedCard); }
+        const newOrder = [...container.querySelectorAll('.pb-card')].map(c => c.dataset.itemId);
+        await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/reorder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemIds: newOrder })
+        });
+        container.querySelectorAll('.pb-drag-over').forEach(el => el.classList.remove('pb-drag-over'));
+      });
+    }
+
+    async function pbCreateBoard() {
+      const name = prompt('Board name:');
+      if (!name) return;
+      const emoji = prompt('Emoji (optional):', '📌') || '📌';
+      await fetch('http://localhost:8765/pinboards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, emoji })
+      });
+      loadPinboardPanel();
     }
 
     // === SIDEBAR SETUP PANEL ===

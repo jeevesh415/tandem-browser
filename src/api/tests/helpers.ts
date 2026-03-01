@@ -460,6 +460,21 @@ export function createMockContext(): RouteContext {
       getConfig: vi.fn().mockReturnValue(null),
       destroy: vi.fn(),
     } as any,
+
+    // ── pinboardManager ──────────────────────────
+    pinboardManager: {
+      listBoards: vi.fn().mockReturnValue([]),
+      getBoard: vi.fn().mockReturnValue(null),
+      createBoard: vi.fn().mockReturnValue({ id: 'pb-1', name: 'Test', emoji: '📌', createdAt: '', updatedAt: '', items: [] }),
+      updateBoard: vi.fn().mockReturnValue({ id: 'pb-1', name: 'Updated', emoji: '📌', createdAt: '', updatedAt: '', items: [] }),
+      deleteBoard: vi.fn().mockReturnValue(true),
+      getItems: vi.fn().mockReturnValue([]),
+      addItem: vi.fn().mockReturnValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
+      updateItem: vi.fn().mockReturnValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
+      deleteItem: vi.fn().mockReturnValue(true),
+      reorderItems: vi.fn().mockReturnValue(true),
+      destroy: vi.fn(),
+    } as any,
   };
 
   return ctx;

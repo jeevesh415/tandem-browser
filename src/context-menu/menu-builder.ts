@@ -75,6 +75,9 @@ export class ContextMenuBuilder {
     // Phase 5: Tandem-specific items (Copilot AI, Bookmark, Screenshot)
     this.addTandemItems(menu, params, wc);
 
+    // Phase 7: Pinboard items
+    this.addPinboardItems(menu, params, wc);
+
     return menu;
   }
 
@@ -628,6 +631,84 @@ export class ContextMenuBuilder {
     }));
 
     return menu;
+  }
+
+  // ═══ Phase 7: Pinboard Items ═══
+
+  /** Add "Save to Pinboard" items based on context. Shows submenu with available boards. */
+  private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    const boards = this.deps.pinboardManager.listBoards();
+    if (boards.length === 0) return;
+
+    this.addSeparator(menu);
+
+    // Save page to Pinboard (always available)
+    menu.append(new MenuItem({
+      label: 'Save Page to Pinboard',
+      submenu: boards.map(board => ({
+        label: `${board.emoji} ${board.name}`,
+        click: () => {
+          this.deps.pinboardManager.addItem(board.id, {
+            type: 'link',
+            url: params.pageURL,
+            title: wc.getTitle(),
+            sourceUrl: params.pageURL,
+          });
+        }
+      }))
+    }));
+
+    // Save link to Pinboard
+    if (params.linkURL && isSafeURL(params.linkURL)) {
+      menu.append(new MenuItem({
+        label: 'Save Link to Pinboard',
+        submenu: boards.map(board => ({
+          label: `${board.emoji} ${board.name}`,
+          click: () => {
+            this.deps.pinboardManager.addItem(board.id, {
+              type: 'link',
+              url: params.linkURL,
+              title: params.linkText || params.linkURL,
+              sourceUrl: params.pageURL,
+            });
+          }
+        }))
+      }));
+    }
+
+    // Save image to Pinboard
+    if (params.mediaType === 'image' && params.srcURL) {
+      menu.append(new MenuItem({
+        label: 'Save Image to Pinboard',
+        submenu: boards.map(board => ({
+          label: `${board.emoji} ${board.name}`,
+          click: () => {
+            this.deps.pinboardManager.addItem(board.id, {
+              type: 'image',
+              url: params.srcURL,
+              sourceUrl: params.pageURL,
+            });
+          }
+        }))
+      }));
+    }
+
+    // Save selection to Pinboard
+    if (params.selectionText) {
+      menu.append(new MenuItem({
+        label: 'Save Selection to Pinboard',
+        submenu: boards.map(board => ({
+          label: `${board.emoji} ${board.name}`,
+          click: () => {
+            this.deps.pinboardManager.addItem(board.id, {
+              type: 'quote',
+              content: params.selectionText,
+              sourceUrl: params.pageURL,
+            });
+          }
+        }))
+      }));
+    }
   }
 
   /** Append a separator only if the menu already has items (avoids leading separators) */
