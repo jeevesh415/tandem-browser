@@ -1,236 +1,228 @@
-# Tandem Browser 🚲
+# Tandem Browser
 
-> "Jij bent mij en ik ben jou, samen zijn we 1" — Robin Waslander
+> "Two people, one vehicle, stronger together." — the tandem bicycle, and the philosophy behind this project.
 
-## Wat is Tandem?
+## What is Tandem?
 
-Een **Electron browser** gebouwd voor mens-AI symbiose. Robin (mens) en Kees (AI) browsen **samen** het web. Robin ziet de pagina's, lost captcha's op, en doet menselijke dingen. Kees navigeert, extraheert data, voert acties uit, en denkt mee — allemaal onzichtbaar voor websites.
+Tandem is an Electron-based browser built for human-AI collaboration. The name comes from the tandem bicycle: two riders, one machine, each contributing what the other can't do alone.
 
-De naam komt van de tandemfiets: twee personen, één voertuig, samen sterker.
+The browser runs two things in parallel. The human uses it like any other browser — navigating, logging in, handling captchas, making decisions. The AI has access to a full HTTP API on localhost:8765 with ~200 endpoints for navigation, interaction, data extraction, and automation. Websites see a normal Chrome browser on macOS. They don't see the AI.
 
-## Waarom dit bestaat
+The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs a 6-layer security shield before anything reaches the page.
 
-1. **AI is blind zonder browser** — Kees heeft ogen nodig op het web
-2. **Platforms blokkeren bots** — LinkedIn, Google, X detecteren alles wat niet menselijk is
-3. **Samen door elke muur** — Een echte browser + echt mens = ondetecteerbaar
-4. **Data ownership** — Geen scraping APIs, geen third-party services, eigen toegang
-5. **Centaur filosofie** — Mens+AI samen is sterker dan de beste AI of mens alleen
+Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
-## Eigenaren
+**GitHub:** `hydro13/tandem-browser` (private)  
+**Current version:** v0.29.0  
+**Started:** February 11, 2026
 
-- **Robin Waslander** — Mens, opdrachtgever, copiloot. Werkt nachtdienst bij DHL, bouwt overdag aan Mblock BV (AI bedrijf)
-- **Kees** — AI assistent (Claude via OpenClaw). Bouwt de code, gebruikt de browser, is de "motor"
-- **GitHub:** `hydro13/tandem-browser` (privé repo)
+---
 
-## Architectuur
+## Philosophy
+
+Human-AI symbiosis, not human-AI hierarchy. The goal isn't an AI that does things for you. It's a setup where both parties contribute what they're good at, and the result is better than either could produce alone.
+
+In browser terms: the human handles ambiguity, judgment calls, authentication, and anything that requires a real person. The AI handles speed, memory, data extraction, parallel processing, and anything that would take the human too long. The browser is the shared workspace.
+
+---
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Tandem Browser (Electron)                                   │
-│                                                               │
-│  ┌─────────────────────┐  ┌──────────────────────────────┐  │
-│  │  Webview (Chromium)  │  │  Kees Panel (shell)          │  │
-│  │                      │  │  ┌────────────────────────┐  │  │
-│  │  Websites zien:      │  │  │ Activity  │ Chat │ 📸 │🎙│  │  │
-│  │  "mens in Chrome     │  │  ├────────────────────────┤  │  │
-│  │   op macOS in BE"    │  │  │                        │  │  │
-│  │                      │  │  │ Chat: WebSocket naar   │  │  │
-│  │  Robin interacteert  │  │  │ OpenClaw gateway       │  │  │
-│  │  hier visueel        │  │  │ (ws://127.0.0.1:18789) │  │  │
-│  │                      │  │  │                        │  │  │
-│  └──────────┬───────────┘  │  │ Screenshots, ClaroNote │  │  │
-│             │              │  └────────────────────────┘  │  │
-│             │              └──────────────────────────────┘  │
-│             ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  Electron Main Process                                   │ │
-│  │                                                           │ │
-│  │  ├── StealthManager    (anti-detect patches)             │ │
-│  │  ├── TabManager        (multi-tab, groups, shortcuts)    │ │
-│  │  ├── ConfigManager     (tandem://settings)               │ │
-│  │  ├── BehaviorObserver  (learn Robin's patterns)          │ │
-│  │  ├── ChromeImporter    (bookmarks, history, cookies)     │ │
-│  │  ├── BookmarkManager   (★ bar + manager)                 │ │
-│  │  ├── HistoryManager    (Cmd+Y, full-text search)         │ │
-│  │  ├── DownloadManager   (progress, pause, resume)         │ │
-│  │  ├── FindInPage        (Cmd+F)                           │ │
-│  │  ├── SiteMemory        (per-site persistent notes)       │ │
-│  │  ├── WatchManager      (scheduled page watches)          │ │
-│  │  ├── HeadlessManager   (background browsing + noodrem)   │ │
-│  │  ├── FormMemory        (form field recall)               │ │
-│  │  ├── PiPManager        (picture-in-picture)              │ │
-│  │  ├── NetworkInspector   (request/response monitoring)    │ │
-│  │  ├── ContentExtractor  (smart page→markdown)             │ │
-│  │  ├── WorkflowEngine    (multi-step automated actions)    │ │
-│  │  ├── LoginManager      (per-site auth state)             │ │
-│  │  ├── AudioCapture      (tab audio recording)             │ │
-│  │  ├── ExtensionLoader   (Chrome extension support)        │ │
-│  │  └── ClaroNoteManager  (voice-to-text integration)      │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│             │                                                 │
-│             ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  Tandem HTTP API (localhost:8765)                        │ │
-│  │  ~111 endpoints — Express.js                             │ │
-│  │                                                           │ │
-│  │  Navigation:  /navigate, /back, /forward, /reload        │ │
-│  │  Content:     /page-content, /page-html, /extract        │ │
-│  │  Interaction: /click, /type, /scroll, /hover             │ │
-│  │  Tabs:        /tabs, /tab/new, /tab/close, /tab/switch   │ │
-│  │  Data:        /cookies, /screenshot, /links, /forms      │ │
-│  │  Control:     /status, /execute-js, /copilot-alert       │ │
-│  │  Bookmarks:   /bookmarks, /bookmarks/add, /bookmarks/rm  │ │
-│  │  History:     /history, /history/search                   │ │
-│  │  And ~80 more...                                          │ │
-│  └─────────────────────────────────────────────────────────┘ │
+┌─────────────────────────────────────────────────────────────────┐
+│  Tandem Browser (Electron v33)                                   │
+│                                                                   │
+│  ┌──────────────────────────┐  ┌───────────────────────────┐    │
+│  │  Sidebar (shell)          │  │  Copilot Panel (shell)    │    │
+│  │                          │  │                            │    │
+│  │  Workspaces (SVG icons)  │  │  Chat / Activity /         │    │
+│  │  Messengers:             │  │  Screenshots / ClaroNote   │    │
+│  │   Telegram, WhatsApp,    │  │                            │    │
+│  │   Discord, Gmail,        │  └───────────────────────────┘    │
+│  │   Calendar, Instagram, X │                                    │
+│  │  Utilities:              │  ┌───────────────────────────┐    │
+│  │   Bookmarks, History,    │  │  Webview (Chromium)       │    │
+│  │   Downloads              │  │                            │    │
+│  │                          │  │  What websites see:        │    │
+│  │  [resizable, frosted     │  │  "Chrome on macOS, BE"    │    │
+│  │   glass, pin/overlay]    │  │                            │    │
+│  └──────────────────────────┘  └───────────────────────────┘    │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Electron Main Process                                       │ │
+│  │                                                               │ │
+│  │  SecurityManager     6-layer shield (see below)             │ │
+│  │  StealthManager      Anti-fingerprint patches               │ │
+│  │  TabManager          Multi-tab, groups, shortcuts           │ │
+│  │  SidebarManager      Sidebar config + panel routing         │ │
+│  │  WorkspaceManager    Named tab groups + persistence         │ │
+│  │  BookmarkManager     Tree, search, CRUD                     │ │
+│  │  HistoryManager      Full-text search, Cmd+Y                │ │
+│  │  DownloadManager     Progress, pause, resume                │ │
+│  │  ChromeImporter      Bookmarks, history, cookies            │ │
+│  │  BehaviorObserver    Learn user patterns                    │ │
+│  │  ContentExtractor    Smart page-to-markdown                 │ │
+│  │  WorkflowEngine      Multi-step automation                  │ │
+│  │  ClaroNoteManager    Voice-to-text integration              │ │
+│  │  SiteMemory          Per-site persistent notes              │ │
+│  │  WatchManager        Scheduled page monitoring              │ │
+│  │  HeadlessManager     Background browsing + kill switch      │ │
+│  │  FormMemory          Encrypted form field recall            │ │
+│  │  AudioCapture        Tab audio recording                    │ │
+│  │  ExtensionLoader     Chrome extension support               │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                      │                                           │
+│                      ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Tandem HTTP API — localhost:8765 (Express)                  │ │
+│  │  ~200 endpoints across 12 route modules                      │ │
+│  │                                                               │ │
+│  │  Navigation, Content, Interaction, Tabs, Screenshots         │ │
+│  │  Bookmarks, History, Downloads, Sessions, Workspaces         │ │
+│  │  Security, DevTools (CDP bridge), Device emulation           │ │
+│  │  Network mocking, Script injection, Behavior stats           │ │
+│  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
-         │                              ▲
-         │ curl / fetch                 │ WebSocket
-         ▼                              │
-┌─────────────────────┐    ┌─────────────────────────┐
-│  OpenClaw (Kees)    │    │  OpenClaw Gateway        │
-│                     │    │  ws://127.0.0.1:18789    │
-│  Gebruikt HTTP API  │    │                           │
-│  om te browsen      │    │  Chat panel verbindt     │
-│  via exec/curl      │    │  hier direct via WS      │
-└─────────────────────┘    └─────────────────────────┘
+         │
+         │ HTTP / fetch / curl
+         ▼
+┌─────────────────────┐
+│  AI Agent (OpenClaw) │
+│                      │
+│  Uses the API to     │
+│  browse, extract,    │
+│  automate, observe   │
+└─────────────────────┘
 ```
 
-## Twee-Lagen Architectuur (KRITISCH)
+---
 
-**Layer 1 — Webview (wat websites zien):**
-- Gewone Chromium webview, ononderscheidbaar van echte Chrome
-- Robin's interactie, cookies, sessies
-- GEEN Electron APIs, GEEN Kees code, GEEN custom elements
+## Security System
 
-**Layer 2 — Shell + Main Process (onzichtbaar voor websites):**
-- Electron shell met Kees panel, draw overlay, voice input
-- Express API op localhost:8765
-- Alle AI functionaliteit leeft hier
-- WebSocket naar OpenClaw gateway voor chat
+Six independent layers that run before anything reaches the page:
 
-**Gouden Regel:** De webview is heilig terrein. Websites mogen NOOIT weten dat er een AI meekijkt.
+| Layer | Name | What it does |
+|-------|------|-------------|
+| 1 | NetworkShield | 811,000+ blocklist entries (URLhaus, PhishTank, Steven Black). Blocks at request level, 0.03ms decision time |
+| 2 | OutboundGuard | Scans POST body for credential exfiltration, blocks known tracker domains |
+| 3 | ContentAnalyzer | Typosquatting detection, script analysis, risk score 0-100 per page |
+| 4 | ScriptGuard | CDP-based script fingerprinting, detects keyloggers and crypto miners |
+| 5 | BehaviorMonitor | Welford's algorithm, per-domain baseline + anomaly detection, trust scores |
+| 6 | GatekeeperWebSocket | AI agent makes real-time decisions on ambiguous requests |
 
-## Chat Architectuur
+None of this touches the webview. Websites don't know it's running.
 
-### Hoe Kees en Robin communiceren in Tandem
+---
 
-Het Kees panel heeft een **Chat tab** die **direct via WebSocket** verbindt met de OpenClaw gateway. Dit is DEZELFDE chat als de OpenClaw webchat — berichten verschijnen in beide.
+## Anti-Detection
 
-**Protocol:** JSON-RPC over WebSocket
+The browser presents itself as a normal Chrome instance on macOS. What gets patched:
+
+- User-Agent: real Chrome UA, no Electron strings
+- `navigator.userAgentData.brands`: Chrome brands only
+- Canvas fingerprint: subtle noise injection
+- WebGL: GPU info masking
+- Font enumeration: consistent list
+- Audio fingerprint: AudioContext noise
+- Timing: randomized delays on automated actions
+- HTTP headers: Sec-CH-UA matches Chrome, "Electron" stripped
+- `app.setName('Google Chrome')`: OS-level name override
+
+**Interaction rule:** All automated interactions go through `webContents.sendInputEvent()`, not `el.click()` or `dispatchEvent()`. `Event.isTrusted` stays true.
+
+---
+
+## Sidebar
+
+Opera-style sidebar on the left. Three sections:
+
+**Workspaces** (top)
+Named tab groups with 24-icon SVG picker (Heroicons outline). Create, edit, rename, delete. Drag tabs from the tab bar onto a workspace icon to move them. Right-click any tab for the full context menu including "Move to Workspace."
+
+**Communication**
+Persistent webview panels for Telegram, WhatsApp, Discord, Gmail, Calendar, Instagram, X. Each panel has its own isolated browser session (own cookies, localStorage, cache). Panels are resizable with per-module width persistence. Frosted glass overlay mode or pinned push mode.
+
+**Utilities**
+Bookmarks (full tree, search, folder navigation), History, Downloads.
+
+Sidebar toggle: `Cmd+Shift+B`. Setup panel (⚙️) to enable/disable individual items.
+
+---
+
+## Workspaces
+
+Named tab groups. Each workspace has an icon (slug, e.g. "briefcase"), a name, and a list of assigned tab IDs. Tab bar filters to show only the active workspace's tabs.
+
+Persisted to `~/.tandem/workspaces.json`. Default workspace ("home" icon) is always present and cannot be deleted.
+
+API: `GET /workspaces`, `POST /workspaces`, `PUT /workspaces/:id`, `DELETE /workspaces/:id`, `POST /workspaces/:id/move-tab`, `POST /workspaces/:id/switch`
+
+---
+
+## Tab Context Menu
+
+Right-click any tab:
+
 ```
-Browser Shell → ws://127.0.0.1:18789 → OpenClaw Gateway → Kees (Claude)
+New Tab
+─────────────────
+Reload
+Duplicate Tab
+Copy Page Address
+─────────────────
+Move to Workspace  ▶  [workspace icon + name per workspace]
+─────────────────
+Mute Tab / Unmute Tab
+─────────────────
+Close Tab
+Close Other Tabs
+Close Tabs to the Right
 ```
 
-**Verbindingsflow:**
-1. WebSocket openen naar `ws://127.0.0.1:18789`
-2. Server stuurt `connect.challenge` event (met optionele nonce)
-3. Client stuurt `connect` request met gateway token
-4. Server stuurt response + `hello` met session info
-5. Client vraagt `chat.history` voor bestaande berichten
-6. Client stuurt `chat.send` voor nieuwe berichten
-7. Server stuurt `chat` events met `delta` (streaming) en `final` (klaar)
+---
 
-**Gateway token:** Staat in `~/.openclaw/openclaw.json` → `gateway.auth.token`
+## API Overview
 
-**Session key:** `agent:main:main` (de hoofd-sessie)
+All endpoints require the `Authorization: Bearer <token>` header (token in `~/.tandem/config.json`). Localhost requests bypass auth.
 
-### ⚠️ NIET doen (geleerde lessen)
-- ❌ **Cron polling** van localhost:8765/chat — te traag, verspilt tokens
-- ❌ **Iframe/webview embed** van OpenClaw webchat — geblokkeerd door X-Frame-Options + CSP
-- ❌ **Token injectie via localStorage** in iframe — cross-origin problemen
-- ✅ **Direct WebSocket** — simpel, snel, real-time, geen overhead
+Route modules:
+- `browser.ts` — navigation, page content, screenshots
+- `tabs.ts` — tab management, groups
+- `workspaces.ts` — workspace CRUD + tab assignment
+- `bookmarks.ts` — bookmark tree, search, CRUD
+- `history.ts` — history search and management
+- `downloads.ts` — download tracking
+- `sessions.ts` — isolated browser sessions
+- `security.ts` — blocklist status, risk scores, alerts
+- `devtools.ts` — CDP bridge (console, network, DOM, storage)
+- `behavior.ts` — behavior stats and pattern data
+- `chat.ts` — internal chat relay
+- `snapshots.ts` — accessibility tree + agent interaction refs
 
-## Stealth & Anti-Detectie
-
-### Wat we patchen
-- **User-Agent:** Echte Chrome UA, geen "Electron" vermelding
-- **navigator.userAgentData.brands:** Chrome brands, geen Electron
-- **Canvas fingerprint:** Subtiele noise injection
-- **WebGL:** GPU info masking
-- **Font enumeration:** Consistente font lijst
-- **Audio fingerprint:** AudioContext noise
-- **Timing:** Random delays bij automated acties
-- **Headers:** Sec-CH-UA headers matchen Chrome, "Electron" gestript uit alle headers
-- **app.setName('Google Chrome'):** OS-level naam override
-
-### Wat websites NIET mogen zien
-- `window.process` of `window.require` (Electron giveaways)
-- `Event.isTrusted === false` (programmatische events)
-- Onze API op localhost:8765 (CORS strict, alleen localhost/file://)
-- Custom DOM elements in de webview
-- WebSocket connecties naar localhost vanuit de webview
-
-### Interactie patronen
-| Actie | ❌ Verboden (detecteerbaar) | ✅ Verplicht (onzichtbaar) |
-|-------|---------------------------|--------------------------|
-| Klikken | `el.click()` / `dispatchEvent()` | `webContents.sendInputEvent()` |
-| Typen | `el.value = "text"` | `sendInputEvent({type:'char'})` per karakter |
-| Screenshot | Canvas API in webview | `webContents.capturePage()` |
-| Page lezen | DOM crawler in webview | `executeJavaScript()` vanuit main process |
-| Overlay | Canvas in webview | Canvas in shell BOVEN webview |
-
-## Behavioral Learning
-
-Tandem leert Robin's browsing patronen en repliceert ze bij automated acties:
-- **BehaviorObserver** (passief, altijd actief) logt events via Electron main process
-- Data naar `~/.tandem/behavior/raw/`
-- Typing ritme, muis curves, scroll patronen, click delays
-- Bij automated acties: sample uit Robin's echte distributies
-
-## Feature Status
-
-### ✅ Phase 1: Core (13 API endpoints, stealth, persistent sessions)
-### ✅ Phase 2: Browser Experience
-- 2.1 Tabs (manager, groups, Cmd+T/W/1-9, humanized input)
-- 2.2 Kees Panel (split window, Activity/Chat/Screenshots/ClaroNote tabs)
-- 2.3 Draw Tool (canvas overlay, 5 tools, 4 colors, snap compositing)
-- 2.4 Voice Input (Web Speech API nl-BE, live transcription)
-- 2.5 Activity Feed (navigation event tracking)
-- 2.6 Chat (**WebSocket naar OpenClaw gateway**, streaming, auto-reconnect)
-- 2.7 Screenshots (thumbnails, Cmd+Shift+S, clipboard + ~/Pictures/Tandem/)
-- 2.8 Settings (tandem://settings, ConfigManager, 6 sections)
-- 2.8b Behavioral Learning (BehaviorObserver, raw data collection)
-- 2.9 New Tab (custom kees.ai page, search, quick links)
-
-### ✅ Phase 3: Advanced
-- Site memory, scheduled watches, headless mode, form memory
-- Context bridge, bidirectional control, PiP mode, network inspector
-
-### ✅ Phase 4: Chrome Compatibility
-- Chrome import (bookmarks/history/cookies)
-- Bookmarks manager + bar + ★
-- History manager + Cmd+Y
-- Download manager
-- Find in page (Cmd+F)
-
-### ✅ Phase 5: Stealth & Integration
-- Canvas/WebGL/font/audio fingerprint protection
-- Audio capture (Cmd+R), extension support
-- OpenClaw integration (content extractor, workflow engine, login manager, skill package)
-- ClaroNote native integration (voice recording, API proxy, Kees Panel tab)
-
-### 🔄 Phase 6: Polish (in progress)
-- Help page, keyboard shortcuts overlay
-- Zoom support, light theme, onboarding flow
+---
 
 ## Key Files
 
 ```
-src/main.ts              # App lifecycle, window creation, IPC handlers, menu
-src/api/server.ts        # Express API — alle ~111 endpoints
-src/stealth/manager.ts   # Anti-detect patches
-src/tabs/manager.ts      # Tab management
-src/config/manager.ts    # Settings/config
-src/behavior/observer.ts # Behavioral learning
-src/chrome/importer.ts   # Chrome data import
-src/content/extractor.ts # Smart page→markdown
-src/workflow/engine.ts   # Multi-step automation
-src/auth/login-manager.ts# Per-site auth state
-src/claronote/manager.ts # ClaroNote voice-to-text
-shell/index.html         # Main UI (shell, panels, chat, all client JS)
-skill/SKILL.md           # OpenClaw skill definition
+src/main.ts                    App lifecycle, window, IPC, menu
+src/api/server.ts              API setup + route registration
+src/api/routes/                12 route modules
+src/security/                  6-layer security system
+src/stealth/manager.ts         Anti-fingerprint patches
+src/tabs/manager.ts            Tab management
+src/sidebar/manager.ts         Sidebar config + state
+src/workspaces/manager.ts      Workspace CRUD + tab mapping
+src/config/manager.ts          Settings
+src/behavior/observer.ts       Behavioral learning
+src/content/extractor.ts       Smart page-to-markdown
+src/workflow/engine.ts         Multi-step automation
+src/preload.ts                 contextBridge API surface
+shell/index.html               Main UI (shell, sidebar, panels)
+shell/js/main.js               Tab bar, drag-drop, context menu
+shell/css/main.css             All shell styles
 ```
+
+---
 
 ## Development
 
@@ -241,27 +233,31 @@ npm install
 # Build TypeScript
 npx tsc
 
-# Run (macOS: clear quarantine first!)
+# Run (macOS: clear quarantine first)
 xattr -cr node_modules/electron/dist/Electron.app
 npx electron .
 
-# API is on localhost:8765
+# API
 curl http://localhost:8765/status
 ```
 
-### macOS Quarantine Fix
-Electron op macOS wordt geKILLed door Gatekeeper als de quarantine flag aanwezig is. **ALTIJD** `xattr -cr` runnen voor het starten:
-```bash
-xattr -cr node_modules/electron/dist/Electron.app
-```
+**macOS note:** Electron binaries get quarantined by Gatekeeper. Run `xattr -cr` before starting, or the process will be killed silently.
 
-## Oorsprong
+---
 
-Herbouwd vanuit `totalrecall-browserV2` — Robin's eerdere custom Electron browser. De DNA is hetzelfde, de focus verschoven van "dev tool" naar "tandem browsing tool".
+## Build History
 
-## Gerelateerde Projecten
+| Date | Versions | What was built |
+|------|----------|---------------|
+| Feb 11 | v0.1–v0.14 | Full foundation: tabs, stealth, 6-layer security, Chrome import, site memory, scheduled watches, headless mode, form memory, context bridge, PiP, network inspector, ClaroNote, workflow engine, audio capture, extension support |
+| Feb 26–27 | — | Refactor: API split into 12 route modules, ManagerRegistry, 739 integration tests, type safety overhaul, security hardening |
+| Feb 28 | v0.15–v0.22 | Sidebar: SidebarManager, icon strip, 3-section layout, Gmail/Calendar, setup panel, pin/overlay toggle, persistent messenger webviews, resizable panels, frosted glass |
+| Mar 1 | v0.23–v0.29 | Gmail auth fix, bookmarks panel, workspace manager + UI, Opera-style icon picker, drag-drop tab move, full right-click context menu |
 
-- **OpenClaw** — AI gateway waar Kees draait (localhost:18789)
-- **ClaroNote** — Robin's voice-to-text SaaS (api.claronote.com), native geïntegreerd in Tandem
-- **Kanbu** — Robin's project management tool (app.kanbu.be)
-- **GenX** — AI agent ecosystem op Robin's servers
+---
+
+## Related Projects
+
+- **OpenClaw** — AI gateway the agent runs on (localhost:18789)
+- **ClaroNote** — Voice-to-text SaaS, natively integrated in Tandem
+- **Kanbu** — Project management tool (app.kanbu.be)
