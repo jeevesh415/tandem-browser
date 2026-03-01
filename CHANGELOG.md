@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.37.0] - 2026-03-01
+
+- feat: pin hover Edit/Remove actions + edit modal + Hydra Editor vendor bundle
+
 ## [v0.36.1] - 2026-03-01
 
 - fix: responsive masonry columns + aspect-ratio card images, no stretch on wide panel
