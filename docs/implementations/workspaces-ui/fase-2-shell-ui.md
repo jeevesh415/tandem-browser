@@ -235,20 +235,23 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [ ] Workspace strip zichtbaar links van het browser content area
-- [ ] Default workspace icon (blauw, 🏠) is actief (witte rand)
-- [ ] "+" knop maakt nieuwe workspace aan (prompt voor naam)
-- [ ] Klik op workspace icon → tab bar filtert, alleen die workspace's tabs zichtbaar
-- [ ] Nieuwe tabs worden automatisch aan actieve workspace toegewezen
+- [x] Workspace strip zichtbaar links van het browser content area
+- [x] Default workspace icon (blauw, 🏠) is actief (indigo bg) — now SVG icons
+- [x] "+" knop maakt nieuwe workspace aan (inline icon picker + name input)
+- [x] Klik op workspace icon → tab bar filtert, alleen die workspace's tabs zichtbaar
+- [x] Nieuwe tabs worden automatisch aan actieve workspace toegewezen
 - [ ] Rechtermuisklik tab → "Verplaats naar workspace" → submenu met workspaces
 - [ ] Tab verplaatsen naar andere workspace → tab verdwijnt uit huidige tab bar
-- [ ] Workspace wisselen → tab bar update → juiste tabs zichtbaar
-- [ ] Na browser restart: workspaces en hun kleuren/emoji's zijn behouden
+- [x] Workspace wisselen → tab bar update → juiste tabs zichtbaar
+- [x] Na browser restart: workspaces en hun SVG icons zijn behouden
+- [x] Opera-style icon picker: 24 SVG icons in 6-col grid (v0.26.0)
+- [x] Edit workspace: inline sheet with icon picker, rename, delete (v0.26.0)
+- [x] Data model migrated: emoji → icon slug (v0.26.0)
 
 **Compilatie verificatie:**
-- [ ] `npx tsc` — zero errors
+- [x] `npx tsc` — zero errors
 - [ ] `npx vitest run` — alle bestaande tests slagen
-- [ ] `npm start` — app start zonder crashes
+- [x] `npm start` — app start zonder crashes
 
 ---
 

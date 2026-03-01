@@ -229,8 +229,8 @@ contextBridge.exposeInMainWorld('tandem', {
   },
 
   // Workspace switching
-  onWorkspaceSwitched: (callback: (workspace: { id: string; name: string; emoji: string; color: string; tabIds: number[] }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, workspace: { id: string; name: string; emoji: string; color: string; tabIds: number[] }) => callback(workspace);
+  onWorkspaceSwitched: (callback: (workspace: { id: string; name: string; icon: string; color: string; tabIds: number[] }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, workspace: { id: string; name: string; icon: string; color: string; tabIds: number[] }) => callback(workspace);
     ipcRenderer.on('workspace-switched', handler);
     return () => ipcRenderer.removeListener('workspace-switched', handler);
   },

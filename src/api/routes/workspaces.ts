@@ -20,9 +20,9 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
 
   router.post('/workspaces', (req: Request, res: Response) => {
     try {
-      const { name, emoji, color } = req.body;
+      const { name, icon, color } = req.body;
       if (!name) { res.status(400).json({ error: 'name is required' }); return; }
-      const workspace = ctx.workspaceManager.create({ name, emoji, color });
+      const workspace = ctx.workspaceManager.create({ name, icon, color });
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
@@ -49,8 +49,8 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
 
   router.put('/workspaces/:id', (req: Request<IdParams>, res: Response) => {
     try {
-      const { name, emoji, color } = req.body;
-      const workspace = ctx.workspaceManager.update(req.params.id, { name, emoji, color });
+      const { name, icon, color } = req.body;
+      const workspace = ctx.workspaceManager.update(req.params.id, { name, icon, color });
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) });

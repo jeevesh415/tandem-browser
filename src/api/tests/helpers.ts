@@ -435,13 +435,13 @@ export function createMockContext(): RouteContext {
     // ── workspaceManager ────────────────────────
     workspaceManager: {
       list: vi.fn().mockReturnValue([]),
-      create: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      create: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', icon: 'briefcase', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
       remove: vi.fn(),
-      switch: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
-      getActive: vi.fn().mockReturnValue({ id: 'ws-default', name: 'Default', emoji: '🏠', color: '#4285f4', order: 0, isDefault: true, tabIds: [] }),
+      switch: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', icon: 'briefcase', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      getActive: vi.fn().mockReturnValue({ id: 'ws-default', name: 'Default', icon: 'home', color: '#4285f4', order: 0, isDefault: true, tabIds: [] }),
       getActiveId: vi.fn().mockReturnValue('ws-default'),
       get: vi.fn().mockReturnValue(null),
-      update: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      update: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', icon: 'briefcase', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
       assignTab: vi.fn(),
       removeTab: vi.fn(),
       moveTab: vi.fn(),

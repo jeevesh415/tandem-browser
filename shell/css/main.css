@@ -1232,28 +1232,41 @@
     .toggle-switch input:checked + .toggle-slider { background: #7c5cbf; }
     .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
 
-    /* === WORKSPACE ICONS (Section 1 of sidebar) === */
+    /* === WORKSPACE STRIP ICONS (Section 1 of sidebar) === */
     .workspace-icon .workspace-icon-inner {
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.15s;
+      transition: transform 0.15s, background 0.15s;
     }
     .workspace-icon:hover .workspace-icon-inner {
       transform: scale(1.1);
     }
     .workspace-icon.active {
-      background: rgba(255,255,255,0.12);
+      background: transparent;
     }
-    .workspace-icon.active .workspace-icon-inner {
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.7);
+    .ws-strip-active {
+      background: #4f46e5 !important;
     }
-    .workspace-emoji {
-      font-size: 15px;
-      line-height: 1;
+    .ws-strip-active .workspace-svg-icon { color: #fff; }
+    .ws-strip-inactive {
+      background: rgba(255,255,255,0.08);
+    }
+    .ws-strip-inactive .workspace-svg-icon { color: rgba(255,255,255,0.6); }
+    .ws-strip-inactive:hover .workspace-svg-icon { color: #fff; }
+    .workspace-svg-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .workspace-svg-icon svg {
+      width: 20px;
+      height: 20px;
     }
     .workspace-add-btn {
       opacity: 0.4;
@@ -1302,17 +1315,21 @@
       background: rgba(255,255,255,0.08);
     }
     .ws-panel-item.active {
-      background: rgba(78,204,163,0.15);
+      background: rgba(79,70,229,0.15);
     }
-    .ws-panel-icon {
+    .ws-panel-icon-svg {
       width: 28px;
       height: 28px;
       border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
       flex-shrink: 0;
+      color: rgba(255,255,255,0.7);
+    }
+    .ws-panel-icon-svg svg {
+      width: 18px;
+      height: 18px;
     }
     .ws-panel-name {
       flex: 1;
@@ -1320,27 +1337,172 @@
       color: var(--text, #fff);
     }
     .ws-panel-check {
-      color: var(--accent, #4ecca3);
+      color: #4f46e5;
       font-size: 14px;
     }
-    .ws-panel-delete {
+    .ws-panel-edit {
       background: none;
       border: none;
       color: var(--text-dim, #888);
       cursor: pointer;
-      font-size: 12px;
+      font-size: 14px;
       padding: 2px 6px;
       border-radius: 4px;
       opacity: 0;
       transition: opacity 0.15s;
+      letter-spacing: 1px;
     }
-    .ws-panel-item:hover .ws-panel-delete {
+    .ws-panel-item:hover .ws-panel-edit {
       opacity: 1;
     }
-    .ws-panel-delete:hover {
-      color: var(--warning, #e94560);
-      background: rgba(233,69,96,0.15);
+    .ws-panel-edit:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
     }
+
+    /* === WORKSPACE FORM (inline create/edit sheet) === */
+    .ws-form-sheet {
+      padding: 12px;
+    }
+    .ws-form-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #eee;
+      margin-bottom: 14px;
+    }
+    .ws-form-section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+    .ws-form-section-label:first-of-type { margin-top: 0; }
+    .ws-icon-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .ws-icon-grid-btn {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+      color: rgba(255,255,255,0.6);
+    }
+    .ws-icon-grid-btn:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+    .ws-icon-grid-btn.selected {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #fff;
+    }
+    .ws-icon-grid-svg {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ws-icon-grid-svg svg {
+      width: 18px;
+      height: 18px;
+    }
+    .ws-form-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #eee;
+      font-size: 13px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .ws-form-input:focus {
+      border-color: #4f46e5;
+    }
+    .ws-form-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      gap: 8px;
+    }
+    .ws-form-btn-cancel {
+      background: transparent;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .ws-form-btn-cancel:hover { color: #ccc; }
+    .ws-form-btn-primary {
+      background: #4f46e5;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .ws-form-btn-primary:hover { background: #4338ca; }
+    .ws-form-btn-delete {
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 16px;
+    }
+    .ws-form-btn-delete:hover {
+      background: rgba(239,68,68,0.1);
+    }
+    .ws-form-delete-confirm {
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 6px;
+      text-align: center;
+    }
+    .ws-form-delete-confirm span {
+      font-size: 12px;
+      color: #ef4444;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .ws-form-delete-confirm-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .ws-form-btn-danger {
+      background: #ef4444;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 6px;
+    }
+    .ws-form-btn-danger:hover { background: #dc2626; }
 
     /* ═══ Browser content ═══ */
     .browser-content {

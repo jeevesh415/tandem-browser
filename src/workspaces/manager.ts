@@ -9,7 +9,7 @@ const log = createLogger('WorkspaceManager');
 export interface Workspace {
   id: string;
   name: string;
-  emoji: string;
+  icon: string;
   color: string;
   order: number;
   isDefault: boolean;
@@ -44,6 +44,11 @@ export class WorkspaceManager {
         const raw = fs.readFileSync(STORAGE_PATH, 'utf-8');
         const data: WorkspacesFile = JSON.parse(raw);
         for (const ws of data.workspaces) {
+          // Migrate old emoji field to icon slug
+          if (!ws.icon && (ws as any).emoji) {
+            ws.icon = 'home';
+            delete (ws as any).emoji;
+          }
           this.workspaces.set(ws.id, ws);
         }
         this.activeId = data.activeId;
@@ -61,7 +66,7 @@ export class WorkspaceManager {
       const defaultWs: Workspace = {
         id: this.generateId(),
         name: 'Default',
-        emoji: '🏠',
+        icon: 'home',
         color: '#4285f4',
         order: 0,
         isDefault: true,
@@ -106,14 +111,14 @@ export class WorkspaceManager {
     return Array.from(this.workspaces.values()).sort((a, b) => a.order - b.order);
   }
 
-  create(opts: { name: string; emoji?: string; color?: string }): Workspace {
+  create(opts: { name: string; icon?: string; color?: string }): Workspace {
     if (!opts.name) throw new Error('name is required');
     // Pick a default color based on current count
     const colorIndex = this.workspaces.size % DEFAULT_COLORS.length;
     const ws: Workspace = {
       id: this.generateId(),
       name: opts.name,
-      emoji: opts.emoji || '📁',
+      icon: opts.icon || 'briefcase',
       color: opts.color || DEFAULT_COLORS[colorIndex],
       order: this.workspaces.size,
       isDefault: false,
@@ -174,11 +179,11 @@ export class WorkspaceManager {
     return this.workspaces.get(id);
   }
 
-  update(id: string, opts: Partial<Pick<Workspace, 'name' | 'emoji' | 'color'>>): Workspace {
+  update(id: string, opts: Partial<Pick<Workspace, 'name' | 'icon' | 'color'>>): Workspace {
     const ws = this.workspaces.get(id);
     if (!ws) throw new Error(`Workspace ${id} not found`);
     if (opts.name !== undefined) ws.name = opts.name;
-    if (opts.emoji !== undefined) ws.emoji = opts.emoji;
+    if (opts.icon !== undefined) ws.icon = opts.icon;
     if (opts.color !== undefined) ws.color = opts.color;
     this.saveToDisk();
     return ws;
