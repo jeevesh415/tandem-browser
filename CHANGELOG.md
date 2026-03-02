@@ -2,6 +2,13 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.8] - 2026-03-02
+
+- fix: remove duplicate onOpenUrlInNewTab handler
+
+TypeScript error: object literal cannot have multiple properties
+with the same name
+
 ## [v0.41.7] - 2026-03-02
 
 - fix: About window links open in new Tandem tab
