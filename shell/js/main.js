@@ -3238,23 +3238,25 @@
       }).catch(() => { });
     }
 
-// ═══ About Overlay ═══
+// ═══ About Overlay (same pattern as onboarding) ═══
 function showAboutOverlay() {
   const overlay = document.getElementById('about-overlay');
   if (overlay) {
-    overlay.style.display = 'flex';
+    overlay.classList.add('visible');
   }
 }
 
 function hideAboutOverlay() {
   const overlay = document.getElementById('about-overlay');
   if (overlay) {
-    overlay.style.display = 'none';
+    overlay.classList.remove('visible');
   }
 }
 
-// Initialize About overlay event listeners
-document.addEventListener('DOMContentLoaded', () => {
+// About overlay initialization moved to DOMContentLoaded below
+
+// ═══ About Overlay Event Listeners ═══
+(function initAboutOverlay() {
   const aboutClose = document.getElementById('about-close');
   const aboutOverlay = document.getElementById('about-overlay');
   const aboutGithubLink = document.getElementById('about-github-link');
@@ -3276,10 +3278,4 @@ document.addEventListener('DOMContentLoaded', () => {
       hideAboutOverlay();
     });
   }
-  
-  // Listen for show-about event from main process
-  if (window.tandem && window.tandem.onShortcut) {
-    const originalHandler = window.tandem.onShortcut;
-    // Add show-about to shortcuts
-  }
-});
+})();
