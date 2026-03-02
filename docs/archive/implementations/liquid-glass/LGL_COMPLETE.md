@@ -29,7 +29,7 @@ cd ~/genx/tandem-browser
 npm run start
 ```
 
-**Expected:** Browser launches with glass effects on tab bar, toolbar, and copilot panel.
+**Expected:** Browser launches with glass effects on tab bar, toolbar, and wingman panel.
 
 **Settings:** Navigate to `tandem://settings` → Appearance → "✨ Liquid Glass Effects"
 
@@ -41,7 +41,7 @@ npm run start
 |---------|-----------|------|--------|
 | Tab bar | Navbar | 20px | Shows page content through tabs |
 | Toolbar | Toolbar | 18px | Gel-like buttons, glass background |
-| Copilot panel | Sidebar | 24px | **Strongest glass** — showcase piece |
+| Wingman panel | Sidebar | 24px | **Strongest glass** — showcase piece |
 | Draw toolbar | Floating | 16px | Floating glass over canvas |
 | Voice overlay | Modal | 15px | Materialization animation |
 | Onboarding | Fullscreen | 24px | Full glass takeover |
@@ -106,7 +106,7 @@ npm run start
 .lgl-glass              → Base class (backdrop-filter)
 .lgl-glass-navbar       → Tab bar glass
 .lgl-glass-toolbar      → Toolbar glass
-.lgl-glass-sidebar      → Copilot panel glass (strongest)
+.lgl-glass-sidebar      → Wingman panel glass (strongest)
 .lgl-glass-floating     → Draw toolbar glass
 .lgl-glass-overlay      → Modal glass
 .lgl-pressable          → Gel press animation
@@ -198,7 +198,7 @@ Total docs:                       +24,294 bytes
 When recording the demo:
 
 1. **Tab bar glass** — Open https://stripe.com, show tabs are see-through
-2. **Copilot panel** — Slide it in over colorful content, watch the glass
+2. **Wingman panel** — Slide it in over colorful content, watch the glass
 3. **Settings controls** — Show blur slider live-updating the effect
 4. **Gel press** — Click toolbar buttons, watch the subtle animation
 5. **Inner glow** — Hover over active tab, watch radial glow follow cursor

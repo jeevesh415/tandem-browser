@@ -19,7 +19,7 @@ vi.mock('../../../input/humanized', () => ({
 }));
 
 vi.mock('../../../notifications/alert', () => ({
-  copilotAlert: vi.fn(),
+  wingmanAlert: vi.fn(),
 }));
 
 vi.mock('fs', () => ({
@@ -56,7 +56,7 @@ import { registerBrowserRoutes } from '../../routes/browser';
 import { createMockContext, createTestApp } from '../helpers';
 import type { RouteContext } from '../../context';
 import { humanizedClick, humanizedType } from '../../../input/humanized';
-import { copilotAlert } from '../../../notifications/alert';
+import { wingmanAlert } from '../../../notifications/alert';
 import fs from 'fs';
 
 describe('Browser Routes', () => {
@@ -91,10 +91,10 @@ describe('Browser Routes', () => {
       expect(res.body).toEqual({ ok: true, url: 'https://example.com' });
       const wc = await mockWC;
       expect(wc!.loadURL).toHaveBeenCalledWith('https://example.com');
-      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'copilot');
+      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'wingman');
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith('navigate', {
         url: 'https://example.com',
-        source: 'copilot',
+        source: 'wingman',
       });
     });
 
@@ -122,7 +122,7 @@ describe('Browser Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'https://session.example.com',
         undefined,
-        'copilot',
+        'wingman',
         'persist:my-session',
       );
     });
@@ -654,26 +654,26 @@ describe('Browser Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // POST /copilot-alert
+  // POST /wingman-alert
   // ═══════════════════════════════════════════════
 
-  describe('POST /copilot-alert', () => {
+  describe('POST /wingman-alert', () => {
     it('sends an alert with provided title and body', async () => {
       const res = await request(app)
-        .post('/copilot-alert')
+        .post('/wingman-alert')
         .send({ title: 'Attention', body: 'Something happened' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
-      expect(copilotAlert).toHaveBeenCalledWith('Attention', 'Something happened');
+      expect(wingmanAlert).toHaveBeenCalledWith('Attention', 'Something happened');
     });
 
     it('uses default title and empty body when not provided', async () => {
-      const res = await request(app).post('/copilot-alert').send({});
+      const res = await request(app).post('/wingman-alert').send({});
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
-      expect(copilotAlert).toHaveBeenCalledWith('Hulp nodig', '');
+      expect(wingmanAlert).toHaveBeenCalledWith('Hulp nodig', '');
     });
   });
 

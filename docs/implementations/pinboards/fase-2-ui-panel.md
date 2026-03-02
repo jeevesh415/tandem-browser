@@ -360,7 +360,7 @@ const pinboardPanel = (() => {
 /* Pinboard Panel */
 #pinboard-panel {
   position: absolute;
-  /* Positioneer naast sidebar, vergelijkbaar met copilot panel */
+  /* Positioneer naast sidebar, vergelijkbaar met wingman panel */
   width: 320px;
   height: 100%;
   background: var(--bg-panel, #1e1e1e);
@@ -512,6 +512,6 @@ curl -s -X POST http://localhost:8765/pinboards \
 - [ ] **isSafeURL check** — gebruik de bestaande `isSafeURL()` helper in menu-builder.ts voor linkURL
 - [ ] **Submenu leeg** — als er geen boards zijn, toon geen "Save to Pinboard" items (check `boards.length === 0`)
 - [ ] **Shell CSS variabelen** — gebruik bestaande CSS custom properties (`--bg-panel`, `--border-color`, etc.) in plaats van hardcoded kleuren
-- [ ] **Panel positionering** — het pinboard paneel mag niet overlappen met het copilot paneel. Gebruik dezelfde positioneringslogica
+- [ ] **Panel positionering** — het pinboard paneel mag niet overlappen met het wingman paneel. Gebruik dezelfde positioneringslogica
 - [ ] **XSS in item content** — `escapeHtml()` gebruiken voor alle user-generated content (titels, quotes, notities)
 - [ ] **API port hardcoded** — gebruik dezelfde port constante als de rest van de shell (kijk hoe `ocChat` het doet)

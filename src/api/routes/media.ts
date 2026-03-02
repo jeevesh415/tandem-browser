@@ -5,7 +5,7 @@ import { handleRouteError } from '../../utils/errors';
 
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
-  // PANEL — Copilot side panel
+  // PANEL — Wingman side panel
   // ═══════════════════════════════════════════════
 
   router.post('/panel/toggle', (req: Request, res: Response) => {
@@ -19,7 +19,7 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
-  // CHAT — Copilot chat messages
+  // CHAT — Wingman chat messages
   // ═══════════════════════════════════════════════
 
   /** Get chat messages (supports ?since_id= for polling) */
@@ -39,11 +39,11 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  /** Send chat message (default: copilot, 'from' param allows robin/claude) */
+  /** Send chat message (default: wingman, 'from' param allows robin/claude) */
   router.post('/chat', (req: Request, res: Response) => {
     const { text, from, image } = req.body;
     if (!text && !image) { res.status(400).json({ error: 'text or image required' }); return; }
-    const sender: 'robin' | 'copilot' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'copilot';
+    const sender: 'robin' | 'wingman' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'wingman';
     try {
       let savedImage: string | undefined;
       if (image) {
@@ -72,11 +72,11 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     res.sendFile(filePath);
   });
 
-  /** Set Copilot typing indicator */
+  /** Set Wingman typing indicator */
   router.post('/chat/typing', (req: Request, res: Response) => {
     try {
       const { typing = true } = req.body;
-      ctx.panelManager.setCopilotTyping(typing);
+      ctx.panelManager.setWingmanTyping(typing);
       res.json({ ok: true, typing });
     } catch (e) {
       handleRouteError(res, e);
@@ -233,16 +233,16 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
-  // COPILOT STREAM (Activity Streaming to OpenClaw)
+  // WINGMAN STREAM (Activity Streaming to OpenClaw)
   // ═══════════════════════════════════════════════
 
-  router.post('/copilot-stream/toggle', (req: Request, res: Response) => {
+  router.post('/wingman-stream/toggle', (req: Request, res: Response) => {
     const { enabled } = req.body;
-    ctx.copilotStream.setEnabled(!!enabled);
+    ctx.wingmanStream.setEnabled(!!enabled);
     res.json({ ok: true, enabled: !!enabled });
   });
 
-  router.get('/copilot-stream/status', (_req: Request, res: Response) => {
-    res.json({ ok: true, enabled: ctx.copilotStream.isEnabled() });
+  router.get('/wingman-stream/status', (_req: Request, res: Response) => {
+    res.json({ ok: true, enabled: ctx.wingmanStream.isEnabled() });
   });
 }

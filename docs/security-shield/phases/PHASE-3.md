@@ -41,7 +41,7 @@ class DevToolsManager {
 
   // Modify existing handleCDPEvent to dispatch to subscribers:
   private handleCDPEvent(method: string, params: any): void {
-    // ... existing handling (console capture, network capture, copilot bindings) ...
+    // ... existing handling (console capture, network capture, wingman bindings) ...
 
     // NEW: dispatch to subscribers
     for (const sub of this.subscribers) {
@@ -69,7 +69,7 @@ class DevToolsManager {
     const wc = this.getAttachedWebContents();
     if (!wc) return;
     await wc.debugger.sendCommand('Debugger.enable');
-    // Runtime.enable is already active (for copilot bindings)
+    // Runtime.enable is already active (for wingman bindings)
     // Network.enable is already active (for network capture)
     console.log('[CDP] Security domains enabled (Debugger)');
   }
@@ -500,7 +500,7 @@ class SecurityManager {
 ## Key Principles
 
 1. **All CDP access goes through DevToolsManager** — never `webContents.debugger.attach()` directly
-2. **Monitor injections use `Runtime.addBinding`** — invisible to page (same pattern as Copilot Vision)
+2. **Monitor injections use `Runtime.addBinding`** — invisible to page (same pattern as Wingman Vision)
 3. **Script analysis must NOT slow page load** — analyze async, only block confirmed threats
 4. **False positives on scripts = broken websites** — err on monitoring over blocking
 5. **Keylogger detection is HIGH priority** — input field listeners from external scripts = immediate alert
@@ -520,7 +520,7 @@ class SecurityManager {
 - [ ] `GET /security/page/analysis` returns comprehensive report
 - [ ] Monitor injections don't break any normal websites (test 10+ popular sites)
 - [ ] Stealth still works (canvas fingerprinting protection active)
-- [ ] Copilot Vision still works (scroll, selection, form tracking)
+- [ ] Wingman Vision still works (scroll, selection, form tracking)
 - [ ] DevToolsManager existing features unaffected
 - [ ] Phase 0-2 regression check: blocking, logging, outbound guard all still work
 
@@ -528,7 +528,7 @@ class SecurityManager {
 
 - Do NOT replace DevToolsManager — extend it with subscribe/sendCommand
 - Do NOT modify Stealth script injections
-- Do NOT modify Copilot Vision bindings
+- Do NOT modify Wingman Vision bindings
 - Do NOT add WebSocket/AI agent features — that's Phase 4
 
 ## Commit Convention
@@ -578,7 +578,7 @@ After completing this phase, update `docs/security-shield/STATUS.md`:
   - [x] Permission monitoring works
   - [x] Crypto miner detection works
   - [x] Security injections don't break sites
-  - [x] Stealth + Copilot Vision unaffected
+  - [x] Stealth + Wingman Vision unaffected
   - [x] Phase 0-2 regression OK
 - **Issues encountered:** (none / describe)
 - **Notes for next phase:** (anything Phase 4 session needs to know)

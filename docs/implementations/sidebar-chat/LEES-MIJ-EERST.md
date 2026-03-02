@@ -17,7 +17,7 @@ Robin gebruikt dagelijks 6 chat-apps en moet nu constant schakelen tussen Tandem
 
 ```
 ┌──────┐  ┌──────────────┐  ┌────────────────────┐  ┌──────────┐
-│ Icon │  │  Panel       │  │  Browser Content    │  │ Copilot  │
+│ Icon │  │  Panel       │  │  Browser Content    │  │ Wingman  │
 │ Strip│→ │  Container   │  │  (main webview)     │  │ Panel    │
 │ 48px │  │  (webview)   │  │                     │  │ (rechts) │
 │      │  │  420px       │  │                     │  │          │
@@ -64,7 +64,7 @@ _(zie het relevante fase-bestand)_
 
 > Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
 
-1. **Sidebar webviews NIET in de webview injecteren** — de sidebar icon strip en panel container zijn shell-level HTML, net als het copilot panel. Ze zitten NAAST de main webview, niet ERIN.
+1. **Sidebar webviews NIET in de webview injecteren** — de sidebar icon strip en panel container zijn shell-level HTML, net als het wingman panel. Ze zitten NAAST de main webview, niet ERIN.
 
 2. **Geen stealth script injection in sidebar webviews** — sidebar panels zijn voor Robin's eigen gebruik (hij logt zelf in, typt zelf). De stealth patches in `createWindow()` die via `app.on('web-contents-created')` worden geïnjecteerd moeten sidebar webviews overslaan. Check de partition naam: als die begint met `persist:whatsapp`, `persist:discord`, etc. → skip stealth injection.
 

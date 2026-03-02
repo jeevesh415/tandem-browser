@@ -2,9 +2,9 @@
 
 ## Vision
 
-Tandem is a copilot browser — human and AI browse together. Security should work the same way: an AI Gatekeeper that understands what's happening, prevents threats in real-time, and evolves over time.
+Tandem is a wingman browser — human and AI browse together. Security should work the same way: an AI Gatekeeper that understands what's happening, prevents threats in real-time, and evolves over time.
 
-**This is not a blocklist. This is an AI Security Copilot.**
+**This is not a blocklist. This is an AI Security Wingman.**
 
 ## Architecture: 7 Layers
 

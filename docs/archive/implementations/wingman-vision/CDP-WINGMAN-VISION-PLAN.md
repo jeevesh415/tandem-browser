@@ -1,4 +1,4 @@
-# CDP Copilot Vision — Scroll/Selection/Form tracking via Runtime.addBinding
+# CDP Wingman Vision — Scroll/Selection/Form tracking via Runtime.addBinding
 
 ## Why This Replaces the Current Approach
 
@@ -25,22 +25,22 @@ CDP: Runtime.addBinding({ name: '__x' })
 | Scroll tracking | `shell/index.html` polling via `executeJavaScript` every 5s | CDP `Runtime.addBinding` + scroll listener injected via `Runtime.evaluate` after each navigation |
 | Text selection | `context-menu` event only (fires on right-click) | CDP binding + `selectionchange` listener (fires on any selection) |
 | Form interaction | `context-menu` isEditable only | CDP binding + `focusin` listener on input/textarea/select |
-| Communication | IPC via shell → main process | CDP `Runtime.bindingCalled` event → DevToolsManager → CopilotStream |
+| Communication | IPC via shell → main process | CDP `Runtime.bindingCalled` event → DevToolsManager → WingmanStream |
 
-### Step 1: Add CopilotStream to DevToolsManager
+### Step 1: Add WingmanStream to DevToolsManager
 
 File: `src/devtools/manager.ts`
 
-Add CopilotStream as an optional dependency:
+Add WingmanStream as an optional dependency:
 
 ```typescript
-import { CopilotStream } from '../activity/copilot-stream';
+import { WingmanStream } from '../activity/wingman-stream';
 
 export class DevToolsManager {
-  private copilotStream?: CopilotStream;
+  private wingmanStream?: WingmanStream;
   
-  setCopilotStream(stream: CopilotStream): void {
-    this.copilotStream = stream;
+  setWingmanStream(stream: WingmanStream): void {
+    this.wingmanStream = stream;
   }
 }
 ```
@@ -50,15 +50,15 @@ export class DevToolsManager {
 In `DevToolsManager.ensureAttached()`, after the existing domain enables (`Network.enable`, `DOM.enable`, `Page.enable`), add:
 
 ```typescript
-// Copilot Vision: install stealth bindings for scroll/selection/form tracking
-await this.installCopilotBindings(wc);
+// Wingman Vision: install stealth bindings for scroll/selection/form tracking
+await this.installWingmanBindings(wc);
 ```
 
 New private method:
 
 ```typescript
-private async installCopilotBindings(wc: WebContents): Promise<void> {
-  if (!this.copilotStream) return;
+private async installWingmanBindings(wc: WebContents): Promise<void> {
+  if (!this.wingmanStream) return;
   
   try {
     // Create hidden bindings
@@ -67,13 +67,13 @@ private async installCopilotBindings(wc: WebContents): Promise<void> {
     await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemFormFocus' });
     
     // Inject listeners (runs in page context but communicates via invisible bindings)
-    await this.injectCopilotListeners(wc);
+    await this.injectWingmanListeners(wc);
     
     // Re-inject after every navigation (SPA + traditional)
     // Page.enable is already called, so we get frameNavigated events
     // The handleCDPEvent will catch Page.frameStoppedLoading and re-inject
   } catch (e: any) {
-    console.warn('⚠️ Copilot Vision bindings failed:', e.message);
+    console.warn('⚠️ Wingman Vision bindings failed:', e.message);
   }
 }
 ```
@@ -83,7 +83,7 @@ private async installCopilotBindings(wc: WebContents): Promise<void> {
 New private method in `DevToolsManager`:
 
 ```typescript
-private async injectCopilotListeners(wc: WebContents): Promise<void> {
+private async injectWingmanListeners(wc: WebContents): Promise<void> {
   // Single injection — all three listeners in one evaluate call
   // Uses IIFE so no global variables are created (stealth)
   const script = `(function(){
@@ -145,16 +145,16 @@ private async injectCopilotListeners(wc: WebContents): Promise<void> {
 In `DevToolsManager.handleCDPEvent()`, add before the existing console/network handling:
 
 ```typescript
-// Copilot Vision: binding callbacks
+// Wingman Vision: binding callbacks
 if (method === 'Runtime.bindingCalled') {
-  this.onCopilotBinding(params, tabId);
+  this.onWingmanBinding(params, tabId);
   return;
 }
 
 // Re-inject listeners after navigation (page context is reset)
 if (method === 'Page.frameStoppedLoading' && params.frameId) {
   // Only re-inject for main frame (not iframes)
-  this.reinjectCopilotListeners();
+  this.reinjectWingmanListeners();
   return;
 }
 ```
@@ -162,8 +162,8 @@ if (method === 'Page.frameStoppedLoading' && params.frameId) {
 New method:
 
 ```typescript
-private onCopilotBinding(params: { name: string; payload: string }, tabId?: string): void {
-  if (!this.copilotStream) return;
+private onWingmanBinding(params: { name: string; payload: string }, tabId?: string): void {
+  if (!this.wingmanStream) return;
   const timestamp = Date.now();
   const tab = tabId || 'unknown';
   
@@ -173,7 +173,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
 
   switch (params.name) {
     case '__tandemScroll':
-      this.copilotStream.emitDebounced(`scroll-${tab}`, {
+      this.wingmanStream.emitDebounced(`scroll-${tab}`, {
         type: 'scroll-position',
         tabId: tab,
         timestamp,
@@ -182,7 +182,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
       break;
       
     case '__tandemSelection':
-      this.copilotStream.emitDebounced(`select-${tab}`, {
+      this.wingmanStream.emitDebounced(`select-${tab}`, {
         type: 'text-selected',
         tabId: tab,
         timestamp,
@@ -193,7 +193,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
     case '__tandemFormFocus':
       try {
         const field = JSON.parse(params.payload);
-        this.copilotStream.emitDebounced(`form-${tab}`, {
+        this.wingmanStream.emitDebounced(`form-${tab}`, {
           type: 'form-interaction',
           tabId: tab,
           timestamp,
@@ -204,15 +204,15 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
   }
 }
 
-private async reinjectCopilotListeners(): Promise<void> {
-  if (!this.copilotStream) return;
+private async reinjectWingmanListeners(): Promise<void> {
+  if (!this.wingmanStream) return;
   const wc = this.attachedWcId ? webContents.fromId(this.attachedWcId) : null;
   if (!wc || wc.isDestroyed()) return;
   
   // Small delay to let page initialize
   setTimeout(async () => {
     try {
-      await this.injectCopilotListeners(wc);
+      await this.injectWingmanListeners(wc);
     } catch { /* page may have navigated again */ }
   }, 500);
 }
@@ -223,7 +223,7 @@ private async reinjectCopilotListeners(): Promise<void> {
 Remove the scroll polling code that was added in the previous implementation. Find and delete:
 
 ```javascript
-// Copilot Vision: scroll position tracking (polls every 5s, only reports changes)
+// Wingman Vision: scroll position tracking (polls every 5s, only reports changes)
 let _scrollInterval = null;
 let _lastScrollPct = -1;
 const scrollCheckJS = `(function(){...})()`;
@@ -233,50 +233,50 @@ wv.addEventListener('destroyed', () => { if (_scrollInterval) clearInterval(_scr
 wv.addEventListener('did-navigate', () => { _lastScrollPct = -1; });
 ```
 
-This is approximately lines 3044-3065 in `shell/index.html` (the block starting with the "Copilot Vision" comment).
+This is approximately lines 3044-3065 in `shell/index.html` (the block starting with the "Wingman Vision" comment).
 
 ### Step 6: Remove context-menu based selection/form tracking from main.ts
 
 Remove the `context-menu` event handler that was added for text selection and form interaction. Find and delete the block starting with:
 
 ```typescript
-// Copilot Vision: detect text selection + form interaction via context-menu
+// Wingman Vision: detect text selection + form interaction via context-menu
 contents.on('context-menu', (_event, params) => {
 ```
 
 This is around line 130 in `src/main.ts`. The context-menu approach only fires on right-click and is now fully replaced by the continuous CDP listeners.
 
-### Step 7: Wire CopilotStream to DevToolsManager in main.ts
+### Step 7: Wire WingmanStream to DevToolsManager in main.ts
 
-In `src/main.ts`, after DevToolsManager and CopilotStream are both instantiated:
+In `src/main.ts`, after DevToolsManager and WingmanStream are both instantiated:
 
 ```typescript
-devToolsManager.setCopilotStream(copilotStream);
+devToolsManager.setWingmanStream(wingmanStream);
 ```
 
 ### Step 8: Auto-attach CDP on tab switch
 
-Currently DevToolsManager uses lazy attachment (attaches on first API call). For Copilot Vision to work continuously, CDP needs to be attached whenever the active tab changes.
+Currently DevToolsManager uses lazy attachment (attaches on first API call). For Wingman Vision to work continuously, CDP needs to be attached whenever the active tab changes.
 
 In `src/main.ts`, in the `tab-focus` IPC handler (around line 555), add after the existing code:
 
 ```typescript
-// Ensure CDP is attached to the new active tab for Copilot Vision
+// Ensure CDP is attached to the new active tab for Wingman Vision
 devToolsManager.ensureAttached().catch(() => {});
 ```
 
-This ensures that when Robin switches tabs, CDP re-attaches to the new tab and installs the copilot bindings.
+This ensures that when Robin switches tabs, CDP re-attaches to the new tab and installs the wingman bindings.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/devtools/manager.ts` | Add `setCopilotStream()`, `installCopilotBindings()`, `injectCopilotListeners()`, `onCopilotBinding()`, `reinjectCopilotListeners()`. Extend `handleCDPEvent()` with binding + navigation handlers. Auto-attach on ensureAttached. |
-| `src/main.ts` | Wire `copilotStream` to `devToolsManager`. Add `ensureAttached()` call on tab-focus. Remove the old `context-menu` based selection/form tracking. |
+| `src/devtools/manager.ts` | Add `setWingmanStream()`, `installWingmanBindings()`, `injectWingmanListeners()`, `onWingmanBinding()`, `reinjectWingmanListeners()`. Extend `handleCDPEvent()` with binding + navigation handlers. Auto-attach on ensureAttached. |
+| `src/main.ts` | Wire `wingmanStream` to `devToolsManager`. Add `ensureAttached()` call on tab-focus. Remove the old `context-menu` based selection/form tracking. |
 | `shell/index.html` | Remove the scroll polling block (~lines 3044-3065). |
 
 ## Files NOT Changed
-- `src/activity/copilot-stream.ts` — no changes needed, works as-is
+- `src/activity/wingman-stream.ts` — no changes needed, works as-is
 - `src/activity/tracker.ts` — still handles tab-switch/open/close/navigate events from IPC. Only scroll/selection/form move to CDP.
 - `src/config/manager.ts` — no changes, `notifyOnActivity` config still applies
 - `src/api/server.ts` — no changes, toggle endpoints still work
@@ -285,10 +285,10 @@ This ensures that when Robin switches tabs, CDP re-attaches to the new tab and i
 
 ```
 Tab events (switch/open/close/navigate):
-  shell IPC → main.ts → ActivityTracker → CopilotStream → OpenClaw webhook
+  shell IPC → main.ts → ActivityTracker → WingmanStream → OpenClaw webhook
 
 Scroll/Selection/Form (NEW CDP route):
-  Page JS → Runtime.addBinding → CDP event → DevToolsManager.onCopilotBinding → CopilotStream → OpenClaw webhook
+  Page JS → Runtime.addBinding → CDP event → DevToolsManager.onWingmanBinding → WingmanStream → OpenClaw webhook
 ```
 
 ## Anti-Detect Safety Analysis
@@ -314,5 +314,5 @@ Overall: much safer than `executeJavaScript` polling. The only page-visible arti
 6. Navigate to a new page → listeners should re-inject (check via selecting text on new page)
 7. Switch tabs → CDP should re-attach to new tab, bindings should work on new tab
 8. Test anti-detect: open DevTools console on a page, run `Object.keys(window).filter(k => k.includes('tandem'))` → should only show `__tandemVisionActive` (acceptable)
-9. Toggle off: `curl -X POST http://127.0.0.1:8765/copilot-stream/toggle -d '{"enabled":false}'` → no more events
+9. Toggle off: `curl -X POST http://127.0.0.1:8765/wingman-stream/toggle -d '{"enabled":false}'` → no more events
 10. Test on LinkedIn (anti-bot heavy) → page should load normally, no detection

@@ -68,7 +68,7 @@ The changelog is currently behind. The structure improvement work (0.10.3 → no
    - Split api/server.ts into 12 route modules (3032→349 lines)
    - Split main.ts into ipc/handlers, menu/app-menu, notifications/alert (1016→575 lines)
    - Shared utilities: tandemDir(), handleRouteError()
-   - Fix circular dependency (copilotAlert)
+   - Fix circular dependency (wingmanAlert)
    - Unified npm test + 152 tests (was 86)
    - CDP types + reduced `any` usage in devtools code
    - Split shell/index.html into external CSS/JS (6572→451 lines)

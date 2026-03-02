@@ -260,7 +260,7 @@ Alles wordt gebouwd met bestaande dependencies:
 
 - [ ] **Bord emoji:** Standaard emoji-selector of vrij tekstveld? (Voorstel: vrij tekstveld, default "📌")
 - [ ] **Thumbnail strategie:** Favicons voor links (simpel, snel) of page screenshots (rijker, trager)?
-- [ ] **Sidebar positie:** Eigen icoon in sidebar of onderdeel van bestaand copilot paneel?
+- [ ] **Sidebar positie:** Eigen icoon in sidebar of onderdeel van bestaand wingman paneel?
 - [ ] **Maximaal aantal boards:** Onbeperkt of cap? (Voorstel: onbeperkt, net als bookmarkmappen)
 
 ---

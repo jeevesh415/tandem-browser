@@ -63,25 +63,25 @@ describe('Tab Routes', () => {
       );
     });
 
-    it('maps "copilot" source correctly', async () => {
+    it('maps "wingman" source correctly', async () => {
       await request(app)
         .post('/tabs/open')
-        .send({ source: 'copilot' });
+        .send({ source: 'wingman' });
 
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'copilot',
+        'wingman',
         'persist:tandem',
         true,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'copilot' },
+        { url: 'about:blank', source: 'wingman' },
       );
     });
 
-    it('maps "kees" source to copilot', async () => {
+    it('maps "kees" source to wingman', async () => {
       await request(app)
         .post('/tabs/open')
         .send({ source: 'kees' });
@@ -89,7 +89,7 @@ describe('Tab Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'copilot',
+        'wingman',
         'persist:tandem',
         true,
       );
@@ -227,17 +227,17 @@ describe('Tab Routes', () => {
     it('sets the tab source', async () => {
       const res = await request(app)
         .post('/tabs/source')
-        .send({ tabId: 'tab-1', source: 'copilot' });
+        .send({ tabId: 'tab-1', source: 'wingman' });
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
-      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'copilot');
+      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'wingman');
     });
 
     it('returns 400 when tabId is missing', async () => {
       const res = await request(app)
         .post('/tabs/source')
-        .send({ source: 'copilot' });
+        .send({ source: 'wingman' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('tabId and source required');

@@ -87,7 +87,7 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = ctx.taskManager.emergencyStop();
       if (ctx.panelManager) {
-        ctx.panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
+        ctx.panelManager.addChatMessage('wingman', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
       }
       res.json(result);
     } catch (e) {

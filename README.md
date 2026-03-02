@@ -84,10 +84,10 @@ Tandem stores config in `~/.tandem/config.json`. Key settings:
 ```json
 {
   "general": {
-    "agentName": "Copilot",
-    "agentDisplayName": "AI Copilot",
-    "copilotPanelPosition": "right",
-    "copilotPanelDefaultOpen": false,
+    "agentName": "Wingman",
+    "agentDisplayName": "AI Wingman",
+    "wingmanPanelPosition": "right",
+    "wingmanPanelDefaultOpen": false,
     "activeBackend": "openclaw"
   }
 }
@@ -122,7 +122,7 @@ Tandem works with any HTTP-capable AI agent:
 
 ## API
 
-Your AI copilot controls the browser through a local HTTP API:
+Your AI wingman controls the browser through a local HTTP API:
 
 ### Navigation & Content
 
@@ -198,14 +198,14 @@ curl -X POST localhost:8765/tabs/close -H 'Content-Type: application/json' -d '{
 curl -X POST localhost:8765/tabs/group -H 'Content-Type: application/json' -d '{"groupId":"work","name":"Work","color":"#4285f4","tabIds":["tab-1","tab-2"]}'
 ```
 
-### Copilot Alerts
+### Wingman Alerts
 
 ```bash
 # Ask the human for help (shows notification)
-curl -X POST localhost:8765/copilot-alert -H 'Content-Type: application/json' -d '{"title":"Captcha!","body":"There is a captcha on LinkedIn, can you solve it?"}'
+curl -X POST localhost:8765/wingman-alert -H 'Content-Type: application/json' -d '{"title":"Captcha!","body":"There is a captcha on LinkedIn, can you solve it?"}'
 ```
 
-### Copilot Panel
+### Wingman Panel
 
 ```bash
 # Get activity log
@@ -214,7 +214,7 @@ curl localhost:8765/activity-log
 # Toggle panel
 curl -X POST localhost:8765/panel/toggle -H 'Content-Type: application/json' -d '{}'
 
-# Send chat message as the copilot
+# Send chat message as the wingman
 curl -X POST localhost:8765/chat -H 'Content-Type: application/json' -d '{"text":"Hey, check out this page!"}'
 
 # Get chat history
@@ -244,7 +244,7 @@ curl localhost:8765/screenshots
 | Cmd/Ctrl+T | New tab |
 | Cmd/Ctrl+W | Close tab |
 | Cmd/Ctrl+1-9 | Switch to tab 1-9 |
-| Cmd/Ctrl+K | Toggle Copilot panel |
+| Cmd/Ctrl+K | Toggle Wingman panel |
 | Cmd/Ctrl+D | Toggle draw mode |
 
 ## Architecture
@@ -253,12 +253,12 @@ curl localhost:8765/screenshots
 Tandem Browser (Electron)
 ├── Tab Bar ← Multiple tabs with favicons, groups, colors
 ├── Browser UI (Chromium webviews) ← You see and navigate
-├── Copilot Panel (shell layer) ← Activity log, chat, screenshots
+├── Wingman Panel (shell layer) ← Activity log, chat, screenshots
 ├── Draw Overlay (shell layer) ← Annotations on top of webview
-├── Tandem API (localhost:8765) ← AI copilot sends commands
+├── Tandem API (localhost:8765) ← AI wingman sends commands
 ├── Input Layer ← sendInputEvent (OS-level, Event.isTrusted=true)
 ├── Stealth Layer ← Anti-detection (UA, headers, navigator)
-└── Copilot Alerts ← AI asks you for help
+└── Wingman Alerts ← AI asks you for help
 ```
 
 ## Anti-Detection
@@ -273,7 +273,7 @@ All automated interactions use `webContents.sendInputEvent()` which produces OS-
 ## Philosophy
 
 - **Real browser** — Not headless, not Puppeteer. A browser you actually use.
-- **API-first** — Everything the copilot does goes through the HTTP API.
+- **API-first** — Everything the wingman does goes through the HTTP API.
 - **Local only** — No cloud, no external services. Your data stays yours.
 - **Tandem** — Together stronger than apart.
 

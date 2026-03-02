@@ -277,7 +277,7 @@ Tandem is designed to be undetectable:
 
 1. **Wait for page loads:** Add delays after navigation
 2. **Check login state:** Use `/auth/check` before sensitive operations  
-3. **Handle captchas:** Use `/copilot-alert` system for human intervention
+3. **Handle captchas:** Use `/wingman-alert` system for human intervention
 4. **Use workflows:** For complex multi-step tasks
 5. **Monitor confidence:** Check extraction confidence scores
 6. **Graceful failures:** Always handle error responses

@@ -33,7 +33,7 @@ import type { EventStreamManager } from './events/stream';
 import type { TaskManager } from './agents/task-manager';
 import type { TabLockManager } from './agents/tab-lock-manager';
 import type { DevToolsManager } from './devtools/manager';
-import type { CopilotStream } from './activity/copilot-stream';
+import type { WingmanStream } from './activity/wingman-stream';
 import type { SecurityManager } from './security/security-manager';
 import type { SnapshotManager } from './snapshot/manager';
 import type { NetworkMocker } from './network/mocker';
@@ -77,7 +77,7 @@ export interface ManagerRegistry {
   taskManager: TaskManager;
   tabLockManager: TabLockManager;
   devToolsManager: DevToolsManager;
-  copilotStream: CopilotStream;
+  wingmanStream: WingmanStream;
   securityManager: SecurityManager | null;
   snapshotManager: SnapshotManager;
   networkMocker: NetworkMocker;

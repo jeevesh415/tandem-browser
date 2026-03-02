@@ -138,7 +138,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
-  // LIVE MODE — Copilot live monitoring toggle
+  // LIVE MODE — Wingman live monitoring toggle
   // ═══════════════════════════════════════════════
 
   router.get('/live/status', (_req: Request, res: Response) => {

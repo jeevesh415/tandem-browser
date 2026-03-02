@@ -17,7 +17,7 @@ After comparing all 68 Opera features against Tandem's 380+ feature inventory:
 
 ### What Stands Out
 
-Tandem **crushes** Opera on: AI integration (6-layer copilot vs Aria chatbot), security (6-layer shield vs basic blocklists), stealth/anti-detection (no Opera equivalent), agent automation (195+ API endpoints, MCP server, CLI), and developer tooling (CDP bridge, network mocking, device emulation).
+Tandem **crushes** Opera on: AI integration (6-layer wingman vs Aria chatbot), security (6-layer shield vs basic blocklists), stealth/anti-detection (no Opera equivalent), agent automation (195+ API endpoints, MCP server, CLI), and developer tooling (CDP bridge, network mocking, device emulation).
 
 Opera **crushes** Tandem on: sidebar messenger integration, tab organization UX (Islands, Workspaces UI, Split Screen), consumer privacy features (ad blocking, VPN, private browsing), content curation (Pinboards), and cross-device sync.
 
@@ -48,7 +48,7 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 
 | # | Feature | Opera Description | Tandem Status | Effort | Priority |
 |---|---------|-------------------|---------------|--------|----------|
-| 1 | **Sidebar Chat Clients** | WhatsApp, Discord, Slack, Telegram, Instagram, X as sidebar webview panels with notifications, mute, pin | ❌ Missing — Tandem has copilot panel but no messenger sidebar | Hard (1-2 weeks) | 🔴 HIGH |
+| 1 | **Sidebar Chat Clients** | WhatsApp, Discord, Slack, Telegram, Instagram, X as sidebar webview panels with notifications, mute, pin | ❌ Missing — Tandem has wingman panel but no messenger sidebar | Hard (1-2 weeks) | 🔴 HIGH |
 | 2 | **Pinboards** | Virtual boards for collecting links, images, notes, YouTube embeds. Kanban mode. Shareable via link. Emoji reactions | ❌ Missing — Tandem has page notes (POST /context/note) but no board concept | Hard (1-2 weeks) | 🔴 HIGH |
 | 3 | **Tab Islands** | Auto-groups tabs by browsing context. Color-coded clusters with names. Collapsible. Shift+click multi-select. Visual connections between grouped tabs | ⚠️ Partial — Has `POST /tabs/group` with colors but no auto-grouping, collapsing, naming, or visual island UX | Medium (3-5 days) | 🔴 HIGH |
 | 4 | **Split Screen** | View 2-4 websites simultaneously in vertical/horizontal/grid layouts. Resizable panes. Independent navigation per pane | ❌ Missing — No multi-pane support | Medium (3-5 days) | 🔴 HIGH |
@@ -121,7 +121,7 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 | 1.12 | Close Tab Variations | Close other, close right, close dupes, reopen | Close other, close right, reopen ✅ | ✅ Match | — |
 | 1.13 | Save Tabs as Speed Dial | Batch save to bookmark folder | Session state save only | ⚠️ Partial | 🟢 LOW |
 | | **SIDEBAR** | | | | |
-| 2.1 | Sidebar Layout | Multi-panel sidebar with customizable panels | Single copilot panel (left/right) | ⚠️ Partial | 🔴 HIGH |
+| 2.1 | Sidebar Layout | Multi-panel sidebar with customizable panels | Single wingman panel (left/right) | ⚠️ Partial | 🔴 HIGH |
 | 2.2 | Sidebar Messengers | Webview panels for apps with notifications | None | ❌ Missing | 🔴 HIGH |
 | | **MESSENGERS** | | | | |
 | 3.1 | WhatsApp | Full WhatsApp Web in sidebar | None | ❌ Missing | 🔴 HIGH |
@@ -132,7 +132,7 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 | 3.6 | Spotify | Sidebar music player, detachable | None | ❌ Missing | 🟡 MED |
 | 3.7 | Telegram | Telegram in sidebar | None | ❌ Missing | 🟡 MED |
 | | **AI** | | | | |
-| 4.1 | Opera AI (Aria) | Contextual AI chat, image gen, web search | AI Copilot with 6-layer security, MCP, 25 tools, CLI, multi-backend | ✅ **Tandem far exceeds** | — |
+| 4.1 | Opera AI (Aria) | Contextual AI chat, image gen, web search | AI Wingman with 6-layer security, MCP, 25 tools, CLI, multi-backend | ✅ **Tandem far exceeds** | — |
 | | **PRIVACY & SECURITY** | | | | |
 | 5.1 | Ad Blocker | EasyList filters, YouTube ads, NoCoin, per-site | NetworkShield (malicious URLs only) | ⚠️ Partial | 🔴 HIGH |
 | 5.2 | Tracker Blocker | Block tracking scripts/pixels | Detect only, no blocking | ⚠️ Partial | 🟡 MED |
@@ -281,7 +281,7 @@ interface PinboardCard {
 **UI Features:**
 - Canvas with drag-and-drop cards (use CSS grid for Kanban, absolute positioning for freeform)
 - Right-click context menu integration: "Save to Pinboard" for links, images, selections
-- Sidebar panel option (new tab in copilot panel, or dedicated sidebar icon)
+- Sidebar panel option (new tab in wingman panel, or dedicated sidebar icon)
 - Card preview with favicon, title, thumbnail for links
 - Keyboard shortcut (Cmd+Shift+P could conflict with PiP — use Cmd+Shift+I or similar)
 
@@ -335,7 +335,7 @@ shell/sidebar.html               — Sidebar icon strip + panel container
 
 **Implementation steps:**
 
-1. **Sidebar icon strip** — Vertical strip of icons on the left edge of the shell window (separate from the copilot panel which is on the right). Each icon represents a configured chat client.
+1. **Sidebar icon strip** — Vertical strip of icons on the left edge of the shell window (separate from the wingman panel which is on the right). Each icon represents a configured chat client.
 
 2. **Panel management** — When an icon is clicked, create or show a `BrowserView` attached to the left side of the window, between the icon strip and the main content area. Width adjustable (default ~400px).
 
@@ -619,7 +619,7 @@ These are Tandem's unique advantages — capabilities Opera simply doesn't offer
 
 | Category | Tandem Feature | Opera Equivalent |
 |----------|---------------|-----------------|
-| **AI Copilot** | 6-layer AI copilot with MCP server, 25 tools, multi-backend (OpenClaw + Claude), dual mode, emergency stop, task approval workflow | Aria chatbot (single model, no tool use, no agent autonomy) |
+| **AI Wingman** | 6-layer AI wingman with MCP server, 25 tools, multi-backend (OpenClaw + Claude), dual mode, emergency stop, task approval workflow | Aria chatbot (single model, no tool use, no agent autonomy) |
 | **Security Shield** | 6-layer defense: NetworkShield, OutboundGuard, ContentAnalyzer, BehaviorMonitor, GatekeeperAI, EvolutionEngine. YARA rules, AST fingerprinting, Shannon entropy, zero-day tracking | Basic ad blocker + phishing blacklist |
 | **Stealth/Anti-Detection** | Canvas/WebGL/Audio/Font fingerprint protection. Electron concealment. OS-level click injection. Per-character human typing. Chrome API mocking. Full UA spoofing | None — Opera is fully detectable |
 | **Behavioral Learning** | Learn user's typing rhythm, mouse curves, scroll patterns. Replay as humanized automation | None |
@@ -629,13 +629,13 @@ These are Tandem's unique advantages — capabilities Opera simply doesn't offer
 | **DevTools Bridge** | CDP endpoints for console, network, DOM, performance, storage access via API | Standard DevTools only (manual) |
 | **Network Mocking** | Intercept and mock HTTP requests via CDP for testing | None |
 | **Device Emulation** | Predefined device profiles (iPhone, iPad, Pixel) via API | None (some via DevTools) |
-| **Drawing/Annotation** | 6 tools (arrow, rect, circle, free line, text, colors) with snap-for-copilot | Basic screenshot crop only |
+| **Drawing/Annotation** | 6 tools (arrow, rect, circle, free line, text, colors) with snap-for-wingman | Basic screenshot crop only |
 | **Voice Input** | Speech-to-text with multi-language support, auto-send on silence | Aria has voice input, but less configurable |
 | **ClaroNote** | Voice recording → transcription integration | None |
 | **Site Memory** | Per-domain visit tracking, time spent, content change detection | Basic history only |
 | **Scheduled Watches** | Monitor URLs for changes on schedule, alert on diff | None |
 | **Form Memory** | Remember form inputs per domain | Basic autofill only |
-| **Tab Source Marking** | Mark tabs as robin-owned vs copilot-owned | None |
+| **Tab Source Marking** | Mark tabs as robin-owned vs wingman-owned | None |
 | **Tab Lock Manager** | Exclusive agent access locks on tabs | None |
 | **Content Extraction** | Smart page-to-markdown extraction | None |
 | **X-Scout** | Dedicated X/Twitter intelligence agent | None |

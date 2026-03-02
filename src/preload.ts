@@ -31,10 +31,10 @@ contextBridge.exposeInMainWorld('tandem', {
   },
 
   // Events from main process
-  onCopilotAlert: (callback: (data: { title: string; body: string }) => void) => {
+  onWingmanAlert: (callback: (data: { title: string; body: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { title: string; body: string }) => callback(data);
-    ipcRenderer.on('copilot-alert', handler);
-    return () => ipcRenderer.removeListener('copilot-alert', handler);
+    ipcRenderer.on('wingman-alert', handler);
+    return () => ipcRenderer.removeListener('wingman-alert', handler);
   },
   onNavigated: (callback: (url: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
@@ -89,9 +89,9 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('screenshot-taken', handler);
     return () => ipcRenderer.removeListener('screenshot-taken', handler);
   },
-  snapForCopilot: () => ipcRenderer.invoke('snap-for-copilot'),
-  /** @deprecated Use snapForCopilot */
-  snapForKees: () => ipcRenderer.invoke('snap-for-copilot'),
+  snapForWingman: () => ipcRenderer.invoke('snap-for-wingman'),
+  /** @deprecated Use snapForWingman */
+  snapForKees: () => ipcRenderer.invoke('snap-for-wingman'),
   quickScreenshot: () => ipcRenderer.invoke('quick-screenshot'),
 
   // Voice
@@ -122,17 +122,17 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('auto-snapshot-request', handler);
   },
 
-  // Copilot typing indicator
-  onCopilotTyping: (callback: (data: { typing: boolean }) => void) => {
+  // Wingman typing indicator
+  onWingmanTyping: (callback: (data: { typing: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { typing: boolean }) => callback(data);
-    ipcRenderer.on('copilot-typing', handler);
-    return () => ipcRenderer.removeListener('copilot-typing', handler);
+    ipcRenderer.on('wingman-typing', handler);
+    return () => ipcRenderer.removeListener('wingman-typing', handler);
   },
-  /** @deprecated Use onCopilotTyping */
+  /** @deprecated Use onWingmanTyping */
   onKeesTyping: (callback: (data: { typing: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { typing: boolean }) => callback(data);
-    ipcRenderer.on('copilot-typing', handler);
-    return () => ipcRenderer.removeListener('copilot-typing', handler);
+    ipcRenderer.on('wingman-typing', handler);
+    return () => ipcRenderer.removeListener('wingman-typing', handler);
   },
 
   // Live mode change events
@@ -152,7 +152,7 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('approval-request', handler);
   },
 
-  // Tab source changes (robin/copilot control indicator)
+  // Tab source changes (robin/wingman control indicator)
   onTabSourceChanged: (callback: (data: { tabId: string; source: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { tabId: string; source: string }) => callback(data);
     ipcRenderer.on('tab-source-changed', handler);
@@ -173,17 +173,17 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('open-url-in-new-tab', handler);
   },
 
-  // Copilot chat injection (from context menu)
-  onCopilotChatInject: (callback: (text: string) => void) => {
+  // Wingman chat injection (from context menu)
+  onWingmanChatInject: (callback: (text: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, text: string) => callback(text);
-    ipcRenderer.on('copilot-chat-inject', handler);
-    return () => ipcRenderer.removeListener('copilot-chat-inject', handler);
+    ipcRenderer.on('wingman-chat-inject', handler);
+    return () => ipcRenderer.removeListener('wingman-chat-inject', handler);
   },
-  /** @deprecated Use onCopilotChatInject */
+  /** @deprecated Use onWingmanChatInject */
   onKeesChatInject: (callback: (text: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, text: string) => callback(text);
-    ipcRenderer.on('copilot-chat-inject', handler);
-    return () => ipcRenderer.removeListener('copilot-chat-inject', handler);
+    ipcRenderer.on('wingman-chat-inject', handler);
+    return () => ipcRenderer.removeListener('wingman-chat-inject', handler);
   },
 
   // Bookmark status change (from context menu)

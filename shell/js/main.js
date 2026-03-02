@@ -91,7 +91,7 @@
     const urlBar = document.getElementById('url-bar');
     const statusDot = document.getElementById('status-dot');
     const container = document.getElementById('webview-container');
-    const overlay = document.getElementById('copilot-overlay');
+    const overlay = document.getElementById('wingman-overlay');
 
     /** Map of tabId → { webview, tabEl } */
     const tabs = new Map();
@@ -476,8 +476,8 @@
           document.getElementById('panel-claronote').style.display = 'flex';
 
           // Open panel if closed
-          if (!document.getElementById('copilot-panel').classList.contains('open')) {
-            document.getElementById('copilot-panel').classList.add('open');
+          if (!document.getElementById('wingman-panel').classList.contains('open')) {
+            document.getElementById('wingman-panel').classList.add('open');
             updatePanelLayout();
           }
 
@@ -564,20 +564,20 @@
     }
 
     // ═══════════════════════════════════════════════
-    // Copilot badge → right-click or long-press → open settings
-    const copilotBadge = document.querySelector('.copilot-badge');
-    copilotBadge.addEventListener('contextmenu', (e) => {
+    // Wingman badge → right-click or long-press → open settings
+    const wingmanBadge = document.querySelector('.wingman-badge');
+    wingmanBadge.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       openSettings();
     });
-    let copilotBadgePressTimer = null;
-    copilotBadge.addEventListener('mousedown', () => {
-      copilotBadgePressTimer = setTimeout(() => openSettings(), 600);
+    let wingmanBadgePressTimer = null;
+    wingmanBadge.addEventListener('mousedown', () => {
+      wingmanBadgePressTimer = setTimeout(() => openSettings(), 600);
     });
-    copilotBadge.addEventListener('mouseup', () => { clearTimeout(copilotBadgePressTimer); });
-    copilotBadge.addEventListener('mouseleave', () => { clearTimeout(copilotBadgePressTimer); });
-    copilotBadge.style.cursor = 'pointer';
-    copilotBadge.title = 'Right-click for settings';
+    wingmanBadge.addEventListener('mouseup', () => { clearTimeout(wingmanBadgePressTimer); });
+    wingmanBadge.addEventListener('mouseleave', () => { clearTimeout(wingmanBadgePressTimer); });
+    wingmanBadge.style.cursor = 'pointer';
+    wingmanBadge.title = 'Right-click for settings';
 
     // Screenshot toolbar button
     document.getElementById('btn-screenshot').addEventListener('click', () => {
@@ -585,11 +585,11 @@
     });
 
     // ═══════════════════════════════════════════════
-    // Copilot alerts
+    // Wingman alerts
     // ═══════════════════════════════════════════════
 
     if (window.tandem) {
-      window.tandem.onCopilotAlert((data) => {
+      window.tandem.onWingmanAlert((data) => {
         document.getElementById('alert-title').textContent = data.title;
         document.getElementById('alert-body').textContent = data.body;
         overlay.classList.add('visible');
@@ -602,10 +602,10 @@
     }
 
     // ═══════════════════════════════════════════════
-    // Copilot Panel
+    // Wingman Panel
     // ═══════════════════════════════════════════════
 
-    const copilotPanel = document.getElementById('copilot-panel');
+    const wingmanPanel = document.getElementById('wingman-panel');
     const panelBody = document.getElementById('panel-body');
 
     // Panel tab switching
@@ -633,9 +633,9 @@
     if (window.tandem) {
       window.tandem.onPanelToggle((data) => {
         if (data.open) {
-          copilotPanel.classList.add('open');
+          wingmanPanel.classList.add('open');
         } else {
-          copilotPanel.classList.remove('open');
+          wingmanPanel.classList.remove('open');
         }
         updatePanelLayout();
       });
@@ -711,8 +711,8 @@
         if (url) window.tandem.newTab(url);
       });
 
-      // Copilot chat injection from context menu — fill input but let user review before sending
-      window.tandem.onCopilotChatInject((text) => {
+      // Wingman chat injection from context menu — fill input but let user review before sending
+      window.tandem.onWingmanChatInject((text) => {
         // Switch to chat tab in panel
         const chatTab = document.querySelector('[data-panel-tab="chat"]');
         if (chatTab) chatTab.click();
@@ -797,8 +797,8 @@
           cls = 'claude';
           name = 'Claude';
         } else {
-          cls = 'copilot';
-          name = 'Copilot';
+          cls = 'wingman';
+          name = 'Wingman';
         }
         const el = document.createElement('div');
         el.className = `chat-msg ${cls} source-${source || sourceClass}`;
@@ -854,11 +854,11 @@
           const clConn = claudeBackend.isConnected();
           wsDot.style.background = 'var(--success)'; // Always connected (OpenClaw via webhook)
           if (clConn) {
-            wsStatusText.textContent = 'Copilot + Claude Connected';
+            wsStatusText.textContent = 'Wingman + Claude Connected';
           } else {
-            wsStatusText.textContent = 'Copilot Connected, Claude Disconnected';
+            wsStatusText.textContent = 'Wingman Connected, Claude Disconnected';
           }
-          inputEl.placeholder = 'Message to Copilot & Claude... (@copilot/@claude for specific)';
+          inputEl.placeholder = 'Message to Wingman & Claude... (@wingman/@claude for specific)';
         } else {
           // Single backend mode
           const backend = router.getActive();
@@ -872,7 +872,7 @@
           if (activeId === 'claude') {
             inputEl.placeholder = 'Message to Claude...';
           } else {
-            inputEl.placeholder = 'Message to Copilot...';
+            inputEl.placeholder = 'Message to Wingman...';
           }
         }
 
@@ -884,7 +884,7 @@
           } else if (activeId === 'claude') {
             typingText.textContent = 'Claude is thinking...';
           } else {
-            typingText.textContent = 'Copilot is typing...';
+            typingText.textContent = 'Wingman is typing...';
           }
         }
       }
@@ -1181,7 +1181,7 @@
         typingEl.classList.toggle('active', typing);
         const typingText = typingEl.querySelector('span:last-child');
         if (typingText && typing) {
-          const name = backendId === 'openclaw' ? 'Copilot' : 'Claude';
+          const name = backendId === 'openclaw' ? 'Wingman' : 'Claude';
           typingText.textContent = `${name} is typing...`;
         }
       });
@@ -1309,7 +1309,7 @@
           if (activeId === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
-            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Copilot receives it
+            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Wingman receives it
             window.tandem?.sendChatMessage(text);
           } else {
             // For Claude, needs WebSocket connection
@@ -1345,7 +1345,7 @@
         })
         .catch(() => switchBackend('openclaw'));
 
-      // Listen for incoming Copilot messages pushed via POST /chat API
+      // Listen for incoming Wingman messages pushed via POST /chat API
       if (window.tandem && window.tandem.onChatMessage) {
         window.tandem.onChatMessage((msg) => {
           // msg: {id, from, text, timestamp, image}
@@ -1408,7 +1408,7 @@
             liveEnabled = data.enabled;
             liveToggleBtn.style.color = liveEnabled ? '#e94560' : 'var(--text-dim)';
             liveToggleBtn.style.borderColor = liveEnabled ? '#e94560' : 'rgba(255,255,255,0.15)';
-            liveToggleBtn.title = liveEnabled ? 'Live Mode AAN — Copilot kijkt mee' : 'Live Mode UIT';
+            liveToggleBtn.title = liveEnabled ? 'Live Mode AAN — Wingman kijkt mee' : 'Live Mode UIT';
           } catch (e) {
             console.error('Live toggle failed:', e);
           }
@@ -1452,7 +1452,7 @@
         const actionDesc = data.action ? `${data.action.type}: ${JSON.stringify(data.action.params || {}).slice(0, 80)}` : '';
 
         card.innerHTML = `
-          <div class="approval-title">🤖 Copilot wants to perform an action:</div>
+          <div class="approval-title">🤖 Wingman wants to perform an action:</div>
           <div class="approval-desc">${escapeHtmlSimple(data.description || '')}</div>
           <div class="approval-desc" style="font-family:monospace;font-size:10px;">${escapeHtmlSimple(actionDesc)}</div>
           <span class="approval-risk ${riskClass}">${riskLabel}</span>
@@ -1504,65 +1504,65 @@
 
     // Panel resize
     const resizeHandle = document.getElementById('panel-resize');
-    const panelToggleBtn = document.getElementById('copilot-panel-toggle');
+    const panelToggleBtn = document.getElementById('wingman-panel-toggle');
     const webviewContainer = document.getElementById('webview-container');
     let resizing = false;
 
     // Restore saved panel width
-    const savedPanelWidth = localStorage.getItem('copilot-panel-width');
+    const savedPanelWidth = localStorage.getItem('wingman-panel-width');
     if (savedPanelWidth) {
       const w = parseInt(savedPanelWidth);
-      if (w >= 280 && w <= 700) copilotPanel.style.width = w + 'px';
+      if (w >= 280 && w <= 700) wingmanPanel.style.width = w + 'px';
     }
 
     function updatePanelLayout() {
-      const isOpen = copilotPanel.classList.contains('open');
-      const pw = copilotPanel.offsetWidth;
+      const isOpen = wingmanPanel.classList.contains('open');
+      const pw = wingmanPanel.offsetWidth;
       if (isOpen) {
         webviewContainer.style.marginRight = pw + 'px';
         resizeHandle.style.right = pw + 'px';
         resizeHandle.style.display = 'block';
         panelToggleBtn.textContent = '▶';
         panelToggleBtn.style.right = pw + 'px';
-        copilotBadge.classList.add('panel-open');
+        wingmanBadge.classList.add('panel-open');
       } else {
         webviewContainer.style.marginRight = '0';
         resizeHandle.style.display = 'none';
         panelToggleBtn.textContent = '◀';
         panelToggleBtn.style.right = '0';
-        copilotBadge.classList.remove('panel-open');
+        wingmanBadge.classList.remove('panel-open');
       }
     }
 
     // Toggle panel function
-    function toggleCopilotPanel() {
-      copilotPanel.classList.toggle('open');
+    function toggleWingmanPanel() {
+      wingmanPanel.classList.toggle('open');
       updatePanelLayout();
     }
 
     // Listen for transition end to update layout smoothly
-    copilotPanel.addEventListener('transitionend', updatePanelLayout);
+    wingmanPanel.addEventListener('transitionend', updatePanelLayout);
 
     // Toggle button click
-    panelToggleBtn.addEventListener('click', toggleCopilotPanel);
+    panelToggleBtn.addEventListener('click', toggleWingmanPanel);
 
-    // Copilot badge single click toggles panel
-    copilotBadge.addEventListener('click', (e) => {
-      if (copilotBadgePressTimer) clearTimeout(copilotBadgePressTimer);
-      toggleCopilotPanel();
+    // Wingman badge single click toggles panel
+    wingmanBadge.addEventListener('click', (e) => {
+      if (wingmanBadgePressTimer) clearTimeout(wingmanBadgePressTimer);
+      toggleWingmanPanel();
     });
 
     resizeHandle.addEventListener('mousedown', (e) => {
       resizing = true;
       resizeHandle.classList.add('dragging');
-      copilotPanel.style.transition = 'none';
+      wingmanPanel.style.transition = 'none';
       e.preventDefault();
     });
     document.addEventListener('mousemove', (e) => {
       if (!resizing) return;
       const panelWidth = window.innerWidth - e.clientX;
       if (panelWidth >= 280 && panelWidth <= 700) {
-        copilotPanel.style.width = panelWidth + 'px';
+        wingmanPanel.style.width = panelWidth + 'px';
         webviewContainer.style.marginRight = panelWidth + 'px';
         resizeHandle.style.right = panelWidth + 'px';
         panelToggleBtn.style.right = panelWidth + 'px';
@@ -1572,8 +1572,8 @@
       if (resizing) {
         resizing = false;
         resizeHandle.classList.remove('dragging');
-        copilotPanel.style.transition = '';
-        localStorage.setItem('copilot-panel-width', copilotPanel.offsetWidth);
+        wingmanPanel.style.transition = '';
+        localStorage.setItem('wingman-panel-width', wingmanPanel.offsetWidth);
       }
     });
 
@@ -1861,9 +1861,9 @@
       redraw();
     });
 
-    // Snap for Copilot
-    document.getElementById('btn-snap-copilot').addEventListener('click', () => {
-      if (window.tandem) window.tandem.snapForCopilot();
+    // Snap for Wingman
+    document.getElementById('btn-snap-wingman').addEventListener('click', () => {
+      if (window.tandem) window.tandem.snapForWingman();
     });
 
     // Draw mode toggle from main process
@@ -1980,7 +1980,7 @@
         if (window.tandem) window.tandem.sendWebviewEvent({ type: 'loading-stop', tabId });
       });
 
-      // Copilot Vision: scroll/selection/form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
+      // Wingman Vision: scroll/selection/form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
     }
 
     // Also wire activity events for the initial tab
@@ -2098,7 +2098,7 @@
       // Auto-snapshot request from activity tracker
       window.tandem.onAutoSnapshotRequest((data) => {
         // Trigger snap silently
-        window.tandem.snapForCopilot();
+        window.tandem.snapForWingman();
       });
     }
 

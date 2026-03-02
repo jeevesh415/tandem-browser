@@ -4,7 +4,7 @@ import type { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
 import { NetworkCapture } from './network-capture';
 import { PageInspector } from './page-inspector';
-import type { CopilotStream } from '../activity/copilot-stream';
+import type { WingmanStream } from '../activity/wingman-stream';
 import type { ActivityTracker } from '../activity/tracker';
 import type {
   ConsoleEntry, CDPNetworkEntry, DOMNodeInfo, StorageData, PerformanceMetrics,
@@ -34,7 +34,7 @@ export type { CDPSubscriber };
  */
 export class DevToolsManager {
   private tabManager: TabManager;
-  private copilotStream?: CopilotStream;
+  private wingmanStream?: WingmanStream;
   private activityTracker?: ActivityTracker;
 
   // Sub-modules (composition)
@@ -56,8 +56,8 @@ export class DevToolsManager {
     this.pageInspector = new PageInspector(() => this.ensureAttached());
   }
 
-  setCopilotStream(stream: CopilotStream): void {
-    this.copilotStream = stream;
+  setWingmanStream(stream: WingmanStream): void {
+    this.wingmanStream = stream;
   }
 
   setActivityTracker(tracker: ActivityTracker): void {
@@ -195,14 +195,14 @@ export class DevToolsManager {
       // Continue — some domains may have succeeded
     }
 
-    // Copilot Vision: install stealth bindings for scroll/selection/form tracking
-    await this.installCopilotBindings(wc);
+    // Wingman Vision: install stealth bindings for scroll/selection/form tracking
+    await this.installWingmanBindings(wc);
 
     return wc;
   }
 
-  private async installCopilotBindings(wc: WebContents): Promise<void> {
-    if (!this.copilotStream) return;
+  private async installWingmanBindings(wc: WebContents): Promise<void> {
+    if (!this.wingmanStream) return;
 
     try {
       // Create hidden bindings
@@ -211,13 +211,13 @@ export class DevToolsManager {
       await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemFormFocus' });
 
       // Inject listeners (runs in page context but communicates via invisible bindings)
-      await this.injectCopilotListeners(wc);
+      await this.injectWingmanListeners(wc);
     } catch (e) {
-      log.warn('⚠️ Copilot Vision bindings failed:', e instanceof Error ? e.message : e);
+      log.warn('⚠️ Wingman Vision bindings failed:', e instanceof Error ? e.message : e);
     }
   }
 
-  private async injectCopilotListeners(wc: WebContents): Promise<void> {
+  private async injectWingmanListeners(wc: WebContents): Promise<void> {
     const script = `(function(){
       if(window.__tandemVisionActive) return;
       window.__tandemVisionActive = true;
@@ -297,12 +297,12 @@ export class DevToolsManager {
   private handleCDPEvent(method: string, params: Record<string, unknown>): void {
     const tabId = this.attachedWcId ? this.findTabIdByWcId(this.attachedWcId) : undefined;
 
-    // Copilot Vision: binding callbacks (check before subscribers for __tandem* bindings)
+    // Wingman Vision: binding callbacks (check before subscribers for __tandem* bindings)
     if (method === 'Runtime.bindingCalled') {
-      // Copilot bindings — handle internally
-      const copilotBindings = ['__tandemScroll', '__tandemSelection', '__tandemFormFocus'];
-      if (copilotBindings.includes(params.name as string)) {
-        this.onCopilotBinding(params as unknown as CDPBindingCalledParams, tabId);
+      // Wingman bindings — handle internally
+      const wingmanBindings = ['__tandemScroll', '__tandemSelection', '__tandemFormFocus'];
+      if (wingmanBindings.includes(params.name as string)) {
+        this.onWingmanBinding(params as unknown as CDPBindingCalledParams, tabId);
       }
       // Fall through to subscribers (security bindings like __tandemSecurityAlert)
     }
@@ -447,10 +447,10 @@ export class DevToolsManager {
     };
   }
 
-  // ═══ Copilot Vision ═══
+  // ═══ Wingman Vision ═══
 
-  private onCopilotBinding(params: { name: string; payload: string }, tabId?: string): void {
-    if (!this.copilotStream) return;
+  private onWingmanBinding(params: { name: string; payload: string }, tabId?: string): void {
+    if (!this.wingmanStream) return;
     const timestamp = Date.now();
     const tab = tabId || 'unknown';
 
@@ -461,7 +461,7 @@ export class DevToolsManager {
     switch (params.name) {
       case '__tandemScroll': {
         const scrollPct = parseInt(params.payload, 10);
-        this.copilotStream.emitDebounced(`scroll-${tab}`, {
+        this.wingmanStream.emitDebounced(`scroll-${tab}`, {
           type: 'scroll-position',
           tabId: tab,
           timestamp,
@@ -474,7 +474,7 @@ export class DevToolsManager {
       }
 
       case '__tandemSelection':
-        this.copilotStream.emitDebounced(`select-${tab}`, {
+        this.wingmanStream.emitDebounced(`select-${tab}`, {
           type: 'text-selected',
           tabId: tab,
           timestamp,
@@ -488,7 +488,7 @@ export class DevToolsManager {
       case '__tandemFormFocus':
         try {
           const field = JSON.parse(params.payload);
-          this.copilotStream.emitDebounced(`form-${tab}`, {
+          this.wingmanStream.emitDebounced(`form-${tab}`, {
             type: 'form-interaction',
             tabId: tab,
             timestamp,

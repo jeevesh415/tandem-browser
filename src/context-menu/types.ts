@@ -33,7 +33,7 @@ export interface ContextMenuParams {
   };
   // Tandem-specific
   tabId?: string;
-  tabSource?: 'robin' | 'kees' | 'copilot';
+  tabSource?: 'robin' | 'kees' | 'wingman';
 }
 
 /**

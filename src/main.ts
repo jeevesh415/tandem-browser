@@ -44,7 +44,7 @@ import { TaskManager } from './agents/task-manager';
 import { TabLockManager } from './agents/tab-lock-manager';
 import { ContextMenuManager } from './context-menu/manager';
 import { DevToolsManager } from './devtools/manager';
-import { CopilotStream } from './activity/copilot-stream';
+import { WingmanStream } from './activity/wingman-stream';
 import { buildAppMenu } from './menu/app-menu';
 import { RequestDispatcher } from './network/dispatcher';
 import { SecurityManager } from './security/security-manager';
@@ -103,7 +103,7 @@ let taskManager: TaskManager | null = null;
 let tabLockManager: TabLockManager | null = null;
 let contextMenuManager: ContextMenuManager | null = null;
 let devToolsManager: DevToolsManager | null = null;
-let copilotStream: CopilotStream | null = null;
+let wingmanStream: WingmanStream | null = null;
 let dispatcher: RequestDispatcher | null = null;
 let securityManager: SecurityManager | null = null;
 let snapshotManager: SnapshotManager | null = null;
@@ -213,7 +213,7 @@ async function createWindow(): Promise<BrowserWindow> {
         });
       }
 
-      // Copilot Vision: text selection + form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
+      // Wingman Vision: text selection + form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
 
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
@@ -342,8 +342,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   tabManager = new TabManager(win);
   panelManager = new PanelManager(win, configManager);
   drawManager = new DrawOverlayManager(win, configManager);
-  copilotStream = new CopilotStream(configManager);
-  activityTracker = new ActivityTracker(win, panelManager, drawManager, copilotStream);
+  wingmanStream = new WingmanStream(configManager);
+  activityTracker = new ActivityTracker(win, panelManager, drawManager, wingmanStream);
   voiceManager = new VoiceManager(win, panelManager);
   behaviorObserver = new BehaviorObserver(win);
   siteMemory = new SiteMemoryManager();
@@ -389,7 +389,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   tabManager.setSessionRestore(sessionRestoreManager);
   historyManager.setSyncManager(syncManager);
   workspaceManager.setSyncManager(syncManager);
-  devToolsManager.setCopilotStream(copilotStream!);
+  devToolsManager.setWingmanStream(wingmanStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
   // SecurityManager consolidated init (was 3 scattered calls, now 1)
@@ -491,7 +491,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     taskManager: taskManager!,
     tabLockManager: tabLockManager!,
     devToolsManager: devToolsManager!,
-    copilotStream: copilotStream!,
+    wingmanStream: wingmanStream!,
     securityManager: securityManager!,
     snapshotManager: snapshotManager!,
     networkMocker: networkMocker!,
@@ -540,7 +540,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     securityManager,
     scriptInjector: scriptInjector!,
     deviceEmulator: deviceEmulator!,
-    copilotStream: copilotStream!,
+    wingmanStream: wingmanStream!,
     snapshotManager: snapshotManager!,
   });
 
@@ -589,7 +589,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       win.webContents.send('tab-registered', { tabId: tab.id });
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext(tabManager!, contextBridge!);
-      // Auto-attach CDP for Copilot Vision + Security on startup
+      // Auto-attach CDP for Wingman Vision + Security on startup
       // Reduced from 2000ms to CDP_ATTACH_DELAY_MS to minimize ScriptGuard race window
       setTimeout(async () => {
         await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
@@ -671,7 +671,7 @@ app.on('will-quit', () => {
   if (tabLockManager) tabLockManager.destroy();
   if (contextMenuManager) contextMenuManager.destroy();
   if (devToolsManager) devToolsManager.destroy();
-  if (copilotStream) copilotStream.destroy();
+  if (wingmanStream) wingmanStream.destroy();
   if (securityManager) securityManager.destroy();
   if (snapshotManager) snapshotManager.destroy();
   if (networkMocker) networkMocker.destroy();

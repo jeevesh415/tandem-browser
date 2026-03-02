@@ -13,7 +13,7 @@ Robin wil zijn chat-apps kunnen gebruiken naast zijn browser, zonder constant va
 
 **Opera heeft:** Sidebar webview panels voor WhatsApp, Discord, Slack, Telegram, Instagram en X/Twitter. Elke messenger draait als een aparte webview naast de browsercontent. Sidebar icons met notification badges, pin/unpin, mute per panel, panel width instelbaar, onafhankelijke login per service.
 
-**Tandem heeft nu:** Een copilot panel (links of rechts) en geen messenger sidebar. De copilot panel is een apart concept — het is het AI-mens communicatiekanaal. Er is geen plek voor externe chat-apps.
+**Tandem heeft nu:** Een wingman panel (links of rechts) en geen messenger sidebar. De wingman panel is een apart concept — het is het AI-mens communicatiekanaal. Er is geen plek voor externe chat-apps.
 
 **Gap:** Geen sidebar messenger integratie. Robin moet nu schakelen tussen Tandem en losse apps/tabs voor al zijn communicatie.
 
@@ -190,7 +190,7 @@ Alles wordt gebouwd met Electron's native `<webview>` tag en bestaande IPC patte
 
 ## Anti-detect overwegingen
 
-Sidebar messenger panels zijn **ANDERS** dan copilot-gestuurde browseactiviteit:
+Sidebar messenger panels zijn **ANDERS** dan wingman-gestuurde browseactiviteit:
 
 - ✅ **Geen anti-detect nodig voor messenger panels** — dit zijn legitimate websites die Robin ZELF bedient. Robin logt zelf in, Robin typt zelf, Robin scrollt zelf. Er is geen AI-automatie in deze panels.
 
@@ -198,7 +198,7 @@ Sidebar messenger panels zijn **ANDERS** dan copilot-gestuurde browseactiviteit:
 
 - ⚠️ **User-Agent:** Sidebar webviews moeten een standaard Chrome User-Agent gebruiken. Sommige messengers (WhatsApp Web) weigeren non-Chrome UA's. De Tandem stealth UA patches zijn hier niet van toepassing — die zijn voor de hoofd-webview.
 
-- ⚠️ **Stealth script injection:** De `web-contents-created` handler in `createWindow()` injecteert stealth scripts in ALLE webviews. Sidebar webviews moeten **NIET** de stealth script krijgen — de stealth patches zijn bedoeld voor sites waar Copilot actief is, niet voor Robin's eigen messenger gebruik. Overweeg een check op partition naam (skip stealth voor `persist:whatsapp`, `persist:discord`, etc.).
+- ⚠️ **Stealth script injection:** De `web-contents-created` handler in `createWindow()` injecteert stealth scripts in ALLE webviews. Sidebar webviews moeten **NIET** de stealth script krijgen — de stealth patches zijn bedoeld voor sites waar Wingman actief is, niet voor Robin's eigen messenger gebruik. Overweeg een check op partition naam (skip stealth voor `persist:whatsapp`, `persist:discord`, etc.).
 
 - ✅ **Geen localhost API calls vanuit sidebar webviews** — de messengers communiceren alleen met hun eigen servers. Geen cross-origin risico naar onze API.
 
@@ -208,7 +208,7 @@ Sidebar messenger panels zijn **ANDERS** dan copilot-gestuurde browseactiviteit:
 
 - [x] Welke messengers: WhatsApp, Discord, Slack, Telegram, Instagram, X/Twitter ✅
 - [x] NIET: Facebook Messenger, VK ✅
-- [ ] Sidebar links of rechts? Voorstel: **links** (copilot panel is rechts, Opera doet het ook links)
+- [ ] Sidebar links of rechts? Voorstel: **links** (wingman panel is rechts, Opera doet het ook links)
 - [ ] Moeten sidebar panels stealth script krijgen? Voorstel: **nee** — Robin bedient deze zelf, geen AI-interactie
 - [ ] Standaard panel breedte? Voorstel: **420px** (breed genoeg voor alle messengers)
 - [ ] Moeten alle 6 iconen altijd zichtbaar zijn, of alleen "enabled" panels? Voorstel: **altijd alle 6 tonen** (consistent, makkelijk te ontdekken)

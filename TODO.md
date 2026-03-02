@@ -9,10 +9,10 @@
 
 | Versie | Subsysteem | Regels |
 |--------|-----------|--------|
-| 0.1.0 | Core browser, stealth layer, API (:8765), copilot panel | ~3,000 |
+| 0.1.0 | Core browser, stealth layer, API (:8765), wingman panel | ~3,000 |
 | 0.2.0 | Tabs, bookmarks, history, downloads, find, draw, voice, settings, new tab, ClaroNote, behavioral observer, stealth (canvas/WebGL/font/audio/timing), workflows, audio capture, help page | ~8,000 |
 | 0.3.0 | MCP server (15 tools, 4 resources), EventStream (SSE), ContextManager, ChatRouter, DualMode, Agent Autonomie (TaskManager, approval, noodrem), TabLockManager, X-Scout | ~3,500 |
-| 0.4.0 | CDP DevTools Bridge (9 endpoints), Context Menu (6 phases), Chat Bridge, Copilot Vision | ~2,500 |
+| 0.4.0 | CDP DevTools Bridge (9 endpoints), Context Menu (6 phases), Chat Bridge, Wingman Vision | ~2,500 |
 | 0.5.0 | Security Shield — 5-layer defense (811K+ blocklist, Guardian, OutboundGuard, ScriptGuard, Gatekeeper AI, EvolutionEngine) | ~3,500 |
 | 0.6.0 | Agent Tools (script injection, semantic locators, device emulation), Electron v28→v40, security fixes | ~2,500 |
 | 0.7.0 | Linux support, Liquid Glass Lite, UI vertaling NL→EN | ~700 |
@@ -36,11 +36,11 @@
 
 ### 🟡 Medium prioriteit — Features
 
-- [ ] Voice + screenshot combo — combi-bericht naar Copilot
+- [ ] Voice + screenshot combo — combi-bericht naar Wingman
 - [ ] Whisper lokaal — offline speech fallback
 - [ ] DOM change detection — meld wat er veranderd is (niet alleen SPA wait)
 - [ ] WebSocket /watch/live — live stream
-- [ ] Notificatie bij gesloten paneel — als Copilot antwoordt
+- [ ] Notificatie bij gesloten paneel — als Wingman antwoordt
 - [ ] Google Photos upload — config UI bestaat, upload code niet
 - [ ] Configureerbare quick links — nu hardcoded in newtab.html
 - [ ] Cron integratie watches — "check LinkedIn elke ochtend om 9:00"
@@ -101,7 +101,7 @@ tandem-browser/
 │   │   ├── linux-portatie/       # Linux portatie roadmap
 │   │   ├── cdp-devtools/         # DevTools Bridge plannen
 │   │   ├── context-menu/         # Context Menu plannen
-│   │   ├── copilot-vision/       # Copilot Vision plannen
+│   │   ├── wingman-vision/       # Wingman Vision plannen
 │   │   └── liquid-glass/         # Liquid Glass Lite docs
 │   ├── plans/                    # Niet-geïmplementeerde plannen
 │   ├── archive/                  # Historische documenten

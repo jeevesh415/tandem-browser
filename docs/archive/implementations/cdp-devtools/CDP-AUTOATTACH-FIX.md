@@ -5,7 +5,7 @@ CDP only attaches when Kees makes an API call (lazy). It should auto-attach:
 1. On startup after the first page loads
 2. On every tab switch
 
-Without this, Copilot Vision bindings (scroll, selection, form) don't work until Kees manually triggers a DevTools API call.
+Without this, Wingman Vision bindings (scroll, selection, form) don't work until Kees manually triggers a DevTools API call.
 
 ## Current State
 - `main.ts` has `devToolsManager?.ensureAttached().catch(() => {})` in the tab-focus handler (line ~539)
@@ -23,7 +23,7 @@ File: `src/main.ts`
 After the app is ready and the first page has loaded, trigger CDP attach. Find the `did-finish-load` or `ready-to-show` event for the main window/webview and add:
 
 ```typescript
-// After first page load — auto-attach CDP for Copilot Vision
+// After first page load — auto-attach CDP for Wingman Vision
 setTimeout(() => {
   devToolsManager?.ensureAttached().catch(() => {});
 }, 2000); // Small delay to ensure webview is fully ready
@@ -39,13 +39,13 @@ In the `tab-focus` IPC handler, the `ensureAttached()` call fires before TabMana
 
 Find the existing code (around line 539):
 ```typescript
-// Ensure CDP is attached to the new active tab for Copilot Vision
+// Ensure CDP is attached to the new active tab for Wingman Vision
 devToolsManager?.ensureAttached().catch(() => {});
 ```
 
 Replace with:
 ```typescript
-// Ensure CDP is attached to the new active tab for Copilot Vision
+// Ensure CDP is attached to the new active tab for Wingman Vision
 // Small delay to let TabManager update its active tab first
 setTimeout(() => {
   devToolsManager?.ensureAttached().catch(() => {});
@@ -109,7 +109,7 @@ async attachToTab(wcId: number): Promise<WebContents | null> {
     console.warn('⚠️ CDP domain enable partially failed:', e.message);
   }
 
-  await this.installCopilotBindings(wc);
+  await this.installWingmanBindings(wc);
   return wc;
 }
 ```

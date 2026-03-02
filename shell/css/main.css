@@ -467,7 +467,7 @@
       }
     }
 
-    .copilot-badge {
+    .wingman-badge {
       font-size: 11px;
       padding: 3px 8px;
       background: rgba(233, 69, 96, 0.2);
@@ -1623,8 +1623,8 @@
       margin: 0 4px;
     }
 
-    /* ═══ Copilot Panel ═══ */
-    .copilot-panel {
+    /* ═══ Wingman Panel ═══ */
+    .wingman-panel {
       position: absolute;
       top: 0;
       right: 0;
@@ -1641,12 +1641,12 @@
       will-change: transform;
     }
 
-    .copilot-panel.open {
+    .wingman-panel.open {
       transform: translateX(0);
     }
 
     /* Toggle button on the panel edge */
-    .copilot-panel-toggle {
+    .wingman-panel-toggle {
       position: absolute;
       top: 50%;
       right: 0;
@@ -1667,7 +1667,7 @@
       transition: background 0.15s, color 0.15s, right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .copilot-panel-toggle:hover {
+    .wingman-panel-toggle:hover {
       background: var(--tab-bg);
       color: var(--text);
     }
@@ -1689,12 +1689,12 @@
       background: rgba(233, 69, 96, 0.4);
     }
 
-    .copilot-panel.open~.panel-resize-handle,
+    .wingman-panel.open~.panel-resize-handle,
     .panel-resize-handle.visible {
       display: block;
     }
 
-    .copilot-badge.panel-open {
+    .wingman-badge.panel-open {
       background: rgba(233, 69, 96, 0.4);
       box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.3);
     }
@@ -1768,7 +1768,7 @@
       color: var(--success);
     }
 
-    .activity-item .a-source.copilot {
+    .activity-item .a-source.wingman {
       color: var(--accent);
     }
 
@@ -1829,7 +1829,7 @@
       color: var(--text);
     }
 
-    .chat-msg.copilot {
+    .chat-msg.wingman {
       background: rgba(233, 69, 96, 0.15);
       border: 1px solid rgba(233, 69, 96, 0.2);
       align-self: flex-start;
@@ -2443,8 +2443,8 @@
       white-space: nowrap;
     }
 
-    /* ═══ Copilot overlay ═══ */
-    .copilot-overlay {
+    /* ═══ Wingman overlay ═══ */
+    .wingman-overlay {
       display: none;
       position: fixed;
       bottom: 20px;
@@ -2459,23 +2459,23 @@
       animation: slideIn 0.3s ease;
     }
 
-    .copilot-overlay.visible {
+    .wingman-overlay.visible {
       display: block;
     }
 
-    .copilot-overlay h3 {
+    .wingman-overlay h3 {
       color: var(--accent);
       margin-bottom: 8px;
       font-size: 14px;
     }
 
-    .copilot-overlay p {
+    .wingman-overlay p {
       color: var(--text-dim);
       font-size: 13px;
       line-height: 1.5;
     }
 
-    .copilot-overlay .dismiss {
+    .wingman-overlay .dismiss {
       position: absolute;
       top: 8px;
       right: 12px;
@@ -2505,7 +2505,7 @@
     /* Core glass effect */
     /* ═══ Liquid Glass Lite Effects ═══ */
 
-    /* Glass base — only used on elements that OVERLAP content (copilot panel, overlays) */
+    /* Glass base — only used on elements that OVERLAP content (wingman panel, overlays) */
     .lgl-glass {
       backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
       -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
@@ -2548,7 +2548,7 @@
         0 0 8px rgba(233, 69, 96, 0.2);
     }
 
-    /* Copilot panel — TRUE glass effect (overlaps webview, backdrop-filter works!) */
+    /* Wingman panel — TRUE glass effect (overlaps webview, backdrop-filter works!) */
     .lgl-glass-sidebar {
       background: rgba(16, 20, 38, 0.78) !important;
       backdrop-filter: blur(20px) saturate(1.3);

@@ -7,9 +7,9 @@ export function setMainWindow(win: BrowserWindow | null): void {
   mainWindow = win;
 }
 
-export function copilotAlert(title: string, body: string): void {
+export function wingmanAlert(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title: `🧀 ${title}`, body }).show();
   }
-  mainWindow?.webContents.send('copilot-alert', { title, body });
+  mainWindow?.webContents.send('wingman-alert', { title, body });
 }

@@ -64,7 +64,7 @@ import { EventStreamManager } from '../events/stream';
 import { TaskManager } from '../agents/task-manager';
 import { TabLockManager } from '../agents/tab-lock-manager';
 import { DevToolsManager } from '../devtools/manager';
-import { CopilotStream } from '../activity/copilot-stream';
+import { WingmanStream } from '../activity/wingman-stream';
 import { SecurityManager } from '../security/security-manager';
 import { SnapshotManager } from '../snapshot/manager';
 import { NetworkMocker } from '../network/mocker';
@@ -105,7 +105,7 @@ export interface RouteContext {
   taskManager: TaskManager;
   tabLockManager: TabLockManager;
   devToolsManager: DevToolsManager;
-  copilotStream: CopilotStream;
+  wingmanStream: WingmanStream;
   securityManager: SecurityManager | null;
   snapshotManager: SnapshotManager;
   networkMocker: NetworkMocker;
@@ -191,7 +191,7 @@ git commit -m "refactor: add RouteContext interface and shared helpers"
 - `GET /cookies`
 - `POST /cookies/clear`
 - `POST /scroll`
-- `POST /copilot-alert`
+- `POST /wingman-alert`
 - `POST /wait`
 - `GET /links`
 - `GET /forms`
@@ -202,7 +202,7 @@ Create `src/api/routes/browser.ts`. The file should:
 - `import { Router, Request, Response } from 'express';`
 - `import path from 'path';` and `import os from 'os';`
 - `import { RouteContext, getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';`
-- `import { copilotAlert } from '../../main';`
+- `import { wingmanAlert } from '../../main';`
 - `import { humanizedClick, humanizedType } from '../../input/humanized';`
 - Export `function registerBrowserRoutes(router: Router, ctx: RouteContext): void`
 - Copy all 14 route handlers from server.ts lines 501-905
@@ -271,7 +271,7 @@ private buildContext(): RouteContext {
     taskManager: this.taskManager,
     tabLockManager: this.tabLockManager,
     devToolsManager: this.devToolsManager,
-    copilotStream: this.copilotStream,
+    wingmanStream: this.wingmanStream,
     securityManager: this.securityManager,
     snapshotManager: this.snapshotManager,
     networkMocker: this.networkMocker,
@@ -653,7 +653,7 @@ git commit -m "refactor: extract content routes to routes/content.ts"
 - `GET /screenshot/annotated` + `POST /screenshot/annotated` (lines 1107-1137)
 - `POST /draw/toggle` (lines 1139-1147)
 - `GET /screenshots` (lines 1149-1157)
-- All `/copilot-stream/*` (lines 3474-3487)
+- All `/wingman-stream/*` (lines 3474-3487)
 
 **Step 1: Create `src/api/routes/media.ts`**
 
@@ -702,9 +702,9 @@ let liveMode = false;
 This keeps the same behavior without needing RouteContext changes.
 
 Also needs: `import { passwordManager } from '../../passwords/manager';` (singleton import)
-And: `import { copilotAlert } from '../../main';` — wait, copilot-alert was moved to browser.ts. Check.
+And: `import { wingmanAlert } from '../../main';` — wait, wingman-alert was moved to browser.ts. Check.
 
-Actually `POST /copilot-alert` was moved to browser.ts in Task 2. So misc.ts does NOT need copilotAlert.
+Actually `POST /wingman-alert` was moved to browser.ts in Task 2. So misc.ts does NOT need wingmanAlert.
 
 But misc.ts does need `PasswordCrypto`:
 ```typescript
@@ -847,7 +847,7 @@ git commit -m "docs: mark split api/server.ts as done"
 1. **All URL paths remain identical** — zero breaking changes
 2. **Auth middleware stays in server.ts**
 3. **`TandemAPIOptions` interface stays** — that's Improvement #8
-4. **`copilotAlert` circular dep stays** — that's Improvement #4
+4. **`wingmanAlert` circular dep stays** — that's Improvement #4
 5. **Security routes stay in SecurityManager**
 6. **`start()`, `stop()`, `getHttpServer()` stay on TandemAPI class**
 

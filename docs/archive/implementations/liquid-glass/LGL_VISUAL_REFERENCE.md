@@ -21,7 +21,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ← → ⟳  [https://example.com         ] ☆ 📸 ● Copilot  │ ← Glass!
+│ ← → ⟳  [https://example.com         ] ☆ 📸 ● Wingman  │ ← Glass!
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -30,14 +30,14 @@
 - URL bar: Subtle glass background
 - Bookmark star: `.lgl-glow` — inner radial glow on hover
 
-### 3. Copilot Panel (`.lgl-glass-sidebar`)
+### 3. Wingman Panel (`.lgl-glass-sidebar`)
 **Blur:** 24px (strongest!) | **Tint:** Dark/Light 0.65 opacity | **Shadow:** Dark  
 **Purpose:** Side panel that shows page content behind it  
 **Treatment:** Sidebar — the showcase piece, strongest glass effect
 
 ```
                                     ┌───────────────────┐
-                                    │ ◐ COPILOT         │
+                                    │ ◐ WINGMAN         │
                                     ├───────────────────┤
                                     │                   │
                                     │  [Chat messages]  │ ← Biggest
@@ -118,7 +118,7 @@ Normal state:          Active state:
 
 ### Inner Glow (`.lgl-glow`)
 
-Applied to: Active tab, toolbar buttons, copilot toggle
+Applied to: Active tab, toolbar buttons, wingman toggle
 
 ```
 Without hover:          With hover (mouse at center):
@@ -218,7 +218,7 @@ All .lgl-glass elements update instantly
 |---------|------|--------------|------------|-------|
 | Tab bar | 20px | 0 (static) | ~2MB | Only repaints on tab switch |
 | Toolbar | 18px | 0 (static) | ~1.5MB | Button hovers are transforms (no repaint) |
-| Copilot panel | 24px | 0 (static) | ~4MB | Biggest surface, but static |
+| Wingman panel | 24px | 0 (static) | ~4MB | Biggest surface, but static |
 | Draw toolbar | 16px | 0 (hidden) | 0 | Only exists when drawing |
 | Voice overlay | 15px | 0 (hidden) | 0 | Only during voice input |
 | Onboarding | 24px | 0 (one-time) | 0 | Removed after first use |

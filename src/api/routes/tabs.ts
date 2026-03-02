@@ -7,7 +7,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
   router.post('/tabs/open', async (req: Request, res: Response) => {
     const { url = 'about:blank', groupId, source = 'robin', focus = true } = req.body;
     try {
-      const tabSource = source === 'kees' || source === 'copilot' ? 'copilot' as const : 'robin' as const;
+      const tabSource = source === 'kees' || source === 'wingman' ? 'wingman' as const : 'robin' as const;
       const tab = await ctx.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
       ctx.panelManager.logActivity('tab-open', { url, source: tabSource });
       res.json({ ok: true, tab });
@@ -62,7 +62,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  // Set tab source (robin/copilot)
+  // Set tab source (robin/wingman)
   router.post('/tabs/source', (req: Request, res: Response) => {
     try {
       const { tabId, source } = req.body;

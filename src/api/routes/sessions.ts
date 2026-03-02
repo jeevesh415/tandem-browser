@@ -77,7 +77,7 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       const sess = ctx.sessionManager.create(name);
       let tab = null;
       if (url) {
-        tab = await ctx.tabManager.openTab(url, undefined, 'copilot', sess.partition);
+        tab = await ctx.tabManager.openTab(url, undefined, 'wingman', sess.partition);
       }
       res.json({ ok: true, name: sess.name, partition: sess.partition, tab: tab || undefined });
     } catch (e) {

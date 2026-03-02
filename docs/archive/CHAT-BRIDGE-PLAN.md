@@ -74,7 +74,7 @@ Read these files first:
 - src/api/server.ts (alleen regels 683-730, de /chat routes)
 
 ## Context
-Tandem Browser has a chat panel where Robin (the human user) talks to Kees (an AI copilot). Kees runs in OpenClaw, a separate process on localhost. Currently Kees only reads chat messages by polling GET /chat — which means messages can take 30-60 minutes to arrive. We need real-time delivery.
+Tandem Browser has a chat panel where Robin (the human user) talks to Kees (an AI wingman). Kees runs in OpenClaw, a separate process on localhost. Currently Kees only reads chat messages by polling GET /chat — which means messages can take 30-60 minutes to arrive. We need real-time delivery.
 
 OpenClaw has a local gateway that accepts wake events. When a wake event is sent, OpenClaw immediately processes it in the active session.
 

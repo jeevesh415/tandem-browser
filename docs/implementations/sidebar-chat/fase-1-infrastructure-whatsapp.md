@@ -24,8 +24,8 @@ Bouw het complete sidebar framework: icon strip, panel container, SidebarManager
 | `src/api/server.ts` | `class TandemAPI`, `setupRoutes()` | Route registratie patroon |
 | `src/registry.ts` | `interface ManagerRegistry` | Manager registry — hier moet SidebarManager bij |
 | `src/api/context.ts` | `type RouteContext` | Automatisch afgeleid van ManagerRegistry |
-| `shell/index.html` | `<div class="main-layout">`, `<div class="copilot-panel">` | Waar sidebar HTML moet komen |
-| `shell/css/main.css` | `.main-layout`, `.browser-content`, `.copilot-panel` | Layout grid dat aangepast moet worden |
+| `shell/index.html` | `<div class="main-layout">`, `<div class="wingman-panel">` | Waar sidebar HTML moet komen |
+| `shell/css/main.css` | `.main-layout`, `.browser-content`, `.wingman-panel` | Layout grid dat aangepast moet worden |
 | `src/api/routes/browser.ts` | `registerBrowserRoutes()` | Voorbeeld van hoe een route-bestand eruitziet |
 | `src/panel/manager.ts` | `class PanelManager` | Referentie voor panel-achtig management patroon |
 

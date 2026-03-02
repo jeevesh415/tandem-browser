@@ -2,7 +2,7 @@
  * Liquid Glass Lite (LGL) Integration for Tandem Browser
  * 
  * CSS-first glass effects (T1 Static tier) with preparation for full WebGL lensing.
- * Applies glass treatment to chrome elements: tab bar, toolbar, copilot panel, overlays.
+ * Applies glass treatment to chrome elements: tab bar, toolbar, wingman panel, overlays.
  */
 
 class LiquidGlassIntegration {
@@ -81,8 +81,8 @@ class LiquidGlassIntegration {
       lensing: true
     });
 
-    // Copilot Panel — LGL Sidebar treatment (biggest glass surface)
-    this.applyGlass('.copilot-panel', {
+    // Wingman Panel — LGL Sidebar treatment (biggest glass surface)
+    this.applyGlass('.wingman-panel', {
       type: 'sidebar',
       blur: 24,
       tint: true,
@@ -117,11 +117,11 @@ class LiquidGlassIntegration {
     this.applyGelPress('.toolbar button');
     this.applyGelPress('.tab');
     this.applyGelPress('.draw-toolbar button');
-    this.applyGelPress('.copilot-panel-toggle');
+    this.applyGelPress('.wingman-panel-toggle');
 
     // Apply inner glow to key elements
     this.applyInnerGlow('.tab.active');
-    this.applyInnerGlow('.copilot-panel-toggle');
+    this.applyInnerGlow('.wingman-panel-toggle');
     this.applyInnerGlow('.toolbar button');
   }
 

@@ -3,7 +3,7 @@
  *
  * Features:
  * - @claude → only ClaudeActivityBackend
- * - @copilot → only OpenClawBackend
+ * - @wingman → only OpenClawBackend
  * - No @-mention in "both" mode → both backends
  * - Answers labeled per source (source: 'openclaw' | 'claude')
  * - Each answer arrives independently and is shown separately
@@ -53,7 +53,7 @@ class DualMode {
     if (lc.startsWith('@claude ') || lc === '@claude') {
       return { target: 'claude', cleanText: trimmed.slice(7).trim() };
     }
-    if (lc.startsWith('@copilot ') || lc === '@copilot') {
+    if (lc.startsWith('@wingman ') || lc === '@wingman') {
       return { target: 'openclaw', cleanText: trimmed.slice(5).trim() };
     }
 
@@ -63,7 +63,7 @@ class DualMode {
   /**
    * Send a message with @-mention routing.
    * - @claude → only claude backend
-   * - @copilot → only openclaw backend
+   * - @wingman → only openclaw backend
    * - no mention → both backends
    */
   async sendMessage(text) {

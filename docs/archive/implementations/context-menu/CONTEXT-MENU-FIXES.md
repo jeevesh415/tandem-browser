@@ -52,7 +52,7 @@ onKeesChatInject: (callback: (text: string) => void) => {
   return () => ipcRenderer.removeListener('kees-chat-inject', handler);
 },
 ```
-Apply this pattern to ALL `on*` functions in preload.ts (onCopilotAlert, onNavigated, onShortcut, onTabRegistered, onPanelToggle, onActivityEvent, onChatMessage, onDrawMode, onDrawClear, onScreenshotTaken, onVoiceToggle, onVoiceTranscript, onAutoSnapshotRequest, onKeesTyping, onApprovalRequest, onTabSourceChanged, onDownloadComplete, onOpenUrlInNewTab, onKeesChatInject, onBookmarkStatusChanged).
+Apply this pattern to ALL `on*` functions in preload.ts (onWingmanAlert, onNavigated, onShortcut, onTabRegistered, onPanelToggle, onActivityEvent, onChatMessage, onDrawMode, onDrawClear, onScreenshotTaken, onVoiceToggle, onVoiceTranscript, onAutoSnapshotRequest, onKeesTyping, onApprovalRequest, onTabSourceChanged, onDownloadComplete, onOpenUrlInNewTab, onKeesChatInject, onBookmarkStatusChanged).
 
 After all fixes: run `npm run compile` and fix any TypeScript errors.
 Do NOT run `npm start` or `npm run dev`.
@@ -168,7 +168,7 @@ Read these files first:
 - src/api/server.ts (search for "/chat" route and "page-content" route)
 - shell/index.html (search for "onKeesChatInject" and "chat-send")
 
-This run improves the Kees AI integration in the context menu. Kees is an AI copilot that communicates via the Tandem API at localhost:8765.
+This run improves the Kees AI integration in the context menu. Kees is an AI wingman that communicates via the Tandem API at localhost:8765.
 
 **K2: "Summarize Page with Kees" sends no page content**
 Currently, clicking "Summarize Page with Kees" injects the text "Please summarize the current page for me." into the chat. But Kees (the AI on the other end of the /chat API) has no way to know what page the user is viewing unless he separately calls /page-content.

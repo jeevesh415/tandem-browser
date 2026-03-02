@@ -24,7 +24,7 @@ Tandem Browser has a strong architectural vision (two-layer stealth architecture
 - Registers all IPC handlers inline with business logic (lines 436-828)
 - Contains a 100-line `activity-webview-event` handler (lines 539-638) that touches 8 subsystems
 - Builds the entire application menu (lines 831-951)
-- Exports `copilotAlert()` that creates circular dependencies
+- Exports `wingmanAlert()` that creates circular dependencies
 
 **Impact:** Every manager change requires edits at 3+ locations within this file. The `activity-webview-event` handler is the most complex business logic in the project, mixing history, site memory, security, scripts, device emulation, and context bridge — all in one IPC listener.
 
@@ -33,7 +33,7 @@ Tandem Browser has a strong architectural vision (two-layer stealth architecture
 **What it does (too much):**
 - 40+ imports, 35-parameter constructor (`TandemAPIOptions`)
 - All 170+ HTTP routes in one file
-- Circular dependency: line 9 imports `copilotAlert` from `../main`
+- Circular dependency: line 9 imports `wingmanAlert` from `../main`
 - Does not fit in a single AI context window
 
 **Impact:** Adding any new API route means editing this massive file. Route handlers aren't grouped by domain.
@@ -233,14 +233,14 @@ Only 2 test files exist:
 ### Current State
 
 ```
-main.ts ←→ api/server.ts      (copilotAlert import)
-main.ts ←  headless/manager.ts (copilotAlert import)
-main.ts ←  watch/watcher.ts    (copilotAlert import)
+main.ts ←→ api/server.ts      (wingmanAlert import)
+main.ts ←  headless/manager.ts (wingmanAlert import)
+main.ts ←  watch/watcher.ts    (wingmanAlert import)
 ```
 
 ### Recommendation
 
-Move `copilotAlert` to `src/notifications/alert.ts` or make it an event on EventStreamManager.
+Move `wingmanAlert` to `src/notifications/alert.ts` or make it an event on EventStreamManager.
 
 ---
 
@@ -276,7 +276,7 @@ shell/
 ├── js/
 │   ├── tabs.js        → __tandemTabs implementation
 │   ├── addressbar.js  → URL bar logic
-│   ├── panel.js       → Copilot panel
+│   ├── panel.js       → Wingman panel
 │   ├── bookmarks.js   → Bookmarks bar
 │   └── shortcuts.js   → Keyboard shortcut handling
 └── css/
@@ -303,7 +303,7 @@ shell/
 | 1 | Split `api/server.ts` into route files | High | Medium | Routes fit in context window |
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | High | Medium | Changes become local |
 | 3 | Shared utilities module (`paths`, `url`, `errors`) | Medium | Low | Less duplication = fewer bugs |
-| 4 | Fix circular dependency (`copilotAlert`) | Medium | Low | Cleaner import graph |
+| 4 | Fix circular dependency (`wingmanAlert`) | Medium | Low | Cleaner import graph |
 | 5 | Unified `npm test` + tests for TabManager/API | Medium | Medium | Find bugs earlier |
 | 6 | Type safety: CDP types + fewer `any` | Medium | Medium | Better autocompletion |
 | 7 | Split `shell/index.html` | Medium | Medium | UI changes become easier |

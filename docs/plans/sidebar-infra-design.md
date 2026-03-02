@@ -24,7 +24,7 @@ Opera heeft dit goed opgelost: één uniforme sidebar met een plug-in systeem. A
 ├── .bookmarks-bar      ← bookmarks bar
 └── .main-layout        ← flex row
       ├── .browser-content   ← flex:1, webviews
-      └── .copilot-panel     ← rechts, AI panel
+      └── .wingman-panel     ← rechts, AI panel
 ```
 
 **Doel:** `.sidebar` toevoegen als EERSTE kind van `.main-layout`:
@@ -33,7 +33,7 @@ Opera heeft dit goed opgelost: één uniforme sidebar met een plug-in systeem. A
 └── .main-layout        ← flex row
       ├── .sidebar           ← NIEUW: links, 48px (icon) of 240px (panel open)
       ├── .browser-content   ← flex:1, webviews (ongewijzigd)
-      └── .copilot-panel     ← rechts, ongewijzigd
+      └── .wingman-panel     ← rechts, ongewijzigd
 ```
 
 ---
@@ -47,7 +47,7 @@ Opera heeft dit goed opgelost: één uniforme sidebar met een plug-in systeem. A
 │ .bookmarks-bar                                             │
 ├──────┬──────────────────────────────────────┬─────────────┤
 │      │                                      │             │
-│ 48px │      .browser-content (flex:1)       │   Copilot   │
+│ 48px │      .browser-content (flex:1)       │   Wingman   │
 │      │                                      │   Panel     │
 │ side │                                      │   (rechts)  │
 │ bar  │                                      │             │
@@ -59,7 +59,7 @@ Met open sidebar panel (bijv. Bookmarks):
 
 ```
 ├──────┬────────────────┬───────────────────────┬───────────┤
-│ 48px │  240px panel   │   .browser-content    │  Copilot  │
+│ 48px │  240px panel   │   .browser-content    │  Wingman  │
 │ icons│  (bijv. Books) │   (verkleint mee)     │  Panel    │
 └──────┴────────────────┴───────────────────────┴───────────┘
 ```
@@ -97,7 +97,7 @@ Met open sidebar panel (bijv. Bookmarks):
 
 > Icon stijl: Heroicons outline (MIT) voor utility. Brand SVG logos voor messengers (simpele herkenbare shapes, eigen kleuren).
 
-**Niet in sidebar:** Copilot AI Panel (blijft rechts, eigen toggle knop)
+**Niet in sidebar:** Wingman AI Panel (blijft rechts, eigen toggle knop)
 
 ---
 
@@ -222,7 +222,7 @@ Na Fase 3 is het fundament klaar en bouwen we per feature een panel (Workspaces,
 - [x] Sidebar infrastructuur vóór individuele features
 - [x] Items: Workspaces, Messengers, Personal News, Pinboards, Bookmarks, History, Downloads
 - [x] Personal News: WEL bouwen (Robin's keuze 2026-02-28)
-- [x] Rechter copilot panel blijft intact — apart systeem
+- [x] Rechter wingman panel blijft intact — apart systeem
 - [x] Narrow mode (48px icon-only) als **standaard** — uitklapbaar naar breed (met labels)
 - [x] Sidebar verbergbaar (collapsed = 0px) via toggle knop + keyboard shortcut
 - [x] SVG icons (geen emoji)

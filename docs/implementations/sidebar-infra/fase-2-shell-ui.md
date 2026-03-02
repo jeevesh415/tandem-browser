@@ -17,9 +17,9 @@ Bouw de zichtbare sidebar in de shell: icon strip, panel container, animaties, s
 | Bestand | Zoek naar | Waarom |
 |---------|-----------|--------|
 | `shell/index.html` | `<!-- Main layout: browser + panel -->` en de `.main-layout` div | Hier voeg je sidebar als eerste kind toe |
-| `shell/index.html` | `<!-- Copilot Panel Toggle Button -->` | Patroon voor toggle knop |
+| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Patroon voor toggle knop |
 | `shell/css/main.css` | `.main-layout {` en `.browser-content {` | CSS aanpassen voor sidebar |
-| `shell/css/main.css` | `.copilot-panel {` en `.copilot-panel.open {` | Patroon voor uitschuif-animatie |
+| `shell/css/main.css` | `.wingman-panel {` en `.wingman-panel.open {` | Patroon voor uitschuif-animatie |
 
 ---
 

@@ -467,7 +467,7 @@
           <div class="field-desc">Which page opens on a new tab?</div>
         </div>
         <select id="cfg-startPage">
-          <option value="copilot">Copilot (New Tab)</option>
+          <option value="wingman">Wingman (New Tab)</option>
           <option value="duckduckgo">DuckDuckGo</option>
           <option value="custom">Custom URL</option>
         </select>
@@ -497,10 +497,10 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Copilot panel position</div>
-          <div class="field-desc">Which side should the Copilot panel appear?</div>
+          <div class="field-label">Wingman panel position</div>
+          <div class="field-desc">Which side should the Wingman panel appear?</div>
         </div>
-        <select id="cfg-copilotPanelPosition">
+        <select id="cfg-wingmanPanelPosition">
           <option value="right">Right</option>
           <option value="left">Left</option>
         </select>
@@ -508,11 +508,11 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Copilot panel default open</div>
+          <div class="field-label">Wingman panel default open</div>
           <div class="field-desc">Panel auto-open on startup</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="cfg-copilotPanelDefaultOpen">
+          <input type="checkbox" id="cfg-wingmanPanelDefaultOpen">
           <span class="slider"></span>
         </label>
       </div>
@@ -837,7 +837,7 @@
     <!-- ═══ AI Autonomie ═══ -->
     <div class="section" id="autonomy">
       <h2>🤖 AI Autonomie</h2>
-      <p class="section-desc">Configure what Copilot/Claude can do automatically without asking</p>
+      <p class="section-desc">Configure what Wingman/Claude can do automatically without asking</p>
 
       <div class="field">
         <div class="field-info">
@@ -1014,14 +1014,14 @@
       const lgl = a.liquidGlass || {};
 
       // General
-      setVal('cfg-startPage', g.startPage || 'copilot');
+      setVal('cfg-startPage', g.startPage || 'wingman');
       setVal('cfg-customStartUrl', g.customStartUrl || '');
 
       // Appearance/Theme
       setVal('cfg-theme', a.theme || 'dark');
       setVal('cfg-language', g.language || 'nl-BE');
-      setVal('cfg-copilotPanelPosition', g.copilotPanelPosition || 'right');
-      setChecked('cfg-copilotPanelDefaultOpen', !!g.copilotPanelDefaultOpen);
+      setVal('cfg-wingmanPanelPosition', g.wingmanPanelPosition || 'right');
+      setChecked('cfg-wingmanPanelDefaultOpen', !!g.wingmanPanelDefaultOpen);
       setChecked('cfg-showBookmarksBar', g.showBookmarksBar !== false);
       toggleField('field-customStartUrl', g.startPage === 'custom');
 
@@ -1115,8 +1115,8 @@
     wire('cfg-startPage', 'general.startPage');
     wire('cfg-customStartUrl', 'general.customStartUrl');
     wire('cfg-language', 'general.language');
-    wire('cfg-copilotPanelPosition', 'general.copilotPanelPosition');
-    wire('cfg-copilotPanelDefaultOpen', 'general.copilotPanelDefaultOpen');
+    wire('cfg-wingmanPanelPosition', 'general.wingmanPanelPosition');
+    wire('cfg-wingmanPanelDefaultOpen', 'general.wingmanPanelDefaultOpen');
     wire('cfg-localFolder', 'screenshots.localFolder');
     wire('cfg-localFolderPath', 'screenshots.localFolderPath');
     wire('cfg-voiceLanguage', 'voice.inputLanguage');

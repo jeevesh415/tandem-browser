@@ -20,7 +20,7 @@ import type { ActivityTracker } from '../activity/tracker';
 import type { SecurityManager } from '../security/security-manager';
 import type { ScriptInjector } from '../scripts/injector';
 import type { DeviceEmulator } from '../device/emulator';
-import type { CopilotStream } from '../activity/copilot-stream';
+import type { WingmanStream } from '../activity/wingman-stream';
 import type { SnapshotManager } from '../snapshot/manager';
 import { createLogger } from '../utils/logger';
 
@@ -47,7 +47,7 @@ export interface IpcDeps {
   securityManager: SecurityManager | null;
   scriptInjector: ScriptInjector;
   deviceEmulator: DeviceEmulator;
-  copilotStream: CopilotStream;
+  wingmanStream: WingmanStream;
   snapshotManager: SnapshotManager;
 }
 
@@ -62,7 +62,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     behaviorObserver, siteMemory, formMemory, contextBridge,
     networkInspector, bookmarkManager, historyManager, eventStream,
     taskManager, contextMenuManager, devToolsManager, activityTracker,
-    securityManager, scriptInjector, deviceEmulator, copilotStream: _copilotStream,
+    securityManager, scriptInjector, deviceEmulator, wingmanStream: _wingmanStream,
     snapshotManager: _snapshotManager,
   } = deps;
 
@@ -71,7 +71,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-copilot', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
+  const ipcHandlers = ['snap-for-wingman', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -98,7 +98,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Screenshot Snap — composites webview + canvas, saves + clipboard ═══
-  ipcMain.handle('snap-for-copilot', async () => {
+  ipcMain.handle('snap-for-wingman', async () => {
     try {
       const activeTab = tabManager.getActiveTab();
       if (!activeTab) return { ok: false, error: 'No active tab' };
@@ -314,7 +314,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   // ═══ Emergency Stop — Escape key from renderer ═══
   ipcMain.handle('emergency-stop', async () => {
     const result = taskManager.emergencyStop();
-    panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
+    panelManager.addChatMessage('wingman', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
     return result;
   });
 

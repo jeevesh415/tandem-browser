@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
-import { copilotAlert } from '../notifications/alert';
+import { wingmanAlert } from '../notifications/alert';
 import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
 import { createLogger } from '../utils/logger';
 
@@ -31,7 +31,7 @@ interface WatchState {
  * 
  * Uses a hidden BrowserWindow to periodically check pages for changes.
  * Hashes page text content and compares with previous check.
- * Alerts the human/copilot when something changes.
+ * Alerts the human/wingman when something changes.
  */
 export class WatchManager {
   private watchFile: string;
@@ -147,7 +147,7 @@ export class WatchManager {
 
       if (changed) {
         watch.changeCount++;
-        copilotAlert(
+        wingmanAlert(
           `Pagina veranderd: ${watch.lastTitle || watch.url}`,
           `${watch.url} is gewijzigd sinds de vorige check.`
         );

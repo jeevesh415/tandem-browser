@@ -15,11 +15,11 @@ const log = createLogger('ConfigManager');
 export interface TandemConfig {
   // Algemeen
   general: {
-    startPage: 'copilot' | 'duckduckgo' | 'custom';
+    startPage: 'wingman' | 'duckduckgo' | 'custom';
     customStartUrl: string;
     language: string;
-    copilotPanelPosition: 'left' | 'right';
-    copilotPanelDefaultOpen: boolean;
+    wingmanPanelPosition: 'left' | 'right';
+    wingmanPanelDefaultOpen: boolean;
     showBookmarksBar: boolean;
     activeBackend: 'openclaw' | 'claude';
     agentName: string;
@@ -91,7 +91,7 @@ export interface TandemConfig {
     url: string;          // e.g. "http://127.0.0.1:18789"
     secret: string;       // shared secret for auth (future use)
     notifyOnRobinChat: boolean;  // fire webhook when Robin sends a message
-    notifyOnActivity: boolean;   // stream activity events to OpenClaw (Copilot Vision)
+    notifyOnActivity: boolean;   // stream activity events to OpenClaw (Wingman Vision)
   };
 
   // Onboarding
@@ -100,15 +100,15 @@ export interface TandemConfig {
 
 const DEFAULT_CONFIG: TandemConfig = {
   general: {
-    startPage: 'copilot',
+    startPage: 'wingman',
     customStartUrl: '',
     language: 'en-US',
-    copilotPanelPosition: 'right',
-    copilotPanelDefaultOpen: false,
+    wingmanPanelPosition: 'right',
+    wingmanPanelDefaultOpen: false,
     showBookmarksBar: true,
     activeBackend: 'openclaw',
-    agentName: 'Copilot',
-    agentDisplayName: 'AI Copilot',
+    agentName: 'Wingman',
+    agentDisplayName: 'AI Wingman',
   },
   screenshots: {
     clipboard: true,
@@ -216,14 +216,14 @@ export class ConfigManager {
         const raw = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
         // Backward compat: migrate old kees* config keys
         if (raw.general) {
-          if (raw.general.keesPanelPosition && !raw.general.copilotPanelPosition) {
-            raw.general.copilotPanelPosition = raw.general.keesPanelPosition;
+          if (raw.general.keesPanelPosition && !raw.general.wingmanPanelPosition) {
+            raw.general.wingmanPanelPosition = raw.general.keesPanelPosition;
           }
-          if (raw.general.keesPanelDefaultOpen !== undefined && raw.general.copilotPanelDefaultOpen === undefined) {
-            raw.general.copilotPanelDefaultOpen = raw.general.keesPanelDefaultOpen;
+          if (raw.general.keesPanelDefaultOpen !== undefined && raw.general.wingmanPanelDefaultOpen === undefined) {
+            raw.general.wingmanPanelDefaultOpen = raw.general.keesPanelDefaultOpen;
           }
           if (raw.general.startPage === 'kees') {
-            raw.general.startPage = 'copilot';
+            raw.general.startPage = 'wingman';
           }
           delete raw.general.keesPanelPosition;
           delete raw.general.keesPanelDefaultOpen;

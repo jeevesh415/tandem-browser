@@ -130,10 +130,10 @@ export function createMockContext(): RouteContext {
       togglePanel: vi.fn().mockReturnValue(true),
       getChatMessages: vi.fn().mockReturnValue([]),
       getChatMessagesSince: vi.fn().mockReturnValue([]),
-      addChatMessage: vi.fn().mockReturnValue({ id: 1, from: 'copilot', text: 'test' }),
+      addChatMessage: vi.fn().mockReturnValue({ id: 1, from: 'wingman', text: 'test' }),
       saveImage: vi.fn().mockReturnValue('img-123.png'),
       getImagePath: vi.fn().mockReturnValue('/tmp/img-123.png'),
-      setCopilotTyping: vi.fn(),
+      setWingmanTyping: vi.fn(),
       sendLiveModeChanged: vi.fn(),
     },
     drawManager: {
@@ -339,7 +339,7 @@ export function createMockContext(): RouteContext {
       sendCommand: vi.fn().mockResolvedValue({}),
       screenshotElement: vi.fn().mockResolvedValue(null),
     },
-    copilotStream: {
+    wingmanStream: {
       setEnabled: vi.fn(),
       isEnabled: vi.fn().mockReturnValue(false),
     },
@@ -477,10 +477,10 @@ describe('Tab Routes', () => {
       );
     });
 
-    it('maps copilot source correctly', async () => {
-      await request(app).post('/tabs/open').send({ source: 'copilot' });
+    it('maps wingman source correctly', async () => {
+      await request(app).post('/tabs/open').send({ source: 'wingman' });
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
-        'about:blank', undefined, 'copilot', 'persist:tandem', true
+        'about:blank', undefined, 'wingman', 'persist:tandem', true
       );
     });
 
@@ -547,7 +547,7 @@ describe('Tab Routes', () => {
 
   describe('POST /tabs/source', () => {
     it('sets tab source', async () => {
-      const res = await request(app).post('/tabs/source').send({ tabId: 'tab-1', source: 'copilot' });
+      const res = await request(app).post('/tabs/source').send({ tabId: 'tab-1', source: 'wingman' });
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
     });
@@ -774,7 +774,7 @@ Mock `ChromeExtensionImporter` and `GalleryLoader` via `vi.mock('../../extension
 
 **Step 1: Write tests**
 
-Sections: panel (1), chat (5), voice (3), audio (4), draw/screenshots (4), copilot stream (2).
+Sections: panel (1), chat (5), voice (3), audio (4), draw/screenshots (4), wingman stream (2).
 
 Key behaviors:
 - `POST /chat` requires text or image, maps from param to sender type
@@ -782,7 +782,7 @@ Key behaviors:
 - `POST /chat/webhook/test` reads config, makes fetch request — mock `fetch`
 - `POST /audio/start` requires active tab
 - `GET /screenshot/annotated` returns 404 when no screenshot
-- `POST /copilot-stream/toggle` sets enabled state
+- `POST /wingman-stream/toggle` sets enabled state
 
 **Step 2: Run & commit**
 
@@ -807,14 +807,14 @@ Key behaviors:
 - `POST /scroll` supports direction/target/selector modes
 - `POST /wait` supports selector or load event
 
-Need to mock `humanizedClick`, `humanizedType`, `copilotAlert` via vi.mock:
+Need to mock `humanizedClick`, `humanizedType`, `wingmanAlert` via vi.mock:
 ```typescript
 vi.mock('../../../input/humanized', () => ({
   humanizedClick: vi.fn().mockResolvedValue({ ok: true }),
   humanizedType: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock('../../../notifications/alert', () => ({
-  copilotAlert: vi.fn(),
+  wingmanAlert: vi.fn(),
 }));
 ```
 

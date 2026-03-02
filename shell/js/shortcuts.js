@@ -212,7 +212,7 @@
 
         hideOnboarding();
 
-        // Show Copilot panel after a brief moment
+        // Show Wingman panel after a brief moment
         setTimeout(() => {
           if (window.tandem && window.tandem.openPanel) {
             window.tandem.openPanel();

@@ -32,7 +32,7 @@ TOKEN=$(cat ~/.tandem/api-token)
 - [x] `assignRefs()` — @e1, @e2, ... toewijzen (stabiel per pagina, reset bij navigatie) _(2026-02-20, sessie 1.1)_
 - [x] `formatTree()` — output als tekst (zelfde stijl als agent-browser) _(2026-02-20, sessie 1.1)_
 - [x] **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler _(2026-02-20, sessie 1.1)_
-- [x] `GET /snapshot` endpoint in server.ts (SNAPSHOT sectie, voor COPILOT STREAM) _(2026-02-20, sessie 1.1)_
+- [x] `GET /snapshot` endpoint in server.ts (SNAPSHOT sectie, voor WINGMAN STREAM) _(2026-02-20, sessie 1.1)_
 - [x] `GET /snapshot?interactive=true` — filter op buttons/inputs/links _(2026-02-20, sessie 1.1)_
 - [x] `npx tsc` — zero errors _(2026-02-20, sessie 1.1)_
 - [x] Test: `curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/snapshot` _(2026-02-20, sessie 1.1)_

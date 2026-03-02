@@ -281,7 +281,7 @@ describe('Session Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'https://example.com',
         undefined,
-        'copilot',
+        'wingman',
         'persist:research',
       );
     });

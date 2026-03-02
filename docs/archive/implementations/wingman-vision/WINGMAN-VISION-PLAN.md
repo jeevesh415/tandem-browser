@@ -1,7 +1,7 @@
-# Copilot Vision — Real-Time Activity Stream to OpenClaw
+# Wingman Vision — Real-Time Activity Stream to OpenClaw
 
 ## Goal
-Give Kees (AI copilot on OpenClaw) real-time awareness of what Robin does in Tandem. Currently Kees is blind unless he actively polls. After this: Tandem pushes activity events via webhook so Kees sees everything as it happens.
+Give Kees (AI wingman on OpenClaw) real-time awareness of what Robin does in Tandem. Currently Kees is blind unless he actively polls. After this: Tandem pushes activity events via webhook so Kees sees everything as it happens.
 
 ## Architecture
 Same pattern as the existing chat bridge webhook in `PanelManager.fireWebhook()`:
@@ -9,12 +9,12 @@ Same pattern as the existing chat bridge webhook in `PanelManager.fireWebhook()`
 - Events are lightweight JSON, debounced where needed
 - Non-blocking, silent fail if OpenClaw is not running
 
-## New File: `src/activity/copilot-stream.ts`
+## New File: `src/activity/wingman-stream.ts`
 
-Single new class: `CopilotStream`
+Single new class: `WingmanStream`
 
 ```typescript
-interface CopilotEvent {
+interface WingmanEvent {
   type: 'tab-switched' | 'navigated' | 'page-loaded' | 'tab-opened' | 'tab-closed' | 'text-selected' | 'scroll-position' | 'form-interaction';
   tabId: string;
   timestamp: number;
@@ -43,19 +43,19 @@ interface CopilotEvent {
 
 ## Implementation
 
-### Step 1: Create `src/activity/copilot-stream.ts`
+### Step 1: Create `src/activity/wingman-stream.ts`
 
 ```typescript
 import { ConfigManager } from '../config/manager';
 
-interface CopilotEvent {
+interface WingmanEvent {
   type: string;
   tabId: string;
   timestamp: number;
   data: Record<string, unknown>;
 }
 
-export class CopilotStream {
+export class WingmanStream {
   private configManager: ConfigManager;
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private enabled: boolean = true;
@@ -65,7 +65,7 @@ export class CopilotStream {
   }
 
   /** Send event to OpenClaw (non-blocking) */
-  async emit(event: CopilotEvent): Promise<void> {
+  async emit(event: WingmanEvent): Promise<void> {
     if (!this.enabled) return;
     const config = this.configManager.getConfig();
     if (!config.webhook?.enabled || !config.webhook?.url) return;
@@ -98,7 +98,7 @@ export class CopilotStream {
   }
 
   /** Debounced emit — groups rapid-fire events */
-  emitDebounced(key: string, event: CopilotEvent, delayMs: number): void {
+  emitDebounced(key: string, event: WingmanEvent, delayMs: number): void {
     const existing = this.debounceTimers.get(key);
     if (existing) clearTimeout(existing);
     this.debounceTimers.set(key, setTimeout(() => {
@@ -108,7 +108,7 @@ export class CopilotStream {
   }
 
   /** Format event as readable text for Kees */
-  private formatEventText(event: CopilotEvent): string {
+  private formatEventText(event: WingmanEvent): string {
     switch (event.type) {
       case 'tab-switched':
         return `[Tandem] Robin switched to tab: ${event.data.title} (${event.data.url})`;
@@ -164,38 +164,38 @@ Default: `notifyOnActivity: true`
 
 ### Step 3: Wire up in `src/activity/tracker.ts`
 
-The `ActivityTracker` already receives all webview events via `onWebviewEvent()`. Add `CopilotStream` as a dependency and emit events:
+The `ActivityTracker` already receives all webview events via `onWebviewEvent()`. Add `WingmanStream` as a dependency and emit events:
 
 ```typescript
-import { CopilotStream } from './copilot-stream';
+import { WingmanStream } from './wingman-stream';
 
 export class ActivityTracker {
   // ... existing fields ...
-  private copilotStream?: CopilotStream;
+  private wingmanStream?: WingmanStream;
 
-  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, copilotStream?: CopilotStream) {
+  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, wingmanStream?: WingmanStream) {
     // ... existing ...
-    this.copilotStream = copilotStream;
+    this.wingmanStream = wingmanStream;
   }
 
   onWebviewEvent(data: { type: string; url?: string; tabId?: string; [key: string]: unknown }): void {
     // ... existing logging code ...
 
     // Stream to Kees
-    if (this.copilotStream) {
+    if (this.wingmanStream) {
       this.streamToKees(data);
     }
   }
 
   private streamToKees(data: Record<string, unknown>): void {
-    if (!this.copilotStream) return;
+    if (!this.wingmanStream) return;
     const tabId = (data.tabId as string) || 'unknown';
     const timestamp = Date.now();
 
     switch (data.type) {
       case 'did-navigate':
       case 'did-navigate-in-page':
-        this.copilotStream.emit({
+        this.wingmanStream.emit({
           type: 'navigated',
           tabId,
           timestamp,
@@ -204,7 +204,7 @@ export class ActivityTracker {
         break;
 
       case 'did-finish-load':
-        this.copilotStream.emit({
+        this.wingmanStream.emit({
           type: 'page-loaded',
           tabId,
           timestamp,
@@ -213,7 +213,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-switch':
-        this.copilotStream.emit({
+        this.wingmanStream.emit({
           type: 'tab-switched',
           tabId,
           timestamp,
@@ -224,7 +224,7 @@ export class ActivityTracker {
       case 'tab-open':
         // Only stream user-initiated opens (source: 'robin'), not agent opens
         if (data.source === 'robin') {
-          this.copilotStream.emit({
+          this.wingmanStream.emit({
             type: 'tab-opened',
             tabId,
             timestamp,
@@ -234,7 +234,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-close':
-        this.copilotStream.emit({
+        this.wingmanStream.emit({
           type: 'tab-closed',
           tabId,
           timestamp,
@@ -245,7 +245,7 @@ export class ActivityTracker {
       case 'text-selected':
         if (data.text) {
           const text = (data.text as string).substring(0, 500);
-          this.copilotStream.emitDebounced(`select-${tabId}`, {
+          this.wingmanStream.emitDebounced(`select-${tabId}`, {
             type: 'text-selected',
             tabId,
             timestamp,
@@ -255,7 +255,7 @@ export class ActivityTracker {
         break;
 
       case 'scroll':
-        this.copilotStream.emitDebounced(`scroll-${tabId}`, {
+        this.wingmanStream.emitDebounced(`scroll-${tabId}`, {
           type: 'scroll-position',
           tabId,
           timestamp,
@@ -264,7 +264,7 @@ export class ActivityTracker {
         break;
 
       case 'input-focus':
-        this.copilotStream.emitDebounced(`form-${tabId}`, {
+        this.wingmanStream.emitDebounced(`form-${tabId}`, {
           type: 'form-interaction',
           tabId,
           timestamp,
@@ -353,20 +353,20 @@ window.addEventListener('scroll', () => {
       (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
     );
     window.electronAPI.sendActivity('scroll', { scrollPercent });
-  }, 1000); // 1s debounce in renderer + 3s debounce in CopilotStream
+  }, 1000); // 1s debounce in renderer + 3s debounce in WingmanStream
 }, { passive: true });
 ```
 
 ### Step 7: Instantiate in `src/main.ts`
 
 ```typescript
-import { CopilotStream } from './activity/copilot-stream';
+import { WingmanStream } from './activity/wingman-stream';
 
 // After ConfigManager is ready:
-const copilotStream = new CopilotStream(configManager);
+const wingmanStream = new WingmanStream(configManager);
 
 // Pass to ActivityTracker constructor:
-const activityTracker = new ActivityTracker(win, panelManager, drawManager, copilotStream);
+const activityTracker = new ActivityTracker(win, panelManager, drawManager, wingmanStream);
 ```
 
 ### Step 8: API endpoint to toggle stream
@@ -374,27 +374,27 @@ const activityTracker = new ActivityTracker(win, panelManager, drawManager, copi
 Add to `src/api/server.ts`:
 
 ```typescript
-// POST /copilot-stream/toggle — enable/disable activity streaming
-this.app.post('/copilot-stream/toggle', (req: Request, res: Response) => {
+// POST /wingman-stream/toggle — enable/disable activity streaming
+this.app.post('/wingman-stream/toggle', (req: Request, res: Response) => {
   const { enabled } = req.body;
-  this.copilotStream.setEnabled(!!enabled);
+  this.wingmanStream.setEnabled(!!enabled);
   res.json({ ok: true, enabled: !!enabled });
 });
 
-// GET /copilot-stream/status — check if streaming is active
-this.app.get('/copilot-stream/status', (req: Request, res: Response) => {
-  res.json({ ok: true, enabled: this.copilotStream.isEnabled() });
+// GET /wingman-stream/status — check if streaming is active
+this.app.get('/wingman-stream/status', (req: Request, res: Response) => {
+  res.json({ ok: true, enabled: this.wingmanStream.isEnabled() });
 });
 ```
 
 ## Files to Create
-1. `src/activity/copilot-stream.ts` — new file (the CopilotStream class)
+1. `src/activity/wingman-stream.ts` — new file (the WingmanStream class)
 
 ## Files to Modify
 1. `src/config/manager.ts` — add `notifyOnActivity` to webhook config + default
-2. `src/activity/tracker.ts` — add CopilotStream dependency + `streamToKees()` method
+2. `src/activity/tracker.ts` — add WingmanStream dependency + `streamToKees()` method
 3. `src/tabs/manager.ts` — emit tab-switch/open/close events to ActivityTracker (if not already)
-4. `src/main.ts` — instantiate CopilotStream, pass to ActivityTracker
+4. `src/main.ts` — instantiate WingmanStream, pass to ActivityTracker
 5. `src/api/server.ts` — add toggle/status endpoints
 6. `src/preload.ts` or `src/bridge/context-bridge.ts` — add selectionchange + scroll listeners with `electronAPI.sendActivity()`
 
@@ -422,7 +422,7 @@ this.app.get('/copilot-stream/status', (req: Request, res: Response) => {
 2. Check OpenClaw is running on 18789
 3. Browse normally — switch tabs, navigate, select text, scroll
 4. Kees should receive events as system events in the main session
-5. Test toggle: `curl -X POST http://127.0.0.1:8765/copilot-stream/toggle -H 'Content-Type: application/json' -d '{"enabled":false}'`
+5. Test toggle: `curl -X POST http://127.0.0.1:8765/wingman-stream/toggle -H 'Content-Type: application/json' -d '{"enabled":false}'`
 6. Verify no events are sent when disabled
 7. Verify agent-initiated actions (source: 'kees') are NOT streamed (prevent echo loops)
 

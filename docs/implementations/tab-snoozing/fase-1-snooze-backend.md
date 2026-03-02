@@ -10,7 +10,7 @@
 ## Doel van deze fase
 
 Bouw `SnoozeManager` met volledige snooze/wake logica en registreer REST API endpoints.
-Na deze fase: Copilot kan tabs snoozen + waken via API. Nog geen UI.
+Na deze fase: Wingman kan tabs snoozen + waken via API. Nog geen UI.
 
 ---
 
@@ -104,7 +104,7 @@ export class SnoozeManager {
     const cutoff = Date.now() - thresholdMinutes * 60 * 1000;
     const tabs = this.tabManager.getAllTabs();
     for (const tab of tabs) {
-      if (tab.source === 'copilot') continue; // NEVER auto-snooze copilot tabs
+      if (tab.source === 'wingman') continue; // NEVER auto-snooze wingman tabs
       if (this.isSnoozed(tab.id)) continue;
       if (tab.lastActiveAt && tab.lastActiveAt < cutoff) {
         await this.snooze(tab.id).catch(() => {}); // ignore errors for individual tabs
@@ -265,4 +265,4 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 - [ ] `tabManager.getWebContentsById()` — check of deze methode bestaat, anders `getActiveWebContents()` gebruiken en ID vergelijken
 - [ ] `tab.lastActiveAt` — controleer of TabManager dit bijhoudt, anders implementeren in deze fase
-- [ ] NOOIT copilot-tabs automatisch snoozen (check `tab.source === 'copilot'`)
+- [ ] NOOIT wingman-tabs automatisch snoozen (check `tab.source === 'wingman'`)

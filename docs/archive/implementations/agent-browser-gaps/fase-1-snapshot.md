@@ -198,7 +198,7 @@ if (snapshotManager) snapshotManager.destroy();
 
 ## API Endpoints
 
-Voeg deze toe in `server.ts` setupRoutes(), NA de DevTools sectie (zoek `// DEVTOOLS — CDP Bridge`), VOOR de Copilot Stream sectie (zoek `// COPILOT STREAM`):
+Voeg deze toe in `server.ts` setupRoutes(), NA de DevTools sectie (zoek `// DEVTOOLS — CDP Bridge`), VOOR de Wingman Stream sectie (zoek `// WINGMAN STREAM`):
 
 ```typescript
 // ═══════════════════════════════════════════════

@@ -46,7 +46,7 @@ Read these files first:
 - src/api/server.ts search for "/chat" routes (GET and POST)
 
 ## Context
-Tandem Browser has a chat panel (right sidebar) where Robin talks to Kees (AI copilot). The chat input is a <textarea>. Robin wants to paste images from clipboard (Cmd+V) into the chat, see a preview, and send them with the message. Images should be saved to disk and the file path stored in the ChatMessage.
+Tandem Browser has a chat panel (right sidebar) where Robin talks to Kees (AI wingman). The chat input is a <textarea>. Robin wants to paste images from clipboard (Cmd+V) into the chat, see a preview, and send them with the message. Images should be saved to disk and the file path stored in the ChatMessage.
 
 The chat system has multiple backends (OpenClaw WebSocket, Claude API) managed by a ChatRouter. The sendMessage() function in the renderer handles both modes. For this feature, we focus on the OpenClaw backend path since that's how Kees receives messages.
 

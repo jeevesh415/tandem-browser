@@ -1,7 +1,7 @@
 # Activity Log Fix — Route CDP Events to ActivityTracker + Filter Endpoint
 
 ## Problem
-CDP Copilot Vision events (scroll, text selection, form focus) go to CopilotStream → webhook → nowhere (OpenClaw has no inbound event endpoint). Meanwhile the existing `/activity-log` endpoint only contains basic webview events (loading-start, loading-stop, did-navigate).
+CDP Wingman Vision events (scroll, text selection, form focus) go to WingmanStream → webhook → nowhere (OpenClaw has no inbound event endpoint). Meanwhile the existing `/activity-log` endpoint only contains basic webview events (loading-start, loading-stop, did-navigate).
 
 ## Solution
 1. Route CDP events into the existing ActivityTracker so they appear in `/activity-log`
@@ -14,7 +14,7 @@ CDP Copilot Vision events (scroll, text selection, form focus) go to CopilotStre
 
 File: `src/devtools/manager.ts`
 
-Add ActivityTracker as a dependency alongside CopilotStream:
+Add ActivityTracker as a dependency alongside WingmanStream:
 
 ```typescript
 import { ActivityTracker } from '../activity/tracker';
@@ -22,7 +22,7 @@ import { ActivityTracker } from '../activity/tracker';
 // Add to class fields:
 private activityTracker?: ActivityTracker;
 
-// Add setter (same pattern as setCopilotStream):
+// Add setter (same pattern as setWingmanStream):
 setActivityTracker(tracker: ActivityTracker): void {
   this.activityTracker = tracker;
 }
@@ -32,11 +32,11 @@ setActivityTracker(tracker: ActivityTracker): void {
 
 File: `src/devtools/manager.ts`
 
-In `onCopilotBinding()`, after each CopilotStream call, also write to ActivityTracker:
+In `onWingmanBinding()`, after each WingmanStream call, also write to ActivityTracker:
 
 ```typescript
-private onCopilotBinding(params: { name: string; payload: string }, tabId?: string): void {
-  if (!this.copilotStream) return;
+private onWingmanBinding(params: { name: string; payload: string }, tabId?: string): void {
+  if (!this.wingmanStream) return;
   const timestamp = Date.now();
   const tab = tabId || 'unknown';
   const wc = this.attachedWcId ? webContents.fromId(this.attachedWcId) : null;
@@ -45,7 +45,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
   switch (params.name) {
     case '__tandemScroll':
       const scrollPct = parseInt(params.payload, 10);
-      this.copilotStream.emitDebounced(`scroll-${tab}`, {
+      this.wingmanStream.emitDebounced(`scroll-${tab}`, {
         type: 'scroll-position', tabId: tab, timestamp,
         data: { scrollPercent: scrollPct, url },
       }, 3000);
@@ -56,7 +56,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
       break;
 
     case '__tandemSelection':
-      this.copilotStream.emitDebounced(`select-${tab}`, {
+      this.wingmanStream.emitDebounced(`select-${tab}`, {
         type: 'text-selected', tabId: tab, timestamp,
         data: { text: params.payload, url },
       }, 1000);
@@ -68,7 +68,7 @@ private onCopilotBinding(params: { name: string; payload: string }, tabId?: stri
     case '__tandemFormFocus':
       try {
         const field = JSON.parse(params.payload);
-        this.copilotStream.emitDebounced(`form-${tab}`, {
+        this.wingmanStream.emitDebounced(`form-${tab}`, {
           type: 'form-interaction', tabId: tab, timestamp,
           data: { fieldType: field.type, fieldName: field.name, url },
         }, 2000);
@@ -117,22 +117,22 @@ this.app.get('/activity-log', (req: Request, res: Response) => {
 
 ### Step 5: Remove webhook dependency (optional but clean)
 
-File: `src/activity/copilot-stream.ts`
+File: `src/activity/wingman-stream.ts`
 
 The webhook `emit()` will keep silently failing since the endpoint doesn't exist. Two options:
 
-**Option A (recommended):** Keep CopilotStream but make the webhook optional. Add a file-based fallback:
+**Option A (recommended):** Keep WingmanStream but make the webhook optional. Add a file-based fallback:
 
 ```typescript
-// Add to CopilotStream:
+// Add to WingmanStream:
 private logPath: string;
 
 constructor(configManager: ConfigManager) {
   this.configManager = configManager;
-  this.logPath = path.join(os.homedir(), '.tandem', 'copilot-stream.jsonl');
+  this.logPath = path.join(os.homedir(), '.tandem', 'wingman-stream.jsonl');
 }
 
-async emit(event: CopilotEvent): Promise<void> {
+async emit(event: WingmanEvent): Promise<void> {
   if (!this.enabled) return;
   
   // Always write to file (rolling log)
@@ -145,7 +145,7 @@ async emit(event: CopilotEvent): Promise<void> {
   }
 }
 
-private writeToFile(event: CopilotEvent): void {
+private writeToFile(event: WingmanEvent): void {
   try {
     const line = JSON.stringify({ ...event, ts: new Date().toISOString() }) + '\n';
     fs.appendFileSync(this.logPath, line);
@@ -160,7 +160,7 @@ private writeToFile(event: CopilotEvent): void {
 }
 ```
 
-**Option B (minimal):** Just leave CopilotStream as-is. The webhook silently fails, and all real data flows through ActivityTracker now.
+**Option B (minimal):** Just leave WingmanStream as-is. The webhook silently fails, and all real data flows through ActivityTracker now.
 
 Go with Option B for now. Option A is nice-to-have for persistent logging across restarts.
 
@@ -168,14 +168,14 @@ Go with Option B for now. Option A is nice-to-have for persistent logging across
 
 | File | Change |
 |------|--------|
-| `src/devtools/manager.ts` | Add `activityTracker` field + `setActivityTracker()`. In `onCopilotBinding()`: also write events to ActivityTracker. |
+| `src/devtools/manager.ts` | Add `activityTracker` field + `setActivityTracker()`. In `onWingmanBinding()`: also write events to ActivityTracker. |
 | `src/main.ts` | Add `devToolsManager.setActivityTracker(activityTracker)` wiring. |
 | `src/api/server.ts` | Add `types` query param filter to `/activity-log` endpoint. |
 
 ## How Kees Uses This
 
 ```bash
-# Get all copilot-relevant events from the last 5 minutes
+# Get all wingman-relevant events from the last 5 minutes
 curl -s 'http://127.0.0.1:8765/activity-log?types=navigated,page-loaded,tab-switched,tab-opened,tab-closed,text-selected,scroll-position,form-interaction&since=1771430000000&limit=50'
 
 # Quick check: what is Robin doing right now?

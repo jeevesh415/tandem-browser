@@ -601,7 +601,7 @@ export class ScriptGuard {
 
   /**
    * Inject security monitor code into the current page.
-   * Uses Runtime.addBinding (invisible to page — same pattern as Copilot Vision).
+   * Uses Runtime.addBinding (invisible to page — same pattern as Wingman Vision).
    * Uses Page.addScriptToEvaluateOnNewDocument for persistence across navigations.
    */
   async injectMonitors(): Promise<void> {

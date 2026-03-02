@@ -100,7 +100,7 @@ npm start
 src/
 ├── api/server.ts           # ← HIER komen alle nieuwe endpoints bij
 │                           #   ~170 endpoints (2385 regels), voeg toe NA de DevTools sectie
-│                           #   Sectie-marker: zoek naar "// COPILOT STREAM" (regel ~2354)
+│                           #   Sectie-marker: zoek naar "// WINGMAN STREAM" (regel ~2354)
 │                           #   Voeg nieuwe secties toe VOOR die regel
 ├── devtools/
 │   ├── manager.ts          # CDP attach/detach + sendCommand() — hergebruiken voor snapshot + mock

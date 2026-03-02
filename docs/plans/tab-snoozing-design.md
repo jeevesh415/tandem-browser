@@ -83,7 +83,7 @@ TabSnoozingManager
 
 - **webContents verloren:** als tabId verandert na reload → sla ook de webContentsId op
 - **Electron webContents.discard():** mooier dan loadURL('about:blank'), maar beschikbaarheid controleren in Electron 40
-- **Auto-snooze en copilot tabs:** NOOIT copilot-beheerde tabs automatisch snoozen — check de tab source marker
+- **Auto-snooze en wingman tabs:** NOOIT wingman-beheerde tabs automatisch snoozen — check de tab source marker
 
 ---
 
@@ -98,4 +98,4 @@ TabSnoozingManager
 
 - [ ] Wil je auto-snooze aan of uit by default?
 - [ ] Drempelwaarde inactiviteit: 30 min? Configureerbaar?
-- [ ] Mogen copilot-tabs gesnoozed worden? (Aanbeveling: nee)
+- [ ] Mogen wingman-tabs gesnoozed worden? (Aanbeveling: nee)

@@ -1,7 +1,7 @@
 import type { BrowserWindow } from 'electron';
 import type { PanelManager } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';
-import type { CopilotStream } from './copilot-stream';
+import type { WingmanStream } from './wingman-stream';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ActivityTracker');
@@ -25,17 +25,17 @@ export class ActivityTracker {
   private win: BrowserWindow;
   private panelManager: PanelManager;
   private drawManager: DrawOverlayManager;
-  private copilotStream?: CopilotStream;
+  private wingmanStream?: WingmanStream;
   private log: ActivityEntry[] = [];
   private counter = 0;
   private maxEntries = 1000;
   private autoSnapshotEnabled = false; // Disabled until stable
 
-  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, copilotStream?: CopilotStream) {
+  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, wingmanStream?: WingmanStream) {
     this.win = win;
     this.panelManager = panelManager;
     this.drawManager = drawManager;
-    this.copilotStream = copilotStream;
+    this.wingmanStream = wingmanStream;
   }
 
   /** Handle webview event forwarded from renderer */
@@ -57,9 +57,9 @@ export class ActivityTracker {
       data as Record<string, unknown>
     );
 
-    // Stream to Copilot (Copilot Vision)
-    if (this.copilotStream) {
-      this.streamToCopilot(data);
+    // Stream to Wingman (Wingman Vision)
+    if (this.wingmanStream) {
+      this.streamToWingman(data);
     }
 
     // Auto-snapshot on navigation (skip initial loads and internal pages)
@@ -75,16 +75,16 @@ export class ActivityTracker {
     }
   }
 
-  /** Stream activity events to Copilot via CopilotStream */
-  private streamToCopilot(data: Record<string, unknown>): void {
-    if (!this.copilotStream) return;
+  /** Stream activity events to Wingman via WingmanStream */
+  private streamToWingman(data: Record<string, unknown>): void {
+    if (!this.wingmanStream) return;
     const tabId = (data.tabId as string) || 'unknown';
     const timestamp = Date.now();
 
     switch (data.type) {
       case 'did-navigate':
       case 'did-navigate-in-page':
-        void this.copilotStream.emit({
+        void this.wingmanStream.emit({
           type: 'navigated',
           tabId,
           timestamp,
@@ -93,7 +93,7 @@ export class ActivityTracker {
         break;
 
       case 'did-finish-load':
-        void this.copilotStream.emit({
+        void this.wingmanStream.emit({
           type: 'page-loaded',
           tabId,
           timestamp,
@@ -102,7 +102,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-switch':
-        void this.copilotStream.emit({
+        void this.wingmanStream.emit({
           type: 'tab-switched',
           tabId,
           timestamp,
@@ -113,7 +113,7 @@ export class ActivityTracker {
       case 'tab-open':
         // Only stream user-initiated opens (source: 'robin'), not agent opens
         if (data.source === 'robin') {
-          void this.copilotStream.emit({
+          void this.wingmanStream.emit({
             type: 'tab-opened',
             tabId,
             timestamp,
@@ -123,7 +123,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-close':
-        void this.copilotStream.emit({
+        void this.wingmanStream.emit({
           type: 'tab-closed',
           tabId,
           timestamp,
@@ -134,7 +134,7 @@ export class ActivityTracker {
       case 'text-selected':
         if (data.text) {
           const text = (data.text as string).substring(0, 500);
-          this.copilotStream.emitDebounced(`select-${tabId}`, {
+          this.wingmanStream.emitDebounced(`select-${tabId}`, {
             type: 'text-selected',
             tabId,
             timestamp,
@@ -144,7 +144,7 @@ export class ActivityTracker {
         break;
 
       case 'scroll':
-        this.copilotStream.emitDebounced(`scroll-${tabId}`, {
+        this.wingmanStream.emitDebounced(`scroll-${tabId}`, {
           type: 'scroll-position',
           tabId,
           timestamp,
@@ -153,7 +153,7 @@ export class ActivityTracker {
         break;
 
       case 'input-focus':
-        this.copilotStream.emitDebounced(`form-${tabId}`, {
+        this.wingmanStream.emitDebounced(`form-${tabId}`, {
           type: 'form-interaction',
           tabId,
           timestamp,

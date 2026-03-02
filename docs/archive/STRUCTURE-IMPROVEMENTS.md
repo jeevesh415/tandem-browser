@@ -10,7 +10,7 @@
 | 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 regels. 12 route files + context.ts |
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 regels. 3 modules: ipc/, menu/, notifications/ |
 | 3 | Shared utilities (`paths`, `url`, `errors`) | DONE | 2026-02-27 | `tandemDir()` in 40 files, `handleRouteError()` in 12 routes. URL utils overgeslagen (te divers). |
-| 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
+| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
 | 5 | Unified `npm test` + meer tests | DONE | 2026-02-27 | 152 tests (was 86). TabManager, TaskManager, utils tests. |
 | 6 | Type safety: CDP types + minder `any` | DONE | 2026-02-27 | 12 CDP types, catch blocks, subscriber handlers |
 | 7 | Split `shell/index.html` | DONE | 2026-02-27 | 6572→451 regels. 4 bestanden: css/main.css, css/shortcuts.css, js/main.js, js/shortcuts.js |
@@ -51,16 +51,16 @@ Of voor meerdere quick wins:
 - **Openstaand:** geen
 
 ### 2026-02-26 — Punt 2+4: Split `main.ts` + fix circulaire deps
-- **Wat gedaan:** main.ts (1016 regels) opgesplitst in 3 modules + copilotAlert circulaire dependency opgelost
+- **Wat gedaan:** main.ts (1016 regels) opgesplitst in 3 modules + wingmanAlert circulaire dependency opgelost
 - **Bestanden aangemaakt:**
-  - `src/notifications/alert.ts` — copilotAlert + setMainWindow setter (breekt circulaire dep)
+  - `src/notifications/alert.ts` — wingmanAlert + setMainWindow setter (breekt circulaire dep)
   - `src/menu/app-menu.ts` — buildAppMenu + MenuDeps interface (~130 regels)
   - `src/ipc/handlers.ts` — registerIpcHandlers + IpcDeps interface + syncTabsToContext (~295 regels)
 - **Bestanden gewijzigd:**
   - `src/main.ts` (1016→575 regels)
-  - `src/api/routes/browser.ts` — import copilotAlert van notifications/alert
-  - `src/watch/watcher.ts` — import copilotAlert van notifications/alert
-  - `src/headless/manager.ts` — import copilotAlert van notifications/alert
+  - `src/api/routes/browser.ts` — import wingmanAlert van notifications/alert
+  - `src/watch/watcher.ts` — import wingmanAlert van notifications/alert
+  - `src/headless/manager.ts` — import wingmanAlert van notifications/alert
 - **Tests:** passing (86 passed, 38 skipped)
 - **Openstaand:** geen
 

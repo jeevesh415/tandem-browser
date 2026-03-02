@@ -92,7 +92,7 @@ if (tab.snoozed) {
 
 ### Stap 4: Snooze Manager mini-paneel (optioneel — als tijd over is)
 
-Klein paneel in de copilot panel "Tabs" sectie dat gesnoozede tabs toont:
+Klein paneel in de wingman panel "Tabs" sectie dat gesnoozede tabs toont:
 ```javascript
 async function loadSnoozedTabs() {
   const { tabs } = await fetch('/tabs/snoozed', { headers: { Authorization: ... } }).then(r => r.json());

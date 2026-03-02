@@ -1,7 +1,7 @@
 # CDP Listener Fix — Event handlers can't reach bindings
 
 ## Problem
-The CDP bindings (`__tandemScroll`, `__tandemSelection`, `__tandemFormFocus`) are installed via `Runtime.addBinding` and work when called directly. But the event listeners injected via `Runtime.evaluate` in `injectCopilotListeners()` don't fire or can't reach the bindings.
+The CDP bindings (`__tandemScroll`, `__tandemSelection`, `__tandemFormFocus`) are installed via `Runtime.addBinding` and work when called directly. But the event listeners injected via `Runtime.evaluate` in `injectWingmanListeners()` don't fire or can't reach the bindings.
 
 This is a known CDP issue: `Runtime.addBinding` creates bindings in the main world, but `Runtime.evaluate` may run in a different execution context, or the event handlers lose access to the binding references.
 
@@ -9,16 +9,16 @@ This is a known CDP issue: `Runtime.addBinding` creates bindings in the main wor
 Replace `Runtime.evaluate` with `Page.addScriptToEvaluateOnNewDocument` for the listener injection. This method:
 - Runs the script in the main world on every page load (including SPA navigations)
 - Has reliable access to `Runtime.addBinding` bindings
-- Auto-reinjects on navigation (no need for `reinjectCopilotListeners`)
+- Auto-reinjects on navigation (no need for `reinjectWingmanListeners`)
 
 ## Changes
 
 ### File: `src/devtools/manager.ts`
 
-#### 1. Replace `injectCopilotListeners()`:
+#### 1. Replace `injectWingmanListeners()`:
 
 ```typescript
-private async injectCopilotListeners(wc: WebContents): Promise<void> {
+private async injectWingmanListeners(wc: WebContents): Promise<void> {
   const script = `(function(){
     if(window.__tandemVisionActive) return;
     window.__tandemVisionActive = true;
@@ -80,23 +80,23 @@ private async injectCopilotListeners(wc: WebContents): Promise<void> {
 }
 ```
 
-#### 2. Remove `reinjectCopilotListeners()`
+#### 2. Remove `reinjectWingmanListeners()`
 
-Since `Page.addScriptToEvaluateOnNewDocument` auto-runs on every navigation, the `reinjectCopilotListeners()` method and its `Page.frameStoppedLoading` trigger in `handleCDPEvent()` are no longer needed.
+Since `Page.addScriptToEvaluateOnNewDocument` auto-runs on every navigation, the `reinjectWingmanListeners()` method and its `Page.frameStoppedLoading` trigger in `handleCDPEvent()` are no longer needed.
 
 Remove:
-- The `reinjectCopilotListeners()` method
+- The `reinjectWingmanListeners()` method
 - The `Page.frameStoppedLoading` handler in `handleCDPEvent()`
 
 #### 3. Note on re-attach
 
-When CDP detaches and re-attaches (tab switch), `installCopilotBindings()` is called again which calls `injectCopilotListeners()`. The `addScriptToEvaluateOnNewDocument` will be re-registered for the new tab. The `__tandemVisionActive` guard prevents double-registration on the current page.
+When CDP detaches and re-attaches (tab switch), `installWingmanBindings()` is called again which calls `injectWingmanListeners()`. The `addScriptToEvaluateOnNewDocument` will be re-registered for the new tab. The `__tandemVisionActive` guard prevents double-registration on the current page.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/devtools/manager.ts` | Update `injectCopilotListeners()` to use `Page.addScriptToEvaluateOnNewDocument`. Remove `reinjectCopilotListeners()` and its `Page.frameStoppedLoading` trigger. |
+| `src/devtools/manager.ts` | Update `injectWingmanListeners()` to use `Page.addScriptToEvaluateOnNewDocument`. Remove `reinjectWingmanListeners()` and its `Page.frameStoppedLoading` trigger. |
 
 ## Testing
 

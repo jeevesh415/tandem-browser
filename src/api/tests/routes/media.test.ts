@@ -38,7 +38,7 @@ describe('Media Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // PANEL — Copilot side panel
+  // PANEL — Wingman side panel
   // ═══════════════════════════════════════════════
 
   describe('POST /panel/toggle', () => {
@@ -81,12 +81,12 @@ describe('Media Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // CHAT — Copilot chat messages
+  // CHAT — Wingman chat messages
   // ═══════════════════════════════════════════════
 
   describe('GET /chat', () => {
     it('returns messages with default limit', async () => {
-      const fakeMessages = [{ id: 1, from: 'copilot', text: 'hello', ts: 1000 }];
+      const fakeMessages = [{ id: 1, from: 'wingman', text: 'hello', ts: 1000 }];
       vi.mocked(ctx.panelManager.getChatMessages).mockReturnValue(fakeMessages as any);
 
       const res = await request(app).get('/chat');
@@ -138,8 +138,8 @@ describe('Media Routes', () => {
   });
 
   describe('POST /chat', () => {
-    it('sends a message as copilot by default', async () => {
-      const fakeMsg = { id: 1, from: 'copilot', text: 'hello', ts: Date.now() };
+    it('sends a message as wingman by default', async () => {
+      const fakeMsg = { id: 1, from: 'wingman', text: 'hello', ts: Date.now() };
       vi.mocked(ctx.panelManager.addChatMessage).mockReturnValue(fakeMsg as any);
 
       const res = await request(app)
@@ -149,7 +149,7 @@ describe('Media Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
       expect(res.body.message).toEqual(fakeMsg);
-      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('copilot', 'hello', undefined);
+      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('wingman', 'hello', undefined);
     });
 
     it('maps from=robin to sender robin', async () => {
@@ -168,12 +168,12 @@ describe('Media Routes', () => {
       expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('claude', 'hi', undefined);
     });
 
-    it('maps unknown from value to copilot', async () => {
+    it('maps unknown from value to wingman', async () => {
       await request(app)
         .post('/chat')
         .send({ text: 'hi', from: 'unknown' });
 
-      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('copilot', 'hi', undefined);
+      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('wingman', 'hi', undefined);
     });
 
     it('sends a message with an image', async () => {
@@ -184,7 +184,7 @@ describe('Media Routes', () => {
         .send({ text: 'look at this', image: 'data:image/png;base64,abc' });
 
       expect(ctx.panelManager.saveImage).toHaveBeenCalledWith('data:image/png;base64,abc');
-      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('copilot', 'look at this', 'saved.png');
+      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('wingman', 'look at this', 'saved.png');
     });
 
     it('sends a message with image only (no text)', async () => {
@@ -194,7 +194,7 @@ describe('Media Routes', () => {
         .post('/chat')
         .send({ image: 'data:image/png;base64,abc' });
 
-      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('copilot', '', 'saved.png');
+      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('wingman', '', 'saved.png');
     });
 
     it('returns 400 when neither text nor image is provided', async () => {
@@ -266,7 +266,7 @@ describe('Media Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, typing: true });
-      expect(ctx.panelManager.setCopilotTyping).toHaveBeenCalledWith(true);
+      expect(ctx.panelManager.setWingmanTyping).toHaveBeenCalledWith(true);
     });
 
     it('sets typing indicator to false', async () => {
@@ -276,11 +276,11 @@ describe('Media Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, typing: false });
-      expect(ctx.panelManager.setCopilotTyping).toHaveBeenCalledWith(false);
+      expect(ctx.panelManager.setWingmanTyping).toHaveBeenCalledWith(false);
     });
 
-    it('returns 500 when setCopilotTyping throws', async () => {
-      vi.mocked(ctx.panelManager.setCopilotTyping).mockImplementation(() => {
+    it('returns 500 when setWingmanTyping throws', async () => {
+      vi.mocked(ctx.panelManager.setWingmanTyping).mockImplementation(() => {
         throw new Error('typing error');
       });
 
@@ -702,55 +702,55 @@ describe('Media Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // COPILOT STREAM (Activity Streaming to OpenClaw)
+  // WINGMAN STREAM (Activity Streaming to OpenClaw)
   // ═══════════════════════════════════════════════
 
-  describe('POST /copilot-stream/toggle', () => {
-    it('enables copilot stream', async () => {
+  describe('POST /wingman-stream/toggle', () => {
+    it('enables wingman stream', async () => {
       const res = await request(app)
-        .post('/copilot-stream/toggle')
+        .post('/wingman-stream/toggle')
         .send({ enabled: true });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, enabled: true });
-      expect(ctx.copilotStream.setEnabled).toHaveBeenCalledWith(true);
+      expect(ctx.wingmanStream.setEnabled).toHaveBeenCalledWith(true);
     });
 
-    it('disables copilot stream', async () => {
+    it('disables wingman stream', async () => {
       const res = await request(app)
-        .post('/copilot-stream/toggle')
+        .post('/wingman-stream/toggle')
         .send({ enabled: false });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, enabled: false });
-      expect(ctx.copilotStream.setEnabled).toHaveBeenCalledWith(false);
+      expect(ctx.wingmanStream.setEnabled).toHaveBeenCalledWith(false);
     });
 
     it('coerces falsy enabled to false', async () => {
       const res = await request(app)
-        .post('/copilot-stream/toggle')
+        .post('/wingman-stream/toggle')
         .send({});
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, enabled: false });
-      expect(ctx.copilotStream.setEnabled).toHaveBeenCalledWith(false);
+      expect(ctx.wingmanStream.setEnabled).toHaveBeenCalledWith(false);
     });
   });
 
-  describe('GET /copilot-stream/status', () => {
-    it('returns copilot stream status when disabled', async () => {
-      vi.mocked(ctx.copilotStream.isEnabled).mockReturnValue(false);
+  describe('GET /wingman-stream/status', () => {
+    it('returns wingman stream status when disabled', async () => {
+      vi.mocked(ctx.wingmanStream.isEnabled).mockReturnValue(false);
 
-      const res = await request(app).get('/copilot-stream/status');
+      const res = await request(app).get('/wingman-stream/status');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, enabled: false });
     });
 
-    it('returns copilot stream status when enabled', async () => {
-      vi.mocked(ctx.copilotStream.isEnabled).mockReturnValue(true);
+    it('returns wingman stream status when enabled', async () => {
+      vi.mocked(ctx.wingmanStream.isEnabled).mockReturnValue(true);
 
-      const res = await request(app).get('/copilot-stream/status');
+      const res = await request(app).get('/wingman-stream/status');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, enabled: true });

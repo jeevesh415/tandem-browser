@@ -97,7 +97,7 @@
   - [x] Permission monitoring (setPermissionRequestHandler installed — blocks camera/mic in strict, notifications from first-visit sites)
   - [x] Crypto miner detection (WASM instantiation tracking + CPU spike correlation via Performance.getMetrics every 10s)
   - [x] Security injections don't break sites (tested GitHub, Google — 0 false blocks, 1815+ requests processed cleanly)
-  - [x] Stealth + Copilot Vision unaffected (navigator.webdriver=false, __tandemScroll binding active, security monitors in separate APIs)
+  - [x] Stealth + Wingman Vision unaffected (navigator.webdriver=false, __tandemScroll binding active, security monitors in separate APIs)
   - [x] Phase 0-2 regression OK (blocklist 811,812 entries, Guardian active, outbound guard working, all 12 previous routes working)
 - **Issues encountered:** None
 - **Notes for next phase:**
@@ -115,7 +115,7 @@
   - Added `unsubscribe(name)` — removes subscriber by name
   - Added `enableSecurityDomains()` — enables Debugger.enable + Performance.enable (not enabled by default)
   - Added `getAttachedWebContents()` — returns attached WC or null (for security modules)
-  - Modified `handleCDPEvent()` — now dispatches ALL events to subscribers after internal handling; Runtime.bindingCalled no longer early-returns (falls through to subscribers for security bindings while still handling copilot bindings internally)
+  - Modified `handleCDPEvent()` — now dispatches ALL events to subscribers after internal handling; Runtime.bindingCalled no longer early-returns (falls through to subscribers for security bindings while still handling wingman bindings internally)
 
 ---
 

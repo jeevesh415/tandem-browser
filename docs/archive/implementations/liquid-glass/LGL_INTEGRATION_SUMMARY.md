@@ -14,7 +14,7 @@ A standalone JavaScript module that manages all glass effects:
 - **Element targeting**: Automatically finds and enhances:
   - Tab bar (`.tab-bar`) — navbar treatment with page show-through
   - Toolbar (`.toolbar`) — toolbar treatment with button gel effects
-  - Copilot panel (`.copilot-panel`) — sidebar treatment (strongest glass)
+  - Wingman panel (`.wingman-panel`) — sidebar treatment (strongest glass)
   - Draw toolbar (`.draw-toolbar`) — floating glass
   - Voice indicator (`.voice-indicator-overlay`) — modal glass
   - Onboarding overlay (`.onboarding-overlay`) — fullscreen glass
@@ -47,7 +47,7 @@ A standalone JavaScript module that manages all glass effects:
 - `.lgl-glass` — Base class with `backdrop-filter` blur + saturation
 - `.lgl-glass-navbar` — Tab bar glass (shows content below)
 - `.lgl-glass-toolbar` — Toolbar glass
-- `.lgl-glass-sidebar` — Copilot panel glass (strongest blur: 24px)
+- `.lgl-glass-sidebar` — Wingman panel glass (strongest blur: 24px)
 - `.lgl-glass-floating` — Draw toolbar glass
 - `.lgl-glass-overlay` — Modal overlay glass
 
@@ -157,7 +157,7 @@ Once the package exists:
 - [ ] Browser launches and shows glass effects
 - [ ] Tab bar is semi-transparent over page content
 - [ ] Toolbar has glass background
-- [ ] Copilot panel slides in with strong glass effect
+- [ ] Wingman panel slides in with strong glass effect
 - [ ] Settings toggle enables/disables effects
 - [ ] Blur slider updates effects in real-time
 - [ ] Inner glow follows mouse on tabs
@@ -171,7 +171,7 @@ Once the package exists:
 When recording the demo, highlight:
 
 1. **Tab bar glass** — Open a colorful webpage, show tabs are see-through
-2. **Copilot panel** — Slide it in over content, the glass is stunning
+2. **Wingman panel** — Slide it in over content, the glass is stunning
 3. **Settings controls** — Show blur slider live-updating the effect
 4. **Gel press** — Click toolbar buttons, watch the subtle scale animation
 5. **Inner glow** — Hover over active tab, watch the radial glow follow cursor

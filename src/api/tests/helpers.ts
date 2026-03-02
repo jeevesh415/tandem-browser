@@ -85,10 +85,10 @@ export function createMockContext(): RouteContext {
       togglePanel: vi.fn().mockReturnValue(true),
       getChatMessages: vi.fn().mockReturnValue([]),
       getChatMessagesSince: vi.fn().mockReturnValue([]),
-      addChatMessage: vi.fn().mockReturnValue({ id: 1, from: 'copilot', text: '', ts: Date.now() }),
+      addChatMessage: vi.fn().mockReturnValue({ id: 1, from: 'wingman', text: '', ts: Date.now() }),
       saveImage: vi.fn().mockReturnValue('image.png'),
       getImagePath: vi.fn().mockReturnValue('/tmp/image.png'),
-      setCopilotTyping: vi.fn(),
+      setWingmanTyping: vi.fn(),
       sendLiveModeChanged: vi.fn(),
     } as any,
 
@@ -348,8 +348,8 @@ export function createMockContext(): RouteContext {
       screenshotElement: vi.fn().mockResolvedValue(null),
     } as any,
 
-    // ── copilotStream ───────────────────────────
-    copilotStream: {
+    // ── wingmanStream ───────────────────────────
+    wingmanStream: {
       setEnabled: vi.fn(),
       isEnabled: vi.fn().mockReturnValue(false),
     } as any,

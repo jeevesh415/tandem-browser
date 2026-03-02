@@ -274,7 +274,7 @@ describe('Agent Routes', () => {
       expect(res.body).toEqual({ stopped: 3 });
       expect(ctx.taskManager.emergencyStop).toHaveBeenCalled();
       expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith(
-        'copilot',
+        'wingman',
         expect.stringContaining('3 tasks stopped'),
       );
     });

@@ -110,7 +110,7 @@ globalShortcut.register('CmdOrCtrl+Shift+N', () => {
 
 ### Stap 3: API endpoint POST /window/private
 
-**Wat:** Endpoint om programmatisch een privé-venster te openen (voor Copilot/agents).
+**Wat:** Endpoint om programmatisch een privé-venster te openen (voor Wingman/agents).
 
 **Bestand:** `src/api/routes/browser.ts`
 

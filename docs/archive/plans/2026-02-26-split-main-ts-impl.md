@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Split `src/main.ts` (1016 lines) into 3 focused modules and fix the `copilotAlert` circular dependency.
+**Goal:** Split `src/main.ts` (1016 lines) into 3 focused modules and fix the `wingmanAlert` circular dependency.
 
-**Architecture:** Extract IPC handlers, application menu, and `copilotAlert` into separate modules with clean dependency interfaces. `main.ts` becomes a bootstrap orchestrator that creates managers and wires modules together.
+**Architecture:** Extract IPC handlers, application menu, and `wingmanAlert` into separate modules with clean dependency interfaces. `main.ts` becomes a bootstrap orchestrator that creates managers and wires modules together.
 
 **Tech Stack:** Electron, TypeScript, Express
 
@@ -17,7 +17,7 @@
 - Modify: `src/api/routes/browser.ts:5` (update import)
 - Modify: `src/watch/watcher.ts:7` (update import)
 - Modify: `src/headless/manager.ts:3` (update import)
-- Modify: `src/main.ts:954-960` (remove copilotAlert, add setMainWindow calls)
+- Modify: `src/main.ts:954-960` (remove wingmanAlert, add setMainWindow calls)
 
 **Step 1: Create `src/notifications/alert.ts`**
 
@@ -30,11 +30,11 @@ export function setMainWindow(win: BrowserWindow | null): void {
   mainWindow = win;
 }
 
-export function copilotAlert(title: string, body: string): void {
+export function wingmanAlert(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title: `🧀 ${title}`, body }).show();
   }
-  mainWindow?.webContents.send('copilot-alert', { title, body });
+  mainWindow?.webContents.send('wingman-alert', { title, body });
 }
 ```
 
@@ -43,30 +43,30 @@ export function copilotAlert(title: string, body: string): void {
 In `src/api/routes/browser.ts`, change:
 ```typescript
 // FROM:
-import { copilotAlert } from '../../main';
+import { wingmanAlert } from '../../main';
 // TO:
-import { copilotAlert } from '../../notifications/alert';
+import { wingmanAlert } from '../../notifications/alert';
 ```
 
 In `src/watch/watcher.ts`, change:
 ```typescript
 // FROM:
-import { copilotAlert } from '../main';
+import { wingmanAlert } from '../main';
 // TO:
-import { copilotAlert } from '../notifications/alert';
+import { wingmanAlert } from '../notifications/alert';
 ```
 
 In `src/headless/manager.ts`, change:
 ```typescript
 // FROM:
-import { copilotAlert } from '../main';
+import { wingmanAlert } from '../main';
 // TO:
-import { copilotAlert } from '../notifications/alert';
+import { wingmanAlert } from '../notifications/alert';
 ```
 
 **Step 3: Update `src/main.ts`**
 
-Remove the `copilotAlert` function and its export (lines 954-960). Add import and setter calls:
+Remove the `wingmanAlert` function and its export (lines 954-960). Add import and setter calls:
 
 Add to imports:
 ```typescript
@@ -97,7 +97,7 @@ Expected: all tests pass
 
 ```bash
 git add src/notifications/alert.ts src/api/routes/browser.ts src/watch/watcher.ts src/headless/manager.ts src/main.ts
-git commit -m "refactor: extract copilotAlert to notifications/alert (fixes circular dep)"
+git commit -m "refactor: extract wingmanAlert to notifications/alert (fixes circular dep)"
 ```
 
 ---
@@ -190,7 +190,7 @@ export function buildAppMenu(deps: MenuDeps): void {
       ],
     },
     {
-      label: deps.configManager?.getConfig().general.agentName || 'Copilot',
+      label: deps.configManager?.getConfig().general.agentName || 'Wingman',
       submenu: [
         { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
           deps.panelManager?.togglePanel();
@@ -332,7 +332,7 @@ import { ActivityTracker } from '../activity/tracker';
 import { SecurityManager } from '../security/security-manager';
 import { ScriptInjector } from '../scripts/injector';
 import { DeviceEmulator } from '../device/emulator';
-import { CopilotStream } from '../activity/copilot-stream';
+import { WingmanStream } from '../activity/wingman-stream';
 import { SnapshotManager } from '../snapshot/manager';
 
 export interface IpcDeps {
@@ -356,7 +356,7 @@ export interface IpcDeps {
   securityManager: SecurityManager | null;
   scriptInjector: ScriptInjector;
   deviceEmulator: DeviceEmulator;
-  copilotStream: CopilotStream;
+  wingmanStream: WingmanStream;
   snapshotManager: SnapshotManager;
 }
 
@@ -367,7 +367,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     behaviorObserver, siteMemory, formMemory, contextBridge,
     networkInspector, bookmarkManager, historyManager, eventStream,
     taskManager, contextMenuManager, devToolsManager, activityTracker,
-    securityManager, scriptInjector, deviceEmulator, copilotStream,
+    securityManager, scriptInjector, deviceEmulator, wingmanStream,
     snapshotManager,
   } = deps;
 
@@ -376,7 +376,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlerNames = ['snap-for-copilot', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
+  const ipcHandlerNames = ['snap-for-wingman', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
   for (const handler of ipcHandlerNames) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -404,7 +404,7 @@ Copy all handlers from main.ts lines 453-828 into `registerIpcHandlers()`. This 
 - `tab-register` handler (line 461)
 - `chat-send` handler (line 482)
 - `chat-send-image` handler (line 489)
-- `snap-for-copilot` handler (line 497)
+- `snap-for-wingman` handler (line 497)
 - `quick-screenshot` handler (line 510)
 - `voice-transcript` handler (line 523)
 - `voice-status-update` handler (line 530)
@@ -470,7 +470,7 @@ registerIpcHandlers({
   securityManager,
   scriptInjector: scriptInjector!,
   deviceEmulator: deviceEmulator!,
-  copilotStream: copilotStream!,
+  wingmanStream: wingmanStream!,
   snapshotManager: snapshotManager!,
 });
 ```
@@ -547,7 +547,7 @@ git commit -m "refactor: clean up unused imports in main.ts"
 Mark Items 2 and 4 as DONE in `docs/STRUCTURE-IMPROVEMENTS.md`:
 ```
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→~400 regels. 3 modules extracted |
-| 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts |
+| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts |
 ```
 
 Add logboek entry.

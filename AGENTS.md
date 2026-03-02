@@ -2,7 +2,7 @@
 
 ## Wie ben je?
 
-Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Copilot (AI) browsen samen het web. Jij schrijft de code.
+Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Wingman (AI) browsen samen het web. Jij schrijft de code.
 
 **Lees EERST `PROJECT.md`** — dat is het complete overzicht van wat Tandem is, hoe het werkt, en waarom.
 
@@ -47,7 +47,7 @@ tandem-browser/
 │   │   ├── linux-portatie/       # Linux portatie roadmap
 │   │   ├── cdp-devtools/         # DevTools Bridge plannen
 │   │   ├── context-menu/         # Context Menu plannen
-│   │   ├── copilot-vision/       # Copilot Vision plannen
+│   │   ├── wingman-vision/       # Wingman Vision plannen
 │   │   └── liquid-glass/         # Liquid Glass Lite docs
 │   ├── plans/                    # Niet-geïmplementeerde plannen (design docs)
 │   ├── research/                 # Opera gap analyse + feature inventories
@@ -130,13 +130,13 @@ tandem-browser/
 ## ⚔️ ANTI-DETECTIE ARCHITECTUUR — KRITISCH
 
 ### De Gouden Regel
-**Alles wat Copilot doet moet onzichtbaar zijn vanuit de webpagina's JavaScript context.**
+**Alles wat Wingman doet moet onzichtbaar zijn vanuit de webpagina's JavaScript context.**
 
-De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Copilot staat over Robin's schouder mee te kijken, maar de website weet dat niet.
+De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Wingman staat over Robin's schouder mee te kijken, maar de website weet dat niet.
 
 ### Twee-lagen architectuur
 - **Layer 1 (website ziet):** Normale Chromium webview, echte sessie, menselijk gedrag
-- **Layer 2 (onzichtbaar):** Electron main process + shell UI waar Copilot opereert
+- **Layer 2 (onzichtbaar):** Electron main process + shell UI waar Wingman opereert
 
 ### Verplichte patronen
 
@@ -148,12 +148,12 @@ De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Copilot 
 | Page lezen | Injected DOM crawler script | `executeJavaScript()` vanuit main process (kort, minimaal) |
 | Draw overlay | Canvas IN de webview | Canvas in de shell BOVEN de webview |
 | Voice | Web Speech API in webview | Web Speech API in de shell |
-| Copilot paneel | iframe/element in webview | Electron panel, apart van webview |
+| Wingman paneel | iframe/element in webview | Electron panel, apart van webview |
 | Activity track | MutationObserver in pagina | Electron webview events |
 
 ### Wat websites detecteren
 - `Event.isTrusted` — programmatische events = false → gebruik sendInputEvent
-- `document.hasFocus()` — als Copilot panel focus heeft → mock focus behouden
+- `document.hasFocus()` — als Wingman panel focus heeft → mock focus behouden
 - `performance.now()` timing — te snel = bot → random delays 80-300ms
 - Injected DOM elements — alles wat niet van de site is → NOOIT in webview
 - WebSocket naar localhost — onze API mag NIET vanuit de webview aangeroepen worden
@@ -202,7 +202,7 @@ Tandem leert Robin's gedragspatronen en repliceert die bij automated acties.
 
 ## 💬 Chat Architectuur — BELANGRIJK
 
-Het Copilot panel heeft een Chat tab die Robin en Copilot laat communiceren. Deze verbindt **direct via WebSocket** met de OpenClaw gateway (ws://127.0.0.1:18789).
+Het Wingman panel heeft een Chat tab die Robin en Wingman laat communiceren. Deze verbindt **direct via WebSocket** met de OpenClaw gateway (ws://127.0.0.1:18789).
 
 ### Hoe het werkt
 1. WebSocket naar `ws://127.0.0.1:18789`

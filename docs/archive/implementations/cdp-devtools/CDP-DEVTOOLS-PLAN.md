@@ -74,7 +74,7 @@ Read these files first for context on the project structure:
 - src/main.ts lines 165-230 (manager initialization in startAPI)
 
 ## Context
-Tandem Browser is an Electron app with a <webview>-based tab system. Each tab has a webContents. Kees (an AI copilot) interacts via the REST API at localhost:8765. We're building a DevTools bridge so Kees can read console logs, inspect network traffic with response bodies, query the DOM, and execute arbitrary CDP commands — all via API endpoints.
+Tandem Browser is an Electron app with a <webview>-based tab system. Each tab has a webContents. Kees (an AI wingman) interacts via the REST API at localhost:8765. We're building a DevTools bridge so Kees can read console logs, inspect network traffic with response bodies, query the DOM, and execute arbitrary CDP commands — all via API endpoints.
 
 Electron's `webContents.debugger` API provides Chrome DevTools Protocol access:
 ```typescript

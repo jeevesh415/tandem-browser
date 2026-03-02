@@ -37,8 +37,8 @@ The browser should launch with glass effects already applied!
 - Hover over bookmark star → inner glow appears
 - Type in URL bar → glass background stays consistent
 
-### 3. Copilot Panel Glass
-- Click the Copilot toggle on the right edge (or press configured shortcut)
+### 3. Wingman Panel Glass
+- Click the Wingman toggle on the right edge (or press configured shortcut)
 - The panel should **slide in with a glass effect**
 - This is the **strongest glass** — lots of blur, shows page content behind
 - Resize the panel → glass effect maintains
@@ -46,7 +46,7 @@ The browser should launch with glass effects already applied!
 **Expected:**
 ```
                               ┌─────────────────┐
-   [Page content visible] →   │ ◐ COPILOT       │ ← Glass!
+   [Page content visible] →   │ ◐ WINGMAN       │ ← Glass!
    [through the panel]         │                 │
                               │  [Chat UI]      │
                               │                 │
@@ -216,7 +216,7 @@ top -pid $(pgrep -f "Electron")
 
 1. Tab bar shows page content through glass
 2. Toolbar has glass background with gel-like buttons
-3. Copilot panel has strong glass effect
+3. Wingman panel has strong glass effect
 4. Settings toggle enables/disables all effects
 5. Blur slider updates effects in real-time
 6. All animations are smooth (60fps)
@@ -253,7 +253,7 @@ If you find bugs or visual issues:
 When recording the demo:
 
 - [ ] Show tab bar glass with colorful page
-- [ ] Open/close copilot panel (slide animation)
+- [ ] Open/close wingman panel (slide animation)
 - [ ] Click buttons (gel press effect)
 - [ ] Hover over active tab (inner glow)
 - [ ] Adjust blur slider in settings (live update)

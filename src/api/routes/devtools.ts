@@ -8,7 +8,7 @@ const MAX_CODE_LENGTH = 1_048_576;
 
 export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
-  // DEVTOOLS — CDP Bridge for Copilot
+  // DEVTOOLS — CDP Bridge for Wingman
   // ═══════════════════════════════════════════════
 
   /** DevTools status */

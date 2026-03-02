@@ -2,7 +2,7 @@
 
 ## Goal
 
-Split `src/main.ts` (1016 lines) into focused modules and fix the `copilotAlert` circular dependency (Items 2 + 4 from STRUCTURE-IMPROVEMENTS.md).
+Split `src/main.ts` (1016 lines) into focused modules and fix the `wingmanAlert` circular dependency (Items 2 + 4 from STRUCTURE-IMPROVEMENTS.md).
 
 ## Current State
 
@@ -14,9 +14,9 @@ Split `src/main.ts` (1016 lines) into focused modules and fix the `copilotAlert`
 | `createWindow()` | 109-277 | BrowserWindow + stealth + webview handlers |
 | `startAPI()` | 279-828 | Manager instantiation + **all IPC handlers** (~380 lines) |
 | `buildAppMenu()` | 831-951 | Full application menu definition |
-| `copilotAlert()` + bootstrap | 954-1015 | Exported helper + app lifecycle |
+| `wingmanAlert()` + bootstrap | 954-1015 | Exported helper + app lifecycle |
 
-The `copilotAlert` function is exported from `main.ts` and imported by `browser.ts`, `watcher.ts`, and `headless/manager.ts` — creating a circular dependency (Item 4).
+The `wingmanAlert` function is exported from `main.ts` and imported by `browser.ts`, `watcher.ts`, and `headless/manager.ts` — creating a circular dependency (Item 4).
 
 ## Architecture
 
@@ -26,7 +26,7 @@ Split into 3 new modules + slimmed main.ts:
 src/
   main.ts                (~400 lines — bootstrap, createWindow, startAPI, lifecycle)
   notifications/
-    alert.ts             (~15 lines — copilotAlert + setMainWindow setter)
+    alert.ts             (~15 lines — wingmanAlert + setMainWindow setter)
   ipc/
     handlers.ts          (~400 lines — all IPC handlers)
   menu/
@@ -35,7 +35,7 @@ src/
 
 ### Module 1: `src/notifications/alert.ts`
 
-Breaks the circular dependency by moving `copilotAlert` out of `main.ts`.
+Breaks the circular dependency by moving `wingmanAlert` out of `main.ts`.
 
 ```typescript
 import { BrowserWindow, Notification } from 'electron';
@@ -46,11 +46,11 @@ export function setMainWindow(win: BrowserWindow | null): void {
   mainWindow = win;
 }
 
-export function copilotAlert(title: string, body: string): void {
+export function wingmanAlert(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title: `🧀 ${title}`, body }).show();
   }
-  mainWindow?.webContents.send('copilot-alert', { title, body });
+  mainWindow?.webContents.send('wingman-alert', { title, body });
 }
 ```
 
@@ -87,7 +87,7 @@ export interface IpcDeps {
   securityManager: SecurityManager | null;
   scriptInjector: ScriptInjector;
   deviceEmulator: DeviceEmulator;
-  copilotStream: CopilotStream;
+  wingmanStream: WingmanStream;
   snapshotManager: SnapshotManager;
 }
 
@@ -96,7 +96,7 @@ export function registerIpcHandlers(deps: IpcDeps): void { ... }
 
 Includes:
 - All `ipcMain.on(...)` handlers: `tab-update`, `tab-register`, `chat-send`, `voice-transcript`, `voice-status-update`, `activity-webview-event`, `form-submitted`
-- All `ipcMain.handle(...)` handlers: `snap-for-copilot`, `quick-screenshot`, `bookmark-page`, `unbookmark-page`, `is-bookmarked`, `tab-new`, `tab-close`, `tab-focus`, `tab-focus-index`, `tab-list`, `show-tab-context-menu`, `emergency-stop`, `navigate`, `go-back`, `go-forward`, `reload`, `get-page-content`, `get-page-status`, `execute-js`, `chat-send-image`
+- All `ipcMain.handle(...)` handlers: `snap-for-wingman`, `quick-screenshot`, `bookmark-page`, `unbookmark-page`, `is-bookmarked`, `tab-new`, `tab-close`, `tab-focus`, `tab-focus-index`, `tab-list`, `show-tab-context-menu`, `emergency-stop`, `navigate`, `go-back`, `go-forward`, `reload`, `get-page-content`, `get-page-status`, `execute-js`, `chat-send-image`
 - The `syncTabsToContext` helper (only used by IPC handlers)
 - The IPC cleanup code (removeAllListeners / removeHandler)
 
@@ -133,7 +133,7 @@ What remains:
 
 Before:
 ```
-main.ts exports copilotAlert
+main.ts exports wingmanAlert
   ← browser.ts imports from main
   ← watcher.ts imports from main
   ← headless/manager.ts imports from main
@@ -141,7 +141,7 @@ main.ts exports copilotAlert
 
 After:
 ```
-notifications/alert.ts exports copilotAlert
+notifications/alert.ts exports wingmanAlert
   ← browser.ts imports from notifications/alert
   ← watcher.ts imports from notifications/alert
   ← headless/manager.ts imports from notifications/alert
@@ -152,4 +152,4 @@ main.ts calls setMainWindow() — no circular dependency
 
 - `npx tsc --noEmit` must pass with zero errors
 - `npx vitest run` must pass (all existing tests)
-- Manual: app starts, IPC works, menu works, copilotAlert works
+- Manual: app starts, IPC works, menu works, wingmanAlert works

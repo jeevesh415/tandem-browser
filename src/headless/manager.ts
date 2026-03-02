@@ -1,6 +1,6 @@
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
-import { copilotAlert } from '../notifications/alert';
+import { wingmanAlert } from '../notifications/alert';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('HeadlessManager');
@@ -35,7 +35,7 @@ export interface HeadlessStatus {
 }
 
 /**
- * HeadlessManager — Background BrowserWindow for the AI copilot to browse solo.
+ * HeadlessManager — Background BrowserWindow for the AI wingman to browse solo.
  * 
  * Uses the same persist:tandem partition (cookies shared).
  * Same stealth patches as main window.
@@ -154,7 +154,7 @@ export class HeadlessManager {
       show: false,
       width: 1400,
       height: 900,
-      title: '🤖 Copilot — Background',
+      title: '🤖 Wingman — Background',
       webPreferences: {
         partition,
         contextIsolation: true,
@@ -187,13 +187,13 @@ export class HeadlessManager {
     this.captchaDetected = false;
   }
 
-  /** Show window and send copilot alert */
+  /** Show window and send wingman alert */
   private showWithAlert(title: string, body: string): void {
     if (this.window && !this.window.isDestroyed()) {
       this.window.show();
       this.window.focus();
     }
-    copilotAlert(title, body);
+    wingmanAlert(title, body);
   }
 
   /** Start periodic captcha detection */
@@ -226,7 +226,7 @@ export class HeadlessManager {
 
       if (found && !this.captchaDetected) {
         this.captchaDetected = true;
-        this.showWithAlert('Captcha detected!', 'The AI copilot needs help — please solve the captcha.');
+        this.showWithAlert('Captcha detected!', 'The AI wingman needs help — please solve the captcha.');
       } else if (!found) {
         this.captchaDetected = false;
       }

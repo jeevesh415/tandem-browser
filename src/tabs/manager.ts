@@ -3,7 +3,7 @@ import { webContents } from 'electron';
 import type { SyncManager } from '../sync/manager';
 import type { SessionRestoreManager } from '../session/restore';
 
-export type TabSource = 'robin' | 'kees' | 'copilot';
+export type TabSource = 'robin' | 'kees' | 'wingman';
 
 export interface Tab {
   id: string;

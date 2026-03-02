@@ -19,7 +19,7 @@ Tandem heeft al volledige session-isolatie via `/sessions` (aparte cookies, loca
 
 ## Gebruikerservaring — hoe het werkt
 
-> Robin opent Tandem. Bovenaan de sidebar (boven het Copilot panel) ziet hij een verticale strip met gekleurde vierkantjes. Het eerste vierkantje (blauw, "Default") is actief.
+> Robin opent Tandem. Bovenaan de sidebar (boven het Wingman panel) ziet hij een verticale strip met gekleurde vierkantjes. Het eerste vierkantje (blauw, "Default") is actief.
 > Robin klikt op "+" om een nieuwe workspace aan te maken. Hij noemt het "Work" en kiest een groene kleur met een 💼 emoji.
 > Hij opent werk-gerelateerde tabs (Slack, GitHub, Jira). Al deze tabs horen bij de "Work" workspace.
 > Hij klikt op het blauwe "Default" vierkantje — de tab bar wisselt: nu ziet hij alleen zijn persoonlijke tabs (YouTube, Reddit). De Work tabs zijn verborgen, niet gesloten.
@@ -76,7 +76,7 @@ Dit betekent dat werkruimtes in Tandem **dieper** zijn dan Opera's workspaces �
 | `src/api/server.ts` | Workspace routes registreren | `setupRoutes()` |
 | `src/main.ts` | WorkspaceManager instantiëren + registreren | `startAPI()` |
 | `src/sessions/manager.ts` | Optioneel: metadata veld toevoegen aan Session type | `interface Session` |
-| `shell/index.html` | Workspace icon strip toevoegen boven copilot panel | `<div class="main-layout">` |
+| `shell/index.html` | Workspace icon strip toevoegen boven wingman panel | `<div class="main-layout">` |
 | `shell/js/main.js` | Workspace switching, tab filtering, strip rendering | event handlers |
 | `shell/css/main.css` | Workspace strip styling | nieuwe CSS classes |
 

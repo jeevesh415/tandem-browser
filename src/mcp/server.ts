@@ -277,7 +277,7 @@ server.tool(
     url: z.string().optional().describe('URL to open (default: new tab page)'),
   },
   async ({ url }) => {
-    const result = await apiCall('POST', '/tabs/open', { url: url || undefined, source: 'copilot' });
+    const result = await apiCall('POST', '/tabs/open', { url: url || undefined, source: 'wingman' });
     await logActivity('open_tab', url || 'new tab');
     return { content: [{ type: 'text', text: `Opened tab: ${result.tab?.id || 'unknown'} — ${url || 'new tab'}` }] };
   }
@@ -318,12 +318,12 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
-// tandem_send_message — Send a message to the Copilot panel
+// tandem_send_message — Send a message to the Wingman panel
 // ═══════════════════════════════════════════════
 
 server.tool(
   'tandem_send_message',
-  'Send a message that appears in the Copilot chat panel (visible to the human)',
+  'Send a message that appears in the Wingman chat panel (visible to the human)',
   {
     text: z.string().describe('Message text to display'),
   },
@@ -339,7 +339,7 @@ server.tool(
 
 server.tool(
   'tandem_get_chat_history',
-  'Get recent chat messages from the Copilot panel',
+  'Get recent chat messages from the Wingman panel',
   {
     limit: z.number().optional().default(20).describe('Number of messages to return (default: 20)'),
   },
@@ -507,8 +507,8 @@ server.tool(
     const findings: Array<{ title: string; url: string; snippet: string }> = [];
 
     try {
-      // Step 1: Open a new tab for research (source: copilot)
-      const tabResult = await apiCall('POST', '/tabs/open', { url: 'about:blank', source: 'copilot' });
+      // Step 1: Open a new tab for research (source: wingman)
+      const tabResult = await apiCall('POST', '/tabs/open', { url: 'about:blank', source: 'wingman' });
       const researchTabId = tabResult?.tab?.id;
 
       await humanDelay(TIMING.beforeAction);
@@ -708,7 +708,7 @@ server.resource(
 server.resource(
   'chat-history',
   'tandem://chat/history',
-  { description: 'Recent chat messages from the Copilot panel' },
+  { description: 'Recent chat messages from the Wingman panel' },
   async () => {
     const data = await apiCall('GET', '/chat?limit=50');
     const messages: Array<{ from: string; text: string; timestamp: number }> = data.messages || [];

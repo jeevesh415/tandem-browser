@@ -99,7 +99,7 @@ export function buildAppMenu(deps: MenuDeps): void {
       ],
     },
     {
-      label: deps.configManager?.getConfig().general.agentName || 'Copilot',
+      label: deps.configManager?.getConfig().general.agentName || 'Wingman',
       submenu: [
         { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
           deps.panelManager?.togglePanel();

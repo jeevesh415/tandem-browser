@@ -51,8 +51,8 @@
       <button class="ext-overflow-btn" id="ext-overflow-btn" title="Extensions" style="display:none;">🧩</button>
       <div class="ext-overflow-dropdown" id="ext-overflow-dropdown"></div>
     </div>
-    <div class="status-dot" id="status-dot" title="Connected to Copilot API"></div>
-    <span class="copilot-badge">🤖 Copilot</span>
+    <div class="status-dot" id="status-dot" title="Connected to Wingman API"></div>
+    <span class="wingman-badge">🤖 Wingman</span>
   </div>
 
   <!-- Bookmarks bar -->
@@ -121,7 +121,7 @@
         <button class="color-btn" data-color="#4285f4" style="background:#4285f4" title="Blauw"></button>
         <div class="separator"></div>
         <button id="btn-draw-clear" title="Wissen">🗑</button>
-        <button id="btn-snap-copilot" title="📸 Snap for Copilot">📸</button>
+        <button id="btn-snap-wingman" title="📸 Snap for Wingman">📸</button>
       </div>
     </div>
 
@@ -139,16 +139,16 @@
       <div class="onboarding-content">
         <div class="onboarding-step" id="onboarding-step-1">
           <h2>👋 Welkom bij Tandem Browser</h2>
-          <p>You + Copilot = browse together. You drive, Copilot watches and helps.</p>
+          <p>You + Wingman = browse together. You drive, Wingman watches and helps.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘K</span>
-            <span>Open Copilot Panel</span>
+            <span>Open Wingman Panel</span>
           </div>
         </div>
 
         <div class="onboarding-step" id="onboarding-step-2" style="display:none;">
           <h2>📸 Screenshots & Annotaties</h2>
-          <p>Draw on the page and take screenshots for Copilot.</p>
+          <p>Draw on the page and take screenshots for Wingman.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘⇧D</span>
             <span>Draw Mode</span>
@@ -161,7 +161,7 @@
 
         <div class="onboarding-step" id="onboarding-step-3" style="display:none;">
           <h2>🎙️ Voice Input</h2>
-          <p>Talk to Copilot with your voice.</p>
+          <p>Talk to Wingman with your voice.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘⇧M</span>
             <span>Start Voice Input</span>
@@ -223,19 +223,19 @@
       </div>
     </div>
 
-    <!-- Copilot Panel Toggle Button -->
-    <button class="copilot-panel-toggle" id="copilot-panel-toggle" title="Toggle Copilot panel">▶</button>
-    <!-- Copilot Panel (SHELL layer, NOT in webview — anti-detect!) -->
-    <div class="copilot-panel" id="copilot-panel">
+    <!-- Wingman Panel Toggle Button -->
+    <button class="wingman-panel-toggle" id="wingman-panel-toggle" title="Toggle Wingman panel">▶</button>
+    <!-- Wingman Panel (SHELL layer, NOT in webview — anti-detect!) -->
+    <div class="wingman-panel" id="wingman-panel">
       <div class="panel-header">
-        <h2>🤖 Copilot</h2>
+        <h2>🤖 Wingman</h2>
         <button class="panel-tab active" data-panel-tab="activity">Activity</button>
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
         <button class="panel-tab" data-panel-tab="claronote" title="Voice Notes">🎙️</button>
         <button class="vault-toggle-btn" id="vault-toggle-btn" title="Password Vault"
           style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;margin-left:auto;transition:color 0.15s;">🔒</button>
-        <button class="live-toggle-btn" id="live-toggle-btn" title="Live Mode — Copilot kijkt mee"
+        <button class="live-toggle-btn" id="live-toggle-btn" title="Live Mode — Wingman kijkt mee"
           style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text-dim);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all 0.15s;">👁️</button>
         <button class="noodrem-btn" id="noodrem-btn" title="Noodrem — stop alle AI activiteit (Escape)">🛑</button>
       </div>
@@ -249,7 +249,7 @@
           <div class="chat-backend-selector" id="chat-backend-selector">
             <button class="backend-option active" data-backend="openclaw" id="btn-backend-openclaw">
               <span class="backend-dot" id="dot-openclaw"></span>
-              🤖 Copilot
+              🤖 Wingman
             </button>
             <button class="backend-option" data-backend="claude" id="btn-backend-claude">
               <span class="backend-dot" id="dot-claude"></span>
@@ -270,11 +270,11 @@
           <div class="chat-messages" id="chat-messages"></div>
           <div class="typing-indicator" id="typing-indicator">
             <div class="typing-dots"><span></span><span></span><span></span></div>
-            <span>Copilot is typing...</span>
+            <span>Wingman is typing...</span>
           </div>
           <div id="chat-image-preview" class="chat-image-preview" style="display:none;"></div>
           <div class="chat-input-wrap">
-            <textarea class="chat-input" id="chat-input" placeholder="Message to Copilot..." rows="1"></textarea>
+            <textarea class="chat-input" id="chat-input" placeholder="Message to Wingman..." rows="1"></textarea>
             <button class="chat-send-btn" id="chat-send-btn">▶</button>
           </div>
         </div>
@@ -357,10 +357,10 @@
     <div class="panel-resize-handle" id="panel-resize"></div>
   </div>
 
-  <!-- Copilot alert overlay -->
-  <div class="copilot-overlay" id="copilot-overlay">
+  <!-- Wingman alert overlay -->
+  <div class="wingman-overlay" id="wingman-overlay">
     <button class="dismiss" onclick="dismissAlert()">✕</button>
-    <h3 id="alert-title">🤖 Copilot heeft je nodig</h3>
+    <h3 id="alert-title">🤖 Wingman heeft je nodig</h3>
     <p id="alert-body">...</p>
   </div>
 
@@ -2299,9 +2299,9 @@
         </div>
 
         <div class="shortcut-group">
-          <h3>Copilot</h3>
-          <div class="shortcut-item" data-search="copilot panel toggle">
-            <span class="shortcut-desc">Copilot panel toggle</span>
+          <h3>Wingman</h3>
+          <div class="shortcut-item" data-search="wingman panel toggle">
+            <span class="shortcut-desc">Wingman panel toggle</span>
             <kbd class="shortcut">Cmd+K</kbd>
           </div>
           <div class="shortcut-item" data-search="voice input microphone">

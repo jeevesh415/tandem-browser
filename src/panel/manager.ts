@@ -16,18 +16,18 @@ export interface ActivityEvent {
 
 export interface ChatMessage {
   id: number;
-  from: 'robin' | 'copilot' | 'kees' | 'claude';
+  from: 'robin' | 'wingman' | 'kees' | 'claude';
   text: string;
   timestamp: number;
   image?: string;  // relative filename in ~/.tandem/chat-images/
 }
 
 /**
- * PanelManager — Manages the Copilot side panel.
+ * PanelManager — Manages the Wingman side panel.
  * 
  * Tracks activity events from Electron webview events (NOT injected into webview).
  * Stores chat messages persistently in ~/.tandem/chat-history.json.
- * Supports typing indicator for the AI copilot.
+ * Supports typing indicator for the AI wingman.
  */
 export class PanelManager {
   private win: BrowserWindow;
@@ -39,7 +39,7 @@ export class PanelManager {
   private panelOpen = false;
   private maxEvents = 500;
   private chatHistoryPath: string;
-  private copilotTyping = false;
+  private wingmanTyping = false;
   private chatImagesDir: string;
 
   constructor(win: BrowserWindow, configManager?: ConfigManager) {
@@ -121,7 +121,7 @@ export class PanelManager {
   }
 
   /** Add a chat message */
-  addChatMessage(from: 'robin' | 'copilot' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
+  addChatMessage(from: 'robin' | 'wingman' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
     const msg: ChatMessage = {
       id: ++this.chatCounter,
       from,
@@ -132,9 +132,9 @@ export class PanelManager {
     this.chatMessages.push(msg);
     this.saveChatHistory();
     this.win.webContents.send('chat-message', msg);
-    // Clear typing indicator when copilot sends a message
-    if ((from === 'copilot' || from === 'kees') && this.copilotTyping) {
-      this.setCopilotTyping(false);
+    // Clear typing indicator when wingman sends a message
+    if ((from === 'wingman' || from === 'kees') && this.wingmanTyping) {
+      this.setWingmanTyping(false);
     }
 
     // Fire webhook for robin messages (async, non-blocking)
@@ -148,7 +148,7 @@ export class PanelManager {
     if (!this.configManager) return;
     const config = this.configManager.getConfig();
     if (!config.webhook?.enabled || !config.webhook?.url) return;
-    // Only notify for robin messages (copilot messages come FROM OpenClaw, no need to echo back)
+    // Only notify for robin messages (wingman messages come FROM OpenClaw, no need to echo back)
     if (msg.from !== 'robin') return;
     if (!config.webhook.notifyOnRobinChat) return;
 
@@ -189,25 +189,25 @@ export class PanelManager {
     return this.chatMessages.filter(m => m.id > sinceId);
   }
 
-  /** Set Copilot typing indicator */
-  setCopilotTyping(typing: boolean): void {
-    this.copilotTyping = typing;
-    this.win.webContents.send('copilot-typing', { typing });
+  /** Set Wingman typing indicator */
+  setWingmanTyping(typing: boolean): void {
+    this.wingmanTyping = typing;
+    this.win.webContents.send('wingman-typing', { typing });
   }
 
-  /** @deprecated Use setCopilotTyping */
+  /** @deprecated Use setWingmanTyping */
   setKeesTyping(typing: boolean): void {
-    this.setCopilotTyping(typing);
+    this.setWingmanTyping(typing);
   }
 
-  /** Is Copilot typing? */
-  isCopilotTyping(): boolean {
-    return this.copilotTyping;
+  /** Is Wingman typing? */
+  isWingmanTyping(): boolean {
+    return this.wingmanTyping;
   }
 
-  /** @deprecated Use isCopilotTyping */
+  /** @deprecated Use isWingmanTyping */
   isKeesTyping(): boolean {
-    return this.copilotTyping;
+    return this.wingmanTyping;
   }
 
   /** Toggle panel open/closed */

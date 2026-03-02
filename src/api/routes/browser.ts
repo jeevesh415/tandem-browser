@@ -5,7 +5,7 @@ import os from 'os';
 import type { RouteContext} from '../context';
 import { getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
 import { tandemDir } from '../../utils/paths';
-import { copilotAlert } from '../../notifications/alert';
+import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
@@ -29,8 +29,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         const sessionTabs = ctx.tabManager.listTabs().filter(t => t.partition === partition);
         if (sessionTabs.length === 0) {
           // No tab for this session — create one
-          const tab = await ctx.tabManager.openTab(url, undefined, 'copilot', partition);
-          ctx.panelManager.logActivity('navigate', { url, source: 'copilot', session: sessionName });
+          const tab = await ctx.tabManager.openTab(url, undefined, 'wingman', partition);
+          ctx.panelManager.logActivity('navigate', { url, source: 'wingman', session: sessionName });
           res.json({ ok: true, url, tab: tab.id });
           return;
         }
@@ -43,12 +43,12 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const wc = await getActiveWC(ctx);
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
       void wc.loadURL(url);
-      // Mark tab as copilot-controlled when navigated via API
+      // Mark tab as wingman-controlled when navigated via API
       const activeTab = ctx.tabManager.getActiveTab();
       if (activeTab) {
-        ctx.tabManager.setTabSource(activeTab.id, 'copilot');
+        ctx.tabManager.setTabSource(activeTab.id, 'wingman');
       }
-      ctx.panelManager.logActivity('navigate', { url, source: 'copilot' });
+      ctx.panelManager.logActivity('navigate', { url, source: 'wingman' });
       res.json({ ok: true, url });
     } catch (e) {
       handleRouteError(res, e);
@@ -349,12 +349,12 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
-  // COPILOT ALERT
+  // WINGMAN ALERT
   // ═══════════════════════════════════════════════
 
-  router.post('/copilot-alert', (req: Request, res: Response) => {
+  router.post('/wingman-alert', (req: Request, res: Response) => {
     const { title = 'Hulp nodig', body = '' } = req.body;
-    copilotAlert(title, body);
+    wingmanAlert(title, body);
     res.json({ ok: true, sent: true });
   });
 

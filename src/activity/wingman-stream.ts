@@ -1,6 +1,6 @@
 import type { ConfigManager } from '../config/manager';
 
-interface CopilotEvent {
+interface WingmanEvent {
   type: string;
   tabId: string;
   timestamp: number;
@@ -8,13 +8,13 @@ interface CopilotEvent {
 }
 
 /**
- * CopilotStream — Pushes real-time activity events to OpenClaw
- * so the AI copilot can see what the human is doing in Tandem.
+ * WingmanStream — Pushes real-time activity events to OpenClaw
+ * so the AI wingman can see what the human is doing in Tandem.
  *
  * Same webhook pattern as PanelManager.fireWebhook().
  * Non-blocking, silent fail if OpenClaw is not running.
  */
-export class CopilotStream {
+export class WingmanStream {
   private configManager: ConfigManager;
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private enabled: boolean = true;
@@ -26,7 +26,7 @@ export class CopilotStream {
   }
 
   /** Send event to OpenClaw (non-blocking) */
-  async emit(event: CopilotEvent): Promise<void> {
+  async emit(event: WingmanEvent): Promise<void> {
     if (!this.enabled) return;
     const config = this.configManager.getConfig();
     if (!config.webhook?.enabled || !config.webhook?.url || !config.webhook?.notifyOnActivity) return;
@@ -67,7 +67,7 @@ export class CopilotStream {
   }
 
   /** Debounced emit — groups rapid-fire events */
-  emitDebounced(key: string, event: CopilotEvent, delayMs: number): void {
+  emitDebounced(key: string, event: WingmanEvent, delayMs: number): void {
     const existing = this.debounceTimers.get(key);
     if (existing) clearTimeout(existing);
     this.debounceTimers.set(key, setTimeout(() => {
@@ -76,8 +76,8 @@ export class CopilotStream {
     }, delayMs));
   }
 
-  /** Format event as readable text for the AI copilot */
-  private formatEventText(event: CopilotEvent): string {
+  /** Format event as readable text for the AI wingman */
+  private formatEventText(event: WingmanEvent): string {
     switch (event.type) {
       case 'tab-switched':
         return `[Tandem] Robin switched to tab: ${event.data.title} (${event.data.url})`;

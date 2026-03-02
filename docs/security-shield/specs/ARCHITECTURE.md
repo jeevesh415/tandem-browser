@@ -8,7 +8,7 @@ Tandem is an Electron browser (TypeScript + Express API on localhost:8765). It h
 - CDP DevTools bridge (attach to any tab, full Chrome DevTools Protocol access)
 - Express API server exposing all browser functionality as REST endpoints
 - Chat system (sidebar panel, WebSocket)
-- Copilot alert system (notifications to AI copilot)
+- Wingman alert system (notifications to AI wingman)
 - Network Inspector (logs requests via session.webRequest — refactored to use dispatcher)
 - Stealth layer (anti-detection for web scraping — refactored to use dispatcher)
 - Site memory (per-domain preferences)
@@ -80,7 +80,7 @@ src/config/                  — App configuration
 │  Built-in consumers:                                  │
 │    ├── ConsoleCapture                                 │
 │    ├── NetworkCapture                                 │
-│    └── CopilotVision (Runtime.addBinding)             │
+│    └── WingmanVision (Runtime.addBinding)             │
 │                                                       │
 │  Subscriber system (Phase 3+):                        │
 │    ├── ScriptGuard → Debugger.scriptParsed            │

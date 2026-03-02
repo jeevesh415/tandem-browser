@@ -12,7 +12,7 @@
 - Does not fit in a single AI context window
 - Makes every route change require navigating a massive file
 - Has a 35-parameter constructor (`TandemAPIOptions`)
-- Contains a circular dependency (`import { copilotAlert } from '../main'`)
+- Contains a circular dependency (`import { wingmanAlert } from '../main'`)
 
 ## Design
 
@@ -33,7 +33,7 @@ src/api/
     ├── agents.ts        → Task management + autonomy
     ├── data.ts          → Bookmarks, history, downloads, config, import
     ├── content.ts       → Content extraction, context, scripts, styles
-    ├── media.ts         → Voice, audio, screenshots, panel, chat, copilot-stream
+    ├── media.ts         → Voice, audio, screenshots, panel, chat, wingman-stream
     └── misc.ts          → Status, passwords, events, live, watch, headless, pip,
                            forms memory, site memory, behavior, activity-log,
                            claronote, workflows, auth, data wipe
@@ -80,7 +80,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       const { url, groupId, source, partition, focus } = req.body;
       const tab = await ctx.tabManager.openTab(
         url || `file://${path.join(__dirname, '..', '..', '..', 'shell', 'newtab.html')}`,
-        groupId, source || 'copilot', partition, focus
+        groupId, source || 'wingman', partition, focus
       );
       ctx.eventStream.handleTabEvent('tab-opened', { tabId: tab.id, url });
       res.json({ ok: true, tab });
@@ -148,7 +148,7 @@ export class TandemAPI {
 - `POST /wait`
 - `GET /links`
 - `GET /forms`
-- `POST /copilot-alert`
+- `POST /wingman-alert`
 
 #### `routes/tabs.ts` — Tab management (~100 lines)
 - `POST /tabs/open`
@@ -259,7 +259,7 @@ export class TandemAPI {
 - All `/scripts/*` (5 routes)
 - All `/styles/*` (5 routes)
 
-#### `routes/media.ts` — Voice, audio, screenshots, panel, chat, copilot-stream (~200 lines)
+#### `routes/media.ts` — Voice, audio, screenshots, panel, chat, wingman-stream (~200 lines)
 - `POST /panel/toggle`
 - All `/chat/*` (5 routes)
 - All `/voice/*` (3 routes)
@@ -267,7 +267,7 @@ export class TandemAPI {
 - `GET /screenshot/annotated` + `POST /screenshot/annotated`
 - `POST /draw/toggle`
 - `GET /screenshots`
-- All `/copilot-stream/*` (2 routes)
+- All `/wingman-stream/*` (2 routes)
 
 #### `routes/misc.ts` — Remaining routes (~350 lines)
 - `GET /status`
@@ -292,7 +292,7 @@ export class TandemAPI {
 1. **All URL paths remain identical** — zero breaking changes for API consumers
 2. **Auth middleware stays in server.ts** — single location for security
 3. **`TandemAPIOptions` interface stays** — refactoring that is Improvement #8
-4. **`copilotAlert` circular dep stays** — that is Improvement #4
+4. **`wingmanAlert` circular dep stays** — that is Improvement #4
 5. **Security routes stay in SecurityManager** — already separately registered
 6. **`start()`, `stop()`, `getHttpServer()` stay on TandemAPI class**
 

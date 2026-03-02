@@ -36,15 +36,15 @@ describe('ConfigManager', () => {
     it('loads with correct general defaults', () => {
       const cm = new ConfigManager();
       const config = cm.getConfig();
-      expect(config.general.startPage).toBe('copilot');
+      expect(config.general.startPage).toBe('wingman');
       expect(config.general.customStartUrl).toBe('');
       expect(config.general.language).toBe('en-US');
-      expect(config.general.copilotPanelPosition).toBe('right');
-      expect(config.general.copilotPanelDefaultOpen).toBe(false);
+      expect(config.general.wingmanPanelPosition).toBe('right');
+      expect(config.general.wingmanPanelDefaultOpen).toBe(false);
       expect(config.general.showBookmarksBar).toBe(true);
       expect(config.general.activeBackend).toBe('openclaw');
-      expect(config.general.agentName).toBe('Copilot');
-      expect(config.general.agentDisplayName).toBe('AI Copilot');
+      expect(config.general.agentName).toBe('Wingman');
+      expect(config.general.agentDisplayName).toBe('AI Wingman');
     });
 
     it('loads with correct screenshot defaults', () => {
@@ -117,7 +117,7 @@ describe('ConfigManager', () => {
       const config1 = cm.getConfig();
       config1.general.startPage = 'duckduckgo';
       const config2 = cm.getConfig();
-      expect(config2.general.startPage).toBe('copilot');
+      expect(config2.general.startPage).toBe('wingman');
     });
   });
 
@@ -129,7 +129,7 @@ describe('ConfigManager', () => {
       // Patched value updated
       expect(config.general.language).toBe('nl-BE');
       // Other values in the same section preserved
-      expect(config.general.startPage).toBe('copilot');
+      expect(config.general.startPage).toBe('wingman');
       expect(config.general.showBookmarksBar).toBe(true);
     });
 
@@ -185,7 +185,7 @@ describe('ConfigManager', () => {
       // Saved value loaded
       expect(config.general.language).toBe('de-DE');
       // Default values preserved for missing fields
-      expect(config.general.startPage).toBe('copilot');
+      expect(config.general.startPage).toBe('wingman');
       expect(config.appearance.theme).toBe('dark');
     });
 
@@ -195,10 +195,10 @@ describe('ConfigManager', () => {
 
       const cm = new ConfigManager();
       const config = cm.getConfig();
-      expect(config.general.startPage).toBe('copilot');
+      expect(config.general.startPage).toBe('wingman');
     });
 
-    it('migrates old keesPanelPosition to copilotPanelPosition', () => {
+    it('migrates old keesPanelPosition to wingmanPanelPosition', () => {
       const savedConfig = JSON.stringify({
         general: { keesPanelPosition: 'left' },
       });
@@ -207,10 +207,10 @@ describe('ConfigManager', () => {
 
       const cm = new ConfigManager();
       const config = cm.getConfig();
-      expect(config.general.copilotPanelPosition).toBe('left');
+      expect(config.general.wingmanPanelPosition).toBe('left');
     });
 
-    it('migrates old startPage kees to copilot', () => {
+    it('migrates old startPage kees to wingman', () => {
       const savedConfig = JSON.stringify({
         general: { startPage: 'kees' },
       });
@@ -219,7 +219,7 @@ describe('ConfigManager', () => {
 
       const cm = new ConfigManager();
       const config = cm.getConfig();
-      expect(config.general.startPage).toBe('copilot');
+      expect(config.general.startPage).toBe('wingman');
     });
   });
 

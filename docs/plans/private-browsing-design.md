@@ -102,7 +102,7 @@ Electron's `session.fromPartition()` zonder `persist:` prefix creëert een ephem
 ## Risico's / Valkuilen
 
 - **Meerdere privé-vensters:** Elk privé-venster moet zijn eigen unieke partition krijgen (`private-[uuid]`), anders delen ze cookies. Mitigatie: UUID per venster genereren.
-- **Copilot in privé-modus:** Moet de AI copilot beschikbaar zijn in privé-vensters? Opera schakelt Aria uit. Mitigatie: Robin laten beslissen — optioneel uitschakelen.
+- **Wingman in privé-modus:** Moet de AI wingman beschikbaar zijn in privé-vensters? Opera schakelt Aria uit. Mitigatie: Robin laten beslissen — optioneel uitschakelen.
 - **Downloads:** Bestanden die gedownload worden in privé-modus blijven op disk staan — dat is verwacht gedrag (zoals in alle browsers), maar vermeld het aan Robin.
 - **Extensions:** Chrome extensions in privé-modus laden kan privacy schenden (extensions kunnen data loggen). Mitigatie: standaard geen extensions laden in privé, optioneel aan te zetten.
 
@@ -118,7 +118,7 @@ Electron's `session.fromPartition()` zonder `persist:` prefix creëert een ephem
 
 ## Beslissingen nodig van Robin
 
-- [ ] Copilot beschikbaar in privé-venster? Opera schakelt Aria uit.
+- [ ] Wingman beschikbaar in privé-venster? Opera schakelt Aria uit.
 - [ ] Extensions laden in privé-modus? Standaard uit, optioneel aan?
 - [ ] Moet privé-venster een eigen API port krijgen, of dezelfde 8765 gebruiken?
 - [ ] Visual: donkerpaarse header, of een andere kleur/indicator?

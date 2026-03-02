@@ -182,7 +182,7 @@ Opera's ingebouwde AI assistent:
 - **Browser integratie:** Kan actieve pagina lezen als context
 - **Gratis** — inbegrepen in browser, account nodig voor sommige functies
 
-**Versus Tandem:** Tandem heeft dit al via de Copilot panel en OpenClaw WebSocket integratie — maar Opera's Aria heeft betere UX (voice, image gen, snellere sidebar toggle).
+**Versus Tandem:** Tandem heeft dit al via de Wingman panel en OpenClaw WebSocket integratie — maar Opera's Aria heeft betere UX (voice, image gen, snellere sidebar toggle).
 
 ---
 
@@ -399,13 +399,13 @@ Standaard Chromium DevTools + extra:
 ## 🔴 Hoge prioriteit — Dit moet Tandem ook hebben
 
 ### 1. Tab Islands (automatische tab groepering)
-Opera's beste UI innovatie. Tabs die vanuit dezelfde parent geopend zijn, horen bij elkaar en Opera laat dat zien. Dit is extreem intuïtief. Tandem zou tabs die via copilot-navigatie geopend zijn als "copilot session" kunnen groeperen.
+Opera's beste UI innovatie. Tabs die vanuit dezelfde parent geopend zijn, horen bij elkaar en Opera laat dat zien. Dit is extreem intuïtief. Tandem zou tabs die via wingman-navigatie geopend zijn als "wingman session" kunnen groeperen.
 
 **Implementatie:** Track `opener` tab ID voor elke nieuwe tab in Electron. Automatisch in tab bar groeperen met visuele connector.
 
 ### 2. Workspaces (virtual tab desktops) ⭐⭐⭐
 Dit is een perfecte match voor Tandem's use case. Stel je voor:
-- Workspace "Research" — Copilot werkt hier autonoom
+- Workspace "Research" — Wingman werkt hier autonoom
 - Workspace "Work" — Robin's dagelijkse tabs
 - Workspace "Projects" — per project een workspace
 
@@ -428,7 +428,7 @@ Tandem heeft de tool (pen, rechthoek, cirkel, freehand, tekst, kleuren, blur/pix
 ## 🟡 Medium prioriteit — Goede inspiratie
 
 ### 7. Easy Setup Quick Panel ⭐
-Opera's quick settings panel rechtsbovenaan is heel slim. Tandem heeft een settings panel maar die is verborgen. Een "Quick Panel" knop in de toolbar met de meest gebruikte opties (security shield, copilot panel toggle, new workspace, snapshot) zou de UX enorm verbeteren.
+Opera's quick settings panel rechtsbovenaan is heel slim. Tandem heeft een settings panel maar die is verborgen. Een "Quick Panel" knop in de toolbar met de meest gebruikte opties (security shield, wingman panel toggle, new workspace, snapshot) zou de UX enorm verbeteren.
 
 ### 8. ~~Lucid Mode~~ — NIET BOUWEN
 Sharpening filter op video. Complete onzin voor Tandem — wij zijn geen media browser. Bestaat, oninteressant, nooit meer over nadenken.
@@ -442,10 +442,10 @@ Clipboard monitoring voor IBAN/creditcard nummers. Past perfect bij Tandem's sec
 Leuke manier om tabs te identificeren. Snel te implementeren, verbetert UX significant.
 
 ### 11. Music Player (detachable module)
-Opera's music player kan losgemaakt worden als floating module. Tandem's Copilot panel kan ook detachable worden gemaakt als floating widget — voor snellere toegang zonder sidebar te openen.
+Opera's music player kan losgemaakt worden als floating module. Tandem's Wingman panel kan ook detachable worden gemaakt als floating widget — voor snellere toegang zonder sidebar te openen.
 
 ### 12. Battery Saver
-Reduce background tab activity. Relevant voor Tandem — als Copilot tabs in background houdt, kunnen die "sleeping" gemaakt worden om RAM/CPU te besparen.
+Reduce background tab activity. Relevant voor Tandem — als Wingman tabs in background houdt, kunnen die "sleeping" gemaakt worden om RAM/CPU te besparen.
 
 ---
 
@@ -470,13 +470,13 @@ Sla alle open tabs op als named collection. Opera doet dit in Speed Dial folders
 
 ## 💡 ORIGINELE TANDEM IDEEËN geïnspireerd door Opera
 
-### Idee A: "Copilot Workspace"
-Speciale workspace voor Copilot's autonomous browsing — gescheiden van Robin's eigen tabs. Copilot opent tabs in zijn eigen workspace, Robin ziet ze maar ze storen zijn workflow niet.
+### Idee A: "Wingman Workspace"
+Speciale workspace voor Wingman's autonomous browsing — gescheiden van Robin's eigen tabs. Wingman opent tabs in zijn eigen workspace, Robin ziet ze maar ze storen zijn workflow niet.
 
 ### Idee B: "Flow voor Tandem" — Robin ↔ Kees file sync
 Opera's Flow stuurt links/bestanden tussen devices. Tandem equivalent: Robin stuurt een URL naar Kees via de browser chat, Kees pakt hem op en navigeert er naartoe. We hebben al de chat, maar geen "push URL" functie.
 
-### Idee C: Tab Islands voor Copilot Sessions
+### Idee C: Tab Islands voor Wingman Sessions
 Alle tabs die Kees opent in een taak-sessie → automatisch in een "island" met de taaknaam. Zo zie je altijd overzichtelijk: "dit zijn Kees' research tabs voor LinkedIn analysis".
 
 ### Idee D: Quick Panel in toolbar (Opera-stijl Easy Setup)
@@ -484,7 +484,7 @@ Alle tabs die Kees opent in een taak-sessie → automatisch in een "island" met 
 - Security shield status + toggle
 - Nieuwe workspace
 - Screenshot nemen
-- Copilot task starten
+- Wingman task starten
 - Recent notes/links (Flow)
 
 ### Idee E: Paste Protection + Clipboard AI
@@ -498,7 +498,7 @@ Opera is de meest feature-rijke consumer browser en heeft 30 jaar productontwikk
 
 1. **Tab management is hun sterkste punt** — Tab Islands + Workspaces zijn briljant. Tandem moet dit bouwen.
 2. **Sidebar als command center** — Opera's sidebar is informatie-dicht maar overzichtelijk. Tandem heeft dit maar kan het verbeteren (badges, quick panel).
-3. **Detachable components** — floating windows (video, music player) zijn enorm nuttig voor productiviteit. Tandem's Copilot panel zou ook detachable moeten zijn.
+3. **Detachable components** — floating windows (video, music player) zijn enorm nuttig voor productiviteit. Tandem's Wingman panel zou ook detachable moeten zijn.
 4. **Security als feature, niet als hinder** — Paste Protection is genius: security die je helpt zonder je te blokkeren. Exact de Tandem filosofie.
 5. **Cross-device sync (Flow)** — wij hebben Kees↔Robin communicatie maar geen "push URL/file to device" feature. Dat is een gat.
 

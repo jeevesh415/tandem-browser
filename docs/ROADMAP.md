@@ -40,7 +40,7 @@ Claude Code werkt dit bij na elke fase. Kees kopieert de commit naar ROADMAP.md.
 > ⚠️ **Besluit 2026-02-28:** Sidebar infrastructuur is het fundament voor Workspaces, Messengers, Pinboards, Personal News, Bookmarks, History, Downloads. Dit komt EERST.
 
 **Definitieve sidebar (links):** Workspaces · Messengers · Personal News · Pinboards · Bookmarks · History · Downloads
-**Rechts blijft (copilot panel):** AI Chat · Activity · Screenshots · ClaroNote
+**Rechts blijft (wingman panel):** AI Chat · Activity · Screenshots · ClaroNote
 
 | Feature | Effort | Design doc | Impl docs | Fase status |
 |---------|--------|-----------|-----------|-------------|

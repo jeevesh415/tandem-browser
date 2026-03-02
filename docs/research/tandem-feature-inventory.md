@@ -28,7 +28,7 @@
 | Chromium webview | Full Chromium rendering engine via Electron | — | Main content area | ✅ Complete |
 | Persistent sessions | `persist:tandem` partition for cookies/storage | — | — | ✅ Complete |
 | JavaScript execution | Run arbitrary JS in active tab (max 1MB) | `POST /execute-js` | — (API only) | ✅ Complete |
-| JS with approval gate | Execute JS requiring user confirmation | `POST /execute-js/confirm` | Approval UI in copilot panel | ✅ Complete |
+| JS with approval gate | Execute JS requiring user confirmation | `POST /execute-js/confirm` | Approval UI in wingman panel | ✅ Complete |
 | Cookie management | Get, set, clear cookies by domain | `GET /cookies`, `POST /cookies/clear` | — (API only) | ✅ Complete |
 | Wait for elements | Wait for DOM element or page load | `POST /wait` | — (API only) | ✅ Complete |
 | Link extraction | Get all links from current page | `GET /links` | — (API only) | ✅ Complete |
@@ -51,19 +51,19 @@
 | Duplicate tab | Duplicate current tab | — | Tab context menu | ✅ Complete |
 | Close other tabs | Close all tabs except current | — | Tab context menu | ✅ Complete |
 | Close tabs to right | Close all tabs to the right | — | Tab context menu | ✅ Complete |
-| Tab source marking | Mark tab as robin/copilot owned | `POST /tabs/source` | Tab context menu ("Let Copilot handle") | ✅ Complete |
+| Tab source marking | Mark tab as robin/wingman owned | `POST /tabs/source` | Tab context menu ("Let Wingman handle") | ✅ Complete |
 | Tab lock manager | Lock tabs for exclusive agent access | `GET /tab-locks`, `POST /tab-locks/acquire`, `POST /tab-locks/release` | — (API only) | ✅ Complete |
 | Zombie cleanup | Remove orphaned webContents | `POST /tabs/cleanup` | — (API only) | ✅ Complete |
 | Tab Islands | Grouped tab organization (Opera-style) | — | — | 🚧 Planned only |
 
 ---
 
-## 3. Sidebar & Panels (Copilot Panel)
+## 3. Sidebar & Panels (Wingman Panel)
 
-### 3.1 Copilot Panel
+### 3.1 Wingman Panel
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Toggle panel | Show/hide copilot side panel (Cmd+K) | `POST /panel/toggle` | Toggle button on side, Copilot menu | ✅ Complete |
+| Toggle panel | Show/hide wingman side panel (Cmd+K) | `POST /panel/toggle` | Toggle button on side, Wingman menu | ✅ Complete |
 | Panel position | Left or right side (configurable) | `PATCH /config` | Settings → General | ✅ Complete |
 | Auto-open panel | Auto-open on app start | `PATCH /config` | Settings → General | ✅ Complete |
 | Resizable panel | Drag handle to resize panel width | — | Panel border | ✅ Complete |
@@ -72,12 +72,12 @@
 ### 3.2 Panel Tabs
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Activity tab | Real-time browsing activity log | `GET /activity-log` | Copilot panel → Activity | ✅ Complete |
-| Chat tab | Chat with AI copilot (multiple backends) | `GET /chat`, `POST /chat` | Copilot panel → Chat | ✅ Complete |
-| Screenshots tab | Gallery of captured screenshots | `GET /screenshots` | Copilot panel → 📸 | ✅ Complete |
-| ClaroNote tab | Voice recording with ClaroNote integration | `POST /claronote/record/start`, etc. | Copilot panel → 🎙️ | ✅ Complete |
+| Activity tab | Real-time browsing activity log | `GET /activity-log` | Wingman panel → Activity | ✅ Complete |
+| Chat tab | Chat with AI wingman (multiple backends) | `GET /chat`, `POST /chat` | Wingman panel → Chat | ✅ Complete |
+| Screenshots tab | Gallery of captured screenshots | `GET /screenshots` | Wingman panel → 📸 | ✅ Complete |
+| ClaroNote tab | Voice recording with ClaroNote integration | `POST /claronote/record/start`, etc. | Wingman panel → 🎙️ | ✅ Complete |
 | Vault toggle | Quick lock/unlock password vault | `POST /passwords/lock`, `POST /passwords/unlock` | 🔒 in panel header | ✅ Complete |
-| Live mode | Show Copilot is watching (👁️) | `POST /live/toggle`, `GET /live/status` | 👁️ button in panel header | ✅ Complete |
+| Live mode | Show Wingman is watching (👁️) | `POST /live/toggle`, `GET /live/status` | 👁️ button in panel header | ✅ Complete |
 
 ---
 
@@ -148,7 +148,7 @@
 
 ---
 
-## 5. Agent/Copilot Tools
+## 5. Agent/Wingman Tools
 
 ### 5.1 Snapshot & Locators (Accessibility Tree)
 | Feature | Description | API Endpoint(s) | UI Location | Status |
@@ -263,8 +263,8 @@
 ### 7.1 Screenshots
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Quick screenshot | Capture page (Cmd+Shift+S) | `GET /screenshot` | 📸 button in toolbar, Copilot menu | ✅ Complete |
-| Screenshot gallery | View all captured screenshots | `GET /screenshots` | Copilot panel → Screenshots tab | ✅ Complete |
+| Quick screenshot | Capture page (Cmd+Shift+S) | `GET /screenshot` | 📸 button in toolbar, Wingman menu | ✅ Complete |
+| Screenshot gallery | View all captured screenshots | `GET /screenshots` | Wingman panel → Screenshots tab | ✅ Complete |
 | Annotated screenshot | Screenshot with draw overlay composited | `GET /screenshot/annotated`, `POST /screenshot/annotated` | Draw toolbar → 📸 Snap button | ✅ Complete |
 | Clipboard copy | Auto-copy screenshot to clipboard | — | — (always on) | ✅ Complete |
 | Local save | Save to ~/Pictures/Tandem/ | `PATCH /config` | Settings → Screenshots | ✅ Complete |
@@ -273,7 +273,7 @@
 ### 7.2 Drawing & Annotation
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Draw mode | Toggle draw overlay (Cmd+Shift+D) | `POST /draw/toggle` | Copilot menu | ✅ Complete |
+| Draw mode | Toggle draw overlay (Cmd+Shift+D) | `POST /draw/toggle` | Wingman menu | ✅ Complete |
 | Arrow tool | Draw arrows on page | — | Draw toolbar | ✅ Complete |
 | Rectangle tool | Draw rectangles | — | Draw toolbar | ✅ Complete |
 | Circle tool | Draw circles/ellipses | — | Draw toolbar | ✅ Complete |
@@ -281,12 +281,12 @@
 | Text label tool | Add text labels | — | Draw toolbar | ✅ Complete |
 | Color palette | 4 colors: red, yellow, green, blue | — | Draw toolbar | ✅ Complete |
 | Clear canvas | Clear all annotations | — | Draw toolbar 🗑 button | ✅ Complete |
-| Snap for Copilot | Composite drawing + page → screenshot for AI | — | Draw toolbar 📸 button | ✅ Complete |
+| Snap for Wingman | Composite drawing + page → screenshot for AI | — | Draw toolbar 📸 button | ✅ Complete |
 
 ### 7.3 Voice Input
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Speech recognition | Web Speech API in shell (Cmd+Shift+M) | `POST /voice/start`, `POST /voice/stop`, `GET /voice/status` | Voice overlay, Copilot menu | ✅ Complete |
+| Speech recognition | Web Speech API in shell (Cmd+Shift+M) | `POST /voice/start`, `POST /voice/stop`, `GET /voice/status` | Voice overlay, Wingman menu | ✅ Complete |
 | Live transcription | Real-time transcript display | — | Voice overlay | ✅ Complete |
 | Multi-language | nl-BE, nl-NL, en-US, en-UK, de, fr | `PATCH /config` | Settings → Voice | ✅ Complete |
 | Auto-send on silence | Automatically send transcription after silence | `PATCH /config` | Settings → Voice | ✅ Complete |
@@ -295,14 +295,14 @@
 ### 7.4 Audio Recording
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| Tab audio capture | Record tab audio output (Cmd+R) | `POST /audio/start`, `POST /audio/stop` | Copilot menu | ✅ Complete |
+| Tab audio capture | Record tab audio output (Cmd+R) | `POST /audio/start`, `POST /audio/stop` | Wingman menu | ✅ Complete |
 | Recording status | Check if recording is active | `GET /audio/status` | — | ✅ Complete |
 | Recording list | Browse past recordings | `GET /audio/recordings` | — (API only) | ✅ Complete |
 
 ### 7.5 Picture-in-Picture
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| PiP mode | Float current tab as always-on-top mini window (Cmd+Shift+P) | `POST /pip/toggle`, `GET /pip/status` | Copilot menu | ✅ Complete |
+| PiP mode | Float current tab as always-on-top mini window (Cmd+Shift+P) | `POST /pip/toggle`, `GET /pip/status` | Wingman menu | ✅ Complete |
 
 ---
 
@@ -368,8 +368,8 @@
 | Inspect Element | Open DevTools on element | Context menu | ✅ Complete |
 | Copy (selection) | Copy selected text | Context menu (when text selected) | ✅ Complete |
 | Search Google for "..." | Search selected text | Context menu (when text selected) | ✅ Complete |
-| Ask Copilot about Selection | Send selected text to AI | Context menu (when text selected) | ✅ Complete |
-| Summarize Page with Copilot | AI page summarization | Context menu | ✅ Complete |
+| Ask Wingman about Selection | Send selected text to AI | Context menu (when text selected) | ✅ Complete |
+| Summarize Page with Wingman | AI page summarization | Context menu | ✅ Complete |
 | Screenshot this Page | Quick screenshot | Context menu | ✅ Complete |
 | Bookmark this Page | Toggle bookmark for current URL | Context menu | ✅ Complete |
 
@@ -389,7 +389,7 @@
 | Save Image As... | Download image | Context menu (on images) | ✅ Complete |
 | Copy Image | Copy image to clipboard | Context menu (on images) | ✅ Complete |
 | Copy Image Address | Copy image URL | Context menu (on images) | ✅ Complete |
-| Ask Copilot about this Image | Send image to AI for analysis | Context menu (on images) | ✅ Complete |
+| Ask Wingman about this Image | Send image to AI for analysis | Context menu (on images) | ✅ Complete |
 
 ### 10.4 Editable Field Context Menu
 | Feature | Description | UI Location | Status |
@@ -416,7 +416,7 @@
 | Duplicate Tab | Duplicate tab | Tab bar context menu | ✅ Complete |
 | Pin/Unpin Tab | Toggle pin state | Tab bar context menu | ✅ Complete |
 | Mute/Unmute Tab | Toggle audio mute | Tab bar context menu | ✅ Complete |
-| Let Copilot handle / Take back | Toggle tab ownership | Tab bar context menu | ✅ Complete |
+| Let Wingman handle / Take back | Toggle tab ownership | Tab bar context menu | ✅ Complete |
 | Close Tab | Close specific tab | Tab bar context menu | ✅ Complete |
 | Close Other Tabs | Close all except current | Tab bar context menu | ✅ Complete |
 | Close Tabs to Right | Close all tabs to right | Tab bar context menu | ✅ Complete |
@@ -506,7 +506,7 @@
 | `tandem_open_tab` | Open new tab | ✅ Complete |
 | `tandem_close_tab` | Close tab by ID | ✅ Complete |
 | `tandem_focus_tab` | Switch to specific tab | ✅ Complete |
-| `tandem_send_message` | Send message to Copilot chat | ✅ Complete |
+| `tandem_send_message` | Send message to Wingman chat | ✅ Complete |
 | `tandem_get_chat_history` | Get recent chat messages | ✅ Complete |
 | `tandem_search_bookmarks` | Search bookmarks by keyword | ✅ Complete |
 | `tandem_search_history` | Search history by keyword | ✅ Complete |
@@ -526,20 +526,20 @@
 
 ---
 
-## 15. Chat Bridge (Tandem ↔ Copilot)
+## 15. Chat Bridge (Tandem ↔ Wingman)
 
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| WebSocket chat | Direct WS connection to OpenClaw gateway (ws://127.0.0.1:18789) | — | Copilot panel → Chat tab | ✅ Complete |
+| WebSocket chat | Direct WS connection to OpenClaw gateway (ws://127.0.0.1:18789) | — | Wingman panel → Chat tab | ✅ Complete |
 | Streaming responses | Real-time token streaming (delta → final) | — | Chat tab | ✅ Complete |
 | Auto-reconnect | Automatic reconnection on disconnect | — | — | ✅ Complete |
 | Chat history | Load previous messages on connect | `GET /chat` | Chat tab | ✅ Complete |
-| Send messages | Send text to copilot | `POST /chat` | Chat tab input | ✅ Complete |
+| Send messages | Send text to wingman | `POST /chat` | Chat tab input | ✅ Complete |
 | Backend selector | Switch between OpenClaw, Claude, or Both | — | Chat tab dropdown | ✅ Complete |
 | Dual mode | Route to both backends simultaneously | — | Chat tab (🐙🤖 Beide) | ✅ Complete |
-| Typing indicator | Show when copilot is typing | `POST /chat/typing` | Chat tab | ✅ Complete |
+| Typing indicator | Show when wingman is typing | `POST /chat/typing` | Chat tab | ✅ Complete |
 | Image support | Send/receive images in chat | `GET /chat/image/:filename` | Chat tab | ✅ Complete |
-| Copilot alert | Modal alert from copilot to user | `POST /copilot-alert` | Overlay modal | ✅ Complete |
+| Wingman alert | Modal alert from wingman to user | `POST /wingman-alert` | Overlay modal | ✅ Complete |
 | Webhook test | Test webhook connectivity | `POST /chat/webhook/test` | — (API only) | ✅ Complete |
 | Connection status | WebSocket connection indicator | — | Status dot in toolbar | ✅ Complete |
 
@@ -575,7 +575,7 @@
 | Search box | Unified search input | — | New tab page (center) | ✅ Complete |
 | Quick links | 8 preset sites (DuckDuckGo, GitHub, LinkedIn, Gmail, YouTube, Reddit, ClaroNote, X) | — | New tab page (grid) | ✅ Complete |
 | Recent tabs | Recently visited tabs with favicon, title, hostname | `GET /tabs/list` | New tab page (below quick links) | ✅ Complete |
-| Custom start page | Choose start page: Copilot, DuckDuckGo, or custom URL | `PATCH /config` | Settings → General | ✅ Complete |
+| Custom start page | Choose start page: Wingman, DuckDuckGo, or custom URL | `PATCH /config` | Settings → General | ✅ Complete |
 
 ---
 
@@ -669,7 +669,7 @@
 |---------|-------------|-----------------|-------------|--------|
 | Page watch | Monitor URL for changes on schedule | `POST /watch/add`, `GET /watch/list` | — (API only) | ✅ Complete |
 | Force check | Manually trigger watch check | `POST /watch/check` | — (API only) | ✅ Complete |
-| Change alerts | Copilot alert on detected changes | — | Copilot alert overlay | ✅ Complete |
+| Change alerts | Wingman alert on detected changes | — | Wingman alert overlay | ✅ Complete |
 | Watch removal | Remove watches | `DELETE /watch/remove` | — (API only) | ✅ Complete |
 
 ### 21.3 Headless Mode
@@ -677,7 +677,7 @@
 |---------|-------------|-----------------|-------------|--------|
 | Background browsing | Hidden BrowserWindow for AI autonomous browsing | `POST /headless/open`, `GET /headless/content` | — (API only) | ✅ Complete |
 | Captcha detection | Auto-detect reCAPTCHA/hCaptcha/Cloudflare and show to user | — | Auto-shows window | ✅ Complete |
-| Login redirect detection | Detect auth redirects and alert user | — | Copilot alert | ✅ Complete |
+| Login redirect detection | Detect auth redirects and alert user | — | Wingman alert | ✅ Complete |
 | Show/hide/close | Manual visibility control | `POST /headless/show`, `POST /headless/hide`, `POST /headless/close` | — (API only) | ✅ Complete |
 | Status | Check headless browser state | `GET /headless/status` | — (API only) | ✅ Complete |
 
@@ -725,7 +725,7 @@
 ### 21.9 ClaroNote Integration
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| ClaroNote login | Authenticate with ClaroNote API | `POST /claronote/login`, `POST /claronote/logout` | Copilot panel → ClaroNote tab | ✅ Complete |
+| ClaroNote login | Authenticate with ClaroNote API | `POST /claronote/login`, `POST /claronote/logout` | Wingman panel → ClaroNote tab | ✅ Complete |
 | Voice recording | Record audio for transcription | `POST /claronote/record/start`, `POST /claronote/record/stop` | ClaroNote tab (🎙️ button) | ✅ Complete |
 | Waveform visualization | Real-time audio waveform during recording | — | ClaroNote tab | ✅ Complete |
 | Notes list | Browse transcribed notes | `GET /claronote/notes`, `GET /claronote/notes/:id` | ClaroNote tab | ✅ Complete |
@@ -737,7 +737,7 @@
 | SSE event stream | Server-Sent Events for real-time updates | `GET /events/stream` | — (for MCP/external tools) | ✅ Complete |
 | Recent events | Get buffered recent events | `GET /events/recent` | — (API only) | ✅ Complete |
 | Live mode stream | Filtered SSE stream (live mode only) | `GET /live/stream` | — (API only) | ✅ Complete |
-| Copilot stream | Toggle activity streaming to copilot | `POST /copilot-stream/toggle`, `GET /copilot-stream/status` | — | ✅ Complete |
+| Wingman stream | Toggle activity streaming to wingman | `POST /wingman-stream/toggle`, `GET /wingman-stream/status` | — | ✅ Complete |
 
 ### 21.11 Chrome Import
 | Feature | Description | API Endpoint(s) | UI Location | Status |
@@ -779,7 +779,7 @@
 | File menu | New tab, close, reopen, bookmarks, find, history | Menu bar | ✅ Complete |
 | Edit menu | Undo, redo, cut, copy, paste, select all | Menu bar | ✅ Complete |
 | View menu | Zoom in/out/reset, fullscreen | Menu bar | ✅ Complete |
-| Copilot menu | Panel, voice, PiP, draw, screenshot, record, ClaroNote | Menu bar | ✅ Complete |
+| Wingman menu | Panel, voice, PiP, draw, screenshot, record, ClaroNote | Menu bar | ✅ Complete |
 | Window menu | Minimize, zoom, bring to front | Menu bar | ✅ Complete |
 | Help menu | Keyboard shortcuts, onboarding | Menu bar | ✅ Complete |
 
@@ -804,11 +804,11 @@
 ### Medium Priority — Features
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Voice + screenshot combo | Combined voice + screenshot message to Copilot | 🚧 Planned |
+| Voice + screenshot combo | Combined voice + screenshot message to Wingman | 🚧 Planned |
 | Whisper local | Offline speech recognition fallback | 🚧 Planned |
 | DOM change detection | Report what changed on dynamic pages | 🚧 Planned |
 | WebSocket /watch/live | Live streaming for watches | 🚧 Planned |
-| Notification when panel closed | Alert when Copilot replies with panel hidden | 🚧 Planned |
+| Notification when panel closed | Alert when Wingman replies with panel hidden | 🚧 Planned |
 | Google Photos upload | Upload screenshots to Google Photos | 🚧 Planned (config UI exists) |
 | Configurable quick links | User-customizable new tab quick links | 🚧 Planned |
 | Cron integration for watches | Schedule watches (e.g., "check LinkedIn at 9:00") | 🚧 Planned |
@@ -855,7 +855,7 @@
 | 2 | Tab Management | 13 | 1 (Islands) | ✅ |
 | 3 | Sidebar & Panels | 11 | 0 | ✅ |
 | 4 | Security Shield | 34 | 0 | ✅ |
-| 5 | Agent/Copilot Tools | 30 | 0 | ✅ |
+| 5 | Agent/Wingman Tools | 30 | 0 | ✅ |
 | 6 | Stealth & Anti-Detection | 18 | 6 | ✅ |
 | 7 | Media (Screenshot/Draw/Voice/Audio/PiP) | 22 | 1 (Voice+Screenshot combo) | ✅ |
 | 8 | Extensions System | 13 | 0 | ✅ |

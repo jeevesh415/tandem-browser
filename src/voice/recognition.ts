@@ -8,7 +8,7 @@ import type { PanelManager } from '../panel/manager';
  * NOT in any webview. Websites cannot detect it.
  * 
  * Flow: Cmd+M → shell starts SpeechRecognition → transcripts sent via IPC
- * → displayed in Copilot panel chat → sent as message on silence/Enter.
+ * → displayed in Wingman panel chat → sent as message on silence/Enter.
  */
 export class VoiceManager {
   private win: BrowserWindow;

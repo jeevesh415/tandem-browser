@@ -24,7 +24,7 @@ Tandem heeft geen linker sidebar. Alle geplande features (Workspaces, Messengers
   │     └── .sidebar-panel (240px, uitschuifbaar)
   │           └── [inhoud gerenderd door actief item]
   ├── .browser-content (flex:1, ongewijzigd)
-  └── .copilot-panel (rechts, ongewijzigd)
+  └── .wingman-panel (rechts, ongewijzigd)
 
 Sidebar states:
   hidden (0px) ←→ narrow (48px) ←→ wide (~180px)
@@ -59,7 +59,7 @@ Sidebar states:
 |---------|-----------|--------|
 | `shell/index.html` | `<!-- Main layout -->` comment | Sidebar HTML hier invoegen |
 | `shell/css/main.css` | `.main-layout {` | CSS voor sidebar naast browser-content |
-| `shell/index.html` | `<!-- Copilot Panel Toggle Button -->` | Patroon voor toggle knop |
+| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Patroon voor toggle knop |
 
 ### Fase 3 (Eerste plugin: Bookmarks)
 | Bestand | Wat zoeken | Waarom |
