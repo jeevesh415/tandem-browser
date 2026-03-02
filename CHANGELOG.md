@@ -2,6 +2,12 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.4] - 2026-03-02
+
+- fix: TypeScript error in setWindowOpenHandler
+
+Add explicit type for url parameter
+
 ## [v0.41.3] - 2026-03-02
 
 - fix: About window branding and link behavior
