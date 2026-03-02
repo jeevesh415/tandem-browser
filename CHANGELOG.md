@@ -2,6 +2,16 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.2] - 2026-03-02
+
+- fix: ACTUALLY use sidebar panel for About (was still using BrowserWindow!)
+
+The hamburger menu was still creating a BrowserWindow for About
+instead of opening the sidebar panel. Now it properly sends
+'show-about' event which triggers renderAboutPanel().
+
+THIS time it's really fixed. Sorry for the confusion!
+
 ## [v0.44.1] - 2026-03-02
 
 - fix: About only via hamburger menu, no sidebar icon
