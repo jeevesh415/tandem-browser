@@ -70,7 +70,9 @@ export class PinboardManager {
       if (!shared) return;
       const localTime = new Date(this.store.lastModified).getTime() || 0;
       const sharedTime = new Date(shared.lastModified).getTime() || 0;
-      if (sharedTime > localTime) {
+      // If local has no boards yet (fresh install / new device), always prefer shared
+      const localEmpty = this.store.boards.length === 0;
+      if (localEmpty || sharedTime > localTime) {
         this.store = shared;
         this.save();
         log.info('Pinboards loaded from sync (newer version found)');
