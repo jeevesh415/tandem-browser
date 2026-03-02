@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.42.0] - 2026-03-02
+
+- feat: frosted glass effect for About window
+
+Applied same styling as sidebar panels:
+- backdrop-filter: blur(32px) + saturate + brightness
+- Semi-transparent dark background
+- Subtle border and shadow
+- Transparent BrowserWindow for backdrop effect
+
+Matches the beautiful glass effect from bookmarks panel
+
 ## [v0.41.9] - 2026-03-02
 
 - fix: remove duplicate onOpenUrlInNewTab listener
