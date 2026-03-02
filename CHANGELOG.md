@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.3] - 2026-03-02
+
+- fix: About window branding and link behavior
+
+Changes:
+- Co-Pilot Browser → Wingman Browser
+- Remove 'Tandem Repo' link (repo not public yet)
+- About window frameless on Linux (no native menubar)
+- External links open in system browser, not popup window
+
+Fixes #3 issues reported by user
+
 ## [v0.41.2] - 2026-03-02
 
 - fix: use _win instead of win in window control handlers
