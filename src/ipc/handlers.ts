@@ -396,4 +396,27 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       return { success: false, error: String(error) };
     }
   });
+
+  // Window controls (frameless window on Linux)
+  ipcMain.on('window-minimize', () => {
+    win.minimize();
+  });
+
+  ipcMain.on('window-maximize', () => {
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  });
+
+  ipcMain.on('window-close', () => {
+    win.close();
+  });
+
+  ipcMain.handle('is-window-maximized', () => {
+    return win.isMaximized();
+  });
+
+
 }
