@@ -25,15 +25,28 @@ const log = createLogger('ActionPolyfill');
  */
 function generatePolyfillScript(cwsId: string, apiPort: number): string {
   // Single quotes and no template literals — this runs in the SW context, not Node
+  //
+  // Strategy: ES module variable shadow.
+  //
+  // In Electron 40, the chrome global is a V8-native Proxy where defineProperty
+  // and set traps are no-ops — we cannot add chrome.action via assignment or
+  // Object.defineProperty. The only reliable approach in a module-type service
+  // worker is to declare module-level `var chrome` and `var browser`, which are
+  // hoisted to module scope and shadow the globals for ALL code in this file.
+  //
+  // Execution order (due to var hoisting):
+  //   1. var chrome, var browser → hoisted to module scope (value: undefined)
+  //   2. setup IIFE runs → captures globalThis.chrome, builds proxy, assigns
+  //      chrome = proxy, browser = proxy
+  //   3. Rest of the module runs with chrome/browser = our proxy
+  //   4. proxy.get('action') → returns our polyfill object
   return `
-/* Tandem chrome.action polyfill v2 — injected at load time */
-(function() {
-  if (typeof chrome === 'undefined') return;
-  if (chrome.action && typeof chrome.action.onClicked !== 'undefined') return;
+/* Tandem chrome.action polyfill v3 — module-scope var shadow */
+;(function() {
+  var __tc = (typeof globalThis !== 'undefined' && globalThis.chrome) || (typeof self !== 'undefined' && self.chrome) || {};
   var CWS_ID = '${cwsId}';
   var API_PORT = ${apiPort};
 
-  /* Simple Chrome-style event emitter */
   function makeEvent() {
     var listeners = [];
     return {
@@ -53,7 +66,6 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     };
   }
 
-  /* Best-effort notification to Tandem toolbar API (silent on failure) */
   function notifyToolbar(endpoint, body) {
     fetch('http://127.0.0.1:' + API_PORT + endpoint, {
       method: 'POST',
@@ -62,15 +74,9 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     }).catch(function() {});
   }
 
-  var ba = (typeof chrome.browserAction !== 'undefined') ? chrome.browserAction : null;
-  var onClicked = (ba && ba.onClicked) ? ba.onClicked : makeEvent();
-
-  /* Build the action polyfill object */
+  var ba = (__tc.browserAction) || null;
   var actionObj = {
-    /* ── Core event ── */
-    onClicked: onClicked,
-
-    /* ── Popup control ── */
+    onClicked: (ba && ba.onClicked) ? ba.onClicked : makeEvent(),
     openPopup: function(options) {
       if (ba && ba.openPopup) return ba.openPopup(options || {});
       return Promise.resolve();
@@ -82,34 +88,25 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     },
     getPopup: function(details, callback) {
       if (ba && ba.getPopup) return ba.getPopup(details, callback);
-      var url = '';
-      if (typeof callback === 'function') callback(url);
-      return Promise.resolve(url);
+      if (typeof callback === 'function') callback('');
+      return Promise.resolve('');
     },
-
-    /* ── Icon ── */
     setIcon: function(details, callback) {
       if (ba && ba.setIcon) return ba.setIcon(details, callback);
       notifyToolbar('/extensions/action/setIcon', { extensionId: CWS_ID, details: details });
       if (typeof callback === 'function') callback();
       return Promise.resolve();
     },
-
-    /* ── Badge ── */
     setBadgeText: function(details, callback) {
       if (ba && ba.setBadgeText) return ba.setBadgeText(details, callback);
-      notifyToolbar('/extensions/action/badge', {
-        extensionId: CWS_ID,
-        text: (details && details.text) || ''
-      });
+      notifyToolbar('/extensions/action/badge', { extensionId: CWS_ID, text: (details && details.text) || '' });
       if (typeof callback === 'function') callback();
       return Promise.resolve();
     },
     getBadgeText: function(details, callback) {
       if (ba && ba.getBadgeText) return ba.getBadgeText(details, callback);
-      var text = '';
-      if (typeof callback === 'function') callback(text);
-      return Promise.resolve(text);
+      if (typeof callback === 'function') callback('');
+      return Promise.resolve('');
     },
     setBadgeBackgroundColor: function(details, callback) {
       if (ba && ba.setBadgeBackgroundColor) return ba.setBadgeBackgroundColor(details, callback);
@@ -118,12 +115,9 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     },
     getBadgeBackgroundColor: function(details, callback) {
       if (ba && ba.getBadgeBackgroundColor) return ba.getBadgeBackgroundColor(details, callback);
-      var color = [0, 0, 0, 0];
-      if (typeof callback === 'function') callback(color);
-      return Promise.resolve(color);
+      if (typeof callback === 'function') callback([0,0,0,0]);
+      return Promise.resolve([0,0,0,0]);
     },
-
-    /* ── Title ── */
     setTitle: function(details, callback) {
       if (ba && ba.setTitle) return ba.setTitle(details, callback);
       if (typeof callback === 'function') callback();
@@ -131,12 +125,9 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     },
     getTitle: function(details, callback) {
       if (ba && ba.getTitle) return ba.getTitle(details, callback);
-      var title = '';
-      if (typeof callback === 'function') callback(title);
-      return Promise.resolve(title);
+      if (typeof callback === 'function') callback('');
+      return Promise.resolve('');
     },
-
-    /* ── Enable / disable ── */
     enable: function(tabId, callback) {
       if (ba && ba.enable) return ba.enable(tabId, callback);
       if (typeof callback === 'function') callback();
@@ -151,69 +142,36 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
       if (typeof callback === 'function') callback(true);
       return Promise.resolve(true);
     },
-
-    /* ── User settings ── */
     getUserSettings: function(callback) {
       if (ba && ba.getUserSettings) return ba.getUserSettings(callback);
-      var settings = { isOnToolbar: true };
-      if (typeof callback === 'function') callback(settings);
-      return Promise.resolve(settings);
+      var s = { isOnToolbar: true };
+      if (typeof callback === 'function') callback(s);
+      return Promise.resolve(s);
     }
   };
 
+  /* Build a proxy that returns actionObj for .action and forwards everything else */
+  var proxy = new Proxy(__tc, {
+    get: function(target, prop) {
+      if (prop === 'action') return actionObj;
+      var val = target[prop];
+      return (typeof val === 'function') ? val.bind(target) : val;
+    },
+    has: function(target, prop) { return prop === 'action' || (prop in target); }
+  });
+
   /*
-   * Install the polyfill — three strategies in order of preference:
-   *
-   * 1. Object.defineProperty with a getter: survives even if Electron later
-   *    tries to overwrite chrome.action with a plain value assignment.
-   * 2. Direct assignment: simple fallback if defineProperty throws.
-   * 3. Proxy on globalThis.chrome: last resort if chrome is completely sealed.
-   *    Replaces the chrome reference on self/globalThis so all subsequent reads
-   *    of chrome.action go through our proxy.
+   * Assign to the module-level var chrome / var browser declared below.
+   * Because var is hoisted, these assignments write to the module-scope
+   * bindings that shadow the globals for ALL code that follows in this file.
    */
-  var installed = false;
-
-  /* Strategy 1: defineProperty getter */
-  try {
-    Object.defineProperty(chrome, 'action', {
-      get: function() { return actionObj; },
-      configurable: true,
-      enumerable: true
-    });
-    installed = !!(chrome.action && chrome.action.onClicked);
-  } catch(e1) { /* sealed — try next */ }
-
-  /* Strategy 2: direct assignment */
-  if (!installed) {
-    try {
-      chrome.action = actionObj;
-      installed = !!(chrome.action && chrome.action.onClicked);
-    } catch(e2) { /* frozen — try proxy */ }
-  }
-
-  /* Strategy 3: Proxy on the chrome global */
-  if (!installed) {
-    try {
-      var __proxied = new Proxy(chrome, {
-        get: function(target, prop) {
-          if (prop === 'action') return actionObj;
-          var val = target[prop];
-          return (typeof val === 'function') ? val.bind(target) : val;
-        }
-      });
-      /* Replace the global chrome reference */
-      try { Object.defineProperty(self, 'chrome', { value: __proxied, configurable: true, writable: true }); } catch(ep1) {}
-      try { Object.defineProperty(globalThis, 'chrome', { value: __proxied, configurable: true, writable: true }); } catch(ep2) {}
-      installed = !!(chrome.action && chrome.action.onClicked);
-    } catch(e3) { /* proxy failed */ }
-  }
-
-  if (installed) {
-    console.log('[Tandem] chrome.action polyfill active for ' + CWS_ID);
-  } else {
-    console.warn('[Tandem] chrome.action polyfill: all install strategies failed for ' + CWS_ID);
-  }
+  chrome = proxy;
+  try { browser = proxy; } catch(e) {}
+  console.log('[Tandem] chrome.action polyfill v3 active for ${cwsId}');
 })();
+/* Module-scope declarations — hoisted above the IIFE, shadow the globals */
+/* eslint-disable no-var */
+var chrome; var browser; // jshint ignore:line
 `;
 }
 
@@ -285,7 +243,7 @@ export class ActionPolyfill {
 
         const cwsId = dir.name;
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
-        const marker = '/* Tandem chrome.action polyfill v2';
+        const marker = '/* Tandem chrome.action polyfill v3';
 
         const existing = fs.readFileSync(swPath, 'utf-8');
 
