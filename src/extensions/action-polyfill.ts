@@ -249,27 +249,28 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   /*
    * windows.create intercept: redirect type:'popup' windows to tabs.
    * Electron does not keep chrome.windows.create({type:'popup'}) open —
-   * the window flashes and immediately closes when the extension opens
-   * its own popup/index.html#detached or any other extension page as a
-   * popup window. Opening as a regular tab works reliably.
+   * the window flashes and immediately closes. Opening as a tab works.
    */
   var windowsCreateOrig = __tc && __tc.windows && __tc.windows.create
     ? __tc.windows.create.bind(__tc.windows)
     : null;
+  var _windowsCreateIntercepted = function(createData, callback) {
+    if (createData && createData.type === 'popup' && createData.url) {
+      var urls = Array.isArray(createData.url) ? createData.url : [createData.url];
+      var firstUrl = urls[0];
+      console.log('[Tandem] windows.create popup->tab:', firstUrl);
+      return __tc.tabs.create({url: firstUrl, active: true}, function(tab) {
+        if (typeof callback === 'function') callback({id: tab ? tab.windowId : -1, tabs: tab ? [tab] : []});
+      });
+    }
+    return windowsCreateOrig ? windowsCreateOrig(createData, callback) : undefined;
+  };
   var windowsObj = __tc && __tc.windows
-    ? Object.assign(Object.create(Object.getPrototypeOf(__tc.windows)), __tc.windows, {
-        create: function(createData, callback) {
-          if (createData && createData.type === 'popup' && createData.url) {
-            var urls = Array.isArray(createData.url) ? createData.url : [createData.url];
-            var firstUrl = urls[0];
-            console.log('[Tandem] windows.create popup redirected to tab:', firstUrl);
-            return __tc.tabs.create({url: firstUrl, active: true}, function(tab) {
-              if (typeof callback === 'function') {
-                callback({id: tab ? tab.windowId : -1, tabs: tab ? [tab] : []});
-              }
-            });
-          }
-          return windowsCreateOrig ? windowsCreateOrig(createData, callback) : undefined;
+    ? new Proxy(__tc.windows, {
+        get: function(t, k) {
+          if (k === 'create') return _windowsCreateIntercepted;
+          var v = t[k];
+          return (typeof v === 'function') ? v.bind(t) : v;
         }
       })
     : undefined;

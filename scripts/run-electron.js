@@ -79,14 +79,14 @@ try {
             } catch {}
         };
         walkDir(extDir);
-        if (extMtime > cacheMtime) {
-            let cleared = 0;
-            for (const f of cacheFiles) {
-                try { fs.unlinkSync(path.join(swCacheDir, f)); cleared++; } catch {}
-            }
-            if (cleared > 0) {
-                console.log(`[run-electron] Cleared ${cleared} stale SW bytecode cache file(s) (ext files newer by ${Math.round((extMtime - cacheMtime)/1000)}s)`);
-            }
+        // Always clear cache — polyfill is injected in-memory (no file mtime change)
+        // so we can't reliably detect polyfill version changes via mtime alone.
+        let cleared = 0;
+        for (const f of cacheFiles) {
+            try { fs.unlinkSync(path.join(swCacheDir, f)); cleared++; } catch {}
+        }
+        if (cleared > 0) {
+            console.log(`[run-electron] Cleared ${cleared} SW bytecode cache file(s) (always-clear for polyfill freshness)`);
         }
     }
 } catch (e) {
