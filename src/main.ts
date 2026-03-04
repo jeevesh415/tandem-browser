@@ -284,6 +284,24 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       });
     }
+
+    // Extension popup windows (type 'window', url starts with chrome-extension://) call
+    // window.open() to open sign-in pages. Electron creates a new BrowserWindow that
+    // flashes and immediately closes. Intercept and redirect to a tab in the main window.
+    if (contents.getType() === 'window') {
+      contents.on('dom-ready', () => {
+        const url = contents.getURL();
+        if (url.startsWith('chrome-extension://')) {
+          contents.setWindowOpenHandler(({ url: targetUrl }) => {
+            log.info(`[ExtPopup] window.open intercepted from extension popup: ${targetUrl}`);
+            if (mainWindow && targetUrl && targetUrl !== 'about:blank') {
+              mainWindow.webContents.send('open-url-in-new-tab', targetUrl);
+            }
+            return { action: 'deny' };
+          });
+        }
+      });
+    }
   });
 
   // macOS: hiddenInset titlebar (tabs inline with traffic lights, Chrome-style)
