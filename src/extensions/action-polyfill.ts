@@ -26,7 +26,7 @@ const log = createLogger('ActionPolyfill');
 function generatePolyfillScript(cwsId: string, apiPort: number): string {
   // Single quotes and no template literals — this runs in the SW context, not Node
   return `
-/* Tandem chrome.action polyfill — injected at load time */
+/* Tandem chrome.action polyfill v2 — injected at load time */
 (function() {
   if (typeof chrome === 'undefined') return;
   if (chrome.action && typeof chrome.action.onClicked !== 'undefined') return;
@@ -65,7 +65,8 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   var ba = (typeof chrome.browserAction !== 'undefined') ? chrome.browserAction : null;
   var onClicked = (ba && ba.onClicked) ? ba.onClicked : makeEvent();
 
-  chrome.action = {
+  /* Build the action polyfill object */
+  var actionObj = {
     /* ── Core event ── */
     onClicked: onClicked,
 
@@ -160,7 +161,58 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     }
   };
 
-  console.log('[Tandem] chrome.action polyfill active for ' + CWS_ID);
+  /*
+   * Install the polyfill — three strategies in order of preference:
+   *
+   * 1. Object.defineProperty with a getter: survives even if Electron later
+   *    tries to overwrite chrome.action with a plain value assignment.
+   * 2. Direct assignment: simple fallback if defineProperty throws.
+   * 3. Proxy on globalThis.chrome: last resort if chrome is completely sealed.
+   *    Replaces the chrome reference on self/globalThis so all subsequent reads
+   *    of chrome.action go through our proxy.
+   */
+  var installed = false;
+
+  /* Strategy 1: defineProperty getter */
+  try {
+    Object.defineProperty(chrome, 'action', {
+      get: function() { return actionObj; },
+      configurable: true,
+      enumerable: true
+    });
+    installed = !!(chrome.action && chrome.action.onClicked);
+  } catch(e1) { /* sealed — try next */ }
+
+  /* Strategy 2: direct assignment */
+  if (!installed) {
+    try {
+      chrome.action = actionObj;
+      installed = !!(chrome.action && chrome.action.onClicked);
+    } catch(e2) { /* frozen — try proxy */ }
+  }
+
+  /* Strategy 3: Proxy on the chrome global */
+  if (!installed) {
+    try {
+      var __proxied = new Proxy(chrome, {
+        get: function(target, prop) {
+          if (prop === 'action') return actionObj;
+          var val = target[prop];
+          return (typeof val === 'function') ? val.bind(target) : val;
+        }
+      });
+      /* Replace the global chrome reference */
+      try { Object.defineProperty(self, 'chrome', { value: __proxied, configurable: true, writable: true }); } catch(ep1) {}
+      try { Object.defineProperty(globalThis, 'chrome', { value: __proxied, configurable: true, writable: true }); } catch(ep2) {}
+      installed = !!(chrome.action && chrome.action.onClicked);
+    } catch(e3) { /* proxy failed */ }
+  }
+
+  if (installed) {
+    console.log('[Tandem] chrome.action polyfill active for ' + CWS_ID);
+  } else {
+    console.warn('[Tandem] chrome.action polyfill: all install strategies failed for ' + CWS_ID);
+  }
 })();
 `;
 }
@@ -233,7 +285,7 @@ export class ActionPolyfill {
 
         const cwsId = dir.name;
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
-        const marker = '/* Tandem chrome.action polyfill';
+        const marker = '/* Tandem chrome.action polyfill v2';
 
         const existing = fs.readFileSync(swPath, 'utf-8');
 
