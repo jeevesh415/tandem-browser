@@ -227,6 +227,20 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
     }
   });
 
+  // POST /extensions/log — Receive error logs from extension service workers.
+  // Used by action-polyfill patches to surface SW errors to the Node.js console.
+  router.post('/extensions/log', (req: Request, res: Response) => {
+    try {
+      const { source, error, msg, stack } = req.body as { source?: string; error?: string; msg?: string; stack?: string };
+      const label = source ?? error ?? 'SW';
+      const detail = msg ?? '(no message)';
+      log.error(`[SW:${label}] ${detail}${stack ? `\n  ${stack}` : ''}`);
+      res.json({ ok: true });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   // GET /extensions/active-tab — Active tab info for extension polyfill (tabs.query fallback).
   // Returns webContentsId as the Chrome tab id so that chrome.tabs.sendMessage() routes
   // correctly to the content script running in the active Tandem webview.
