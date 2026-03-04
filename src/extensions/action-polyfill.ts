@@ -326,7 +326,17 @@ export class ActionPolyfill {
           log.info(`🩹 Patched zce WINDOW_ID_NONE/TAB_ID_NONE for ${manifest.name || cwsId}`);
         }
 
-        // Patch 4: chrome.webNavigation — module-level event listener registration at SW
+        // Patch 4: browser.commands.onCommand — module-level listener registration:
+        //   browser.commands.onCommand.addListener(A=>{amA(A)&&...})
+        // browser.commands is not implemented in Electron. Anchored to amA(A) callback.
+        const commandsPattern = 'browser.commands.onCommand.addListener(A=>{amA(A)&&';
+        const commandsPatch   = 'browser.commands?.onCommand?.addListener(A=>{amA(A)&&';
+        if (existing.includes(commandsPattern) && !existing.includes(commandsPatch)) {
+          existing = existing.replace(commandsPattern, commandsPatch);
+          log.info(`🩹 Patched browser.commands.onCommand for ${manifest.name || cwsId}`);
+        }
+
+        // Patch 5: chrome.webNavigation — module-level event listener registration at SW
         // startup crashes because chrome.webNavigation is undefined in Electron (the
         // 'webNavigation' permission is listed as unknown at extension load time).
         // Only the two module-init calls are patched; all other webNavigation uses are inside
