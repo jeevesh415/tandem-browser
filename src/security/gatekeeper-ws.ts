@@ -45,20 +45,28 @@ export class GatekeeperWebSocket {
     this.db = db;
     this.authSecret = this.getOrCreateSecret();
 
-    this.wss = new WebSocketServer({
-      server,
-      path: '/security/gatekeeper',
-      verifyClient: (info: { req: IncomingMessage }, callback: (result: boolean, code?: number, message?: string) => void) => {
-        const url = new URL(info.req.url || '', 'http://localhost');
-        const token = url.searchParams.get('token') ||
-          (info.req.headers['x-gatekeeper-token'] as string | undefined);
-        if (token === this.authSecret) {
-          callback(true);
-        } else {
-          log.info('Auth rejected — invalid token');
-          callback(false, 401, 'Invalid token');
-        }
-      },
+    // Use noServer:true + manual upgrade handling to avoid conflicts with other
+    // WebSocketServer instances on the same http.Server (e.g. NativeMessagingProxy).
+    // When a WSS uses server+path, it actively destroys upgrade requests for
+    // non-matching paths with HTTP 400, breaking other WSS instances on the same server.
+    this.wss = new WebSocketServer({ noServer: true });
+
+    server.on('upgrade', (req: IncomingMessage, socket, head) => {
+      const url = new URL(req.url ?? '', 'http://localhost');
+      if (url.pathname !== '/security/gatekeeper') return; // not ours
+
+      const token = url.searchParams.get('token') ||
+        (req.headers['x-gatekeeper-token'] as string | undefined);
+      if (token !== this.authSecret) {
+        log.info('Auth rejected — invalid token');
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      this.wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+        this.wss.emit('connection', ws, req);
+      });
     });
 
     this.wss.on('connection', (ws: WebSocket) => {
