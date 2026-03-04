@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.4] - 2026-03-04
+
+- fix: correct newtab.html path in ipc handlers
+
+handlers.js compiles to dist/ipc/, so __dirname is dist/ipc/.
+The previous path.join(__dirname, '..', 'shell', 'newtab.html')
+resolved to dist/shell/newtab.html which does not exist.
+
+Adding an extra '..' resolves to the correct shell/newtab.html
+at the project root, matching the path calculation used in main.ts.
+
 ## [v0.44.3] - 2026-03-04
 
 - fix: prevent zombie tabs from renderer/main-process state drift
