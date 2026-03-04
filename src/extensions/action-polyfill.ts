@@ -41,7 +41,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   //   3. Rest of the module runs with chrome/browser = our proxy
   //   4. proxy.get('action') → returns our polyfill object
   return `
-/* Tandem chrome.action polyfill v6 — module-scope var shadow */
+/* Tandem chrome.action polyfill v7 — module-scope var shadow */
 ;(function() {
   var __tc = (typeof globalThis !== 'undefined' && globalThis.chrome) || (typeof self !== 'undefined' && self.chrome) || {};
   var CWS_ID = '${cwsId}';
@@ -246,17 +246,46 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
       })
     : undefined;
 
+  /*
+   * windows.create intercept: redirect type:'popup' windows to tabs.
+   * Electron does not keep chrome.windows.create({type:'popup'}) open —
+   * the window flashes and immediately closes when the extension opens
+   * its own popup/index.html#detached or any other extension page as a
+   * popup window. Opening as a regular tab works reliably.
+   */
+  var windowsCreateOrig = __tc && __tc.windows && __tc.windows.create
+    ? __tc.windows.create.bind(__tc.windows)
+    : null;
+  var windowsObj = __tc && __tc.windows
+    ? Object.assign(Object.create(Object.getPrototypeOf(__tc.windows)), __tc.windows, {
+        create: function(createData, callback) {
+          if (createData && createData.type === 'popup' && createData.url) {
+            var urls = Array.isArray(createData.url) ? createData.url : [createData.url];
+            var firstUrl = urls[0];
+            console.log('[Tandem] windows.create popup redirected to tab:', firstUrl);
+            return __tc.tabs.create({url: firstUrl, active: true}, function(tab) {
+              if (typeof callback === 'function') {
+                callback({id: tab ? tab.windowId : -1, tabs: tab ? [tab] : []});
+              }
+            });
+          }
+          return windowsCreateOrig ? windowsCreateOrig(createData, callback) : undefined;
+        }
+      })
+    : undefined;
+
   /* Build a proxy that returns stubs for missing APIs, forwards the rest */
   var proxy = new Proxy(__tc, {
     get: function(target, prop) {
       if (prop === 'action')         return actionObj;
       if (prop === 'notifications')  return notificationsObj;
       if (prop === 'runtime' && runtimeProxy) return runtimeProxy;
+      if (prop === 'windows' && windowsObj)   return windowsObj;
       var val = target[prop];
       return (typeof val === 'function') ? val.bind(target) : val;
     },
     has: function(target, prop) {
-      return prop === 'action' || prop === 'notifications' || prop === 'runtime' || (prop in target);
+      return prop === 'action' || prop === 'notifications' || prop === 'runtime' || prop === 'windows' || (prop in target);
     }
   });
 
@@ -267,7 +296,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
    */
   chrome = proxy;
   try { browser = proxy; } catch(e) {}
-  console.log('[Tandem] chrome.action polyfill v6 active for ${cwsId}');
+  console.log('[Tandem] chrome.action polyfill v7 active for ${cwsId}');
 })();
 /* Module-scope declarations — hoisted above the IIFE, shadow the globals */
 /* eslint-disable no-var */
@@ -346,7 +375,7 @@ export class ActionPolyfill {
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
         const POLYFILL_START_PREFIX = '/* Tandem chrome.action polyfill v';
         const POLYFILL_END_MARKER  = '/* Tandem:polyfill:end */';
-        const marker = '/* Tandem chrome.action polyfill v6';
+        const marker = '/* Tandem chrome.action polyfill v7';
 
         let existing = fs.readFileSync(swPath, 'utf-8');
 
