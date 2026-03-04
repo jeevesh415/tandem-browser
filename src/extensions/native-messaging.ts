@@ -26,10 +26,12 @@ export interface NativeMessagingStatus {
 }
 
 // Known native messaging hosts that extensions in our gallery depend on
-const KNOWN_HOSTS: Record<string, { extensionName: string; extensionId: string }> = {
-  'com.1password.1password': { extensionName: '1Password', extensionId: 'aeblfdkhhhdcdjpifhhbdiojplfjncoa' },
-  'com.lastpass.nplastpass': { extensionName: 'LastPass', extensionId: 'hdokiejnpimakedhajhdlcegeplioahd' },
-  'com.postman.postmanagent': { extensionName: 'Postman Interceptor', extensionId: 'aicmkgpgakddgnaphhhpliifpcfhicfo' },
+const KNOWN_HOSTS: Record<string, { extensionName: string; extensionIds: string[] }> = {
+  // Multiple extension IDs: official CWS ID + Tandem-extracted ID (differs because
+  // Tandem loads the extension locally, which generates a different Electron ID)
+  'com.1password.1password': { extensionName: '1Password', extensionIds: ['aeblfdkhhhdcdjpifhhbdiojplfjncoa', 'chdppelbdlmkldaobdpeaemleeajiodj'] },
+  'com.lastpass.nplastpass': { extensionName: 'LastPass', extensionIds: ['hdokiejnpimakedhajhdlcegeplioahd'] },
+  'com.postman.postmanagent': { extensionName: 'Postman Interceptor', extensionIds: ['aicmkgpgakddgnaphhhpliifpcfhicfo'] },
 };
 
 /**
@@ -66,6 +68,12 @@ export class NativeMessagingSetup {
         dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome', 'NativeMessagingHosts'));
         // Chromium (non-Google-branded) directories
         dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'Chromium', 'NativeMessagingHosts'));
+        // Tandem Browser / Electron app-specific directories
+        // Electron 40 does not expose setNativeMessagingHostDirectory(); it reads from
+        // the app's own userData directory. We mirror manifests there at startup.
+        dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'Tandem Browser', 'NativeMessagingHosts'));
+        dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'tandem-browser', 'NativeMessagingHosts'));
+        dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'Electron', 'NativeMessagingHosts'));
         break;
 
       case 'linux':
@@ -172,6 +180,14 @@ export class NativeMessagingSetup {
       this.detectHosts();
     }
 
+    // Mirror manifests from Chrome/Chromium dirs into Tandem's own userData dir.
+    // Electron 40 does not expose setNativeMessagingHostDirectory(); it reads native
+    // messaging host manifests from its own app userData path, NOT Chrome's directory.
+    // Actual Tandem userData: ~/Library/Application Support/Tandem Browser/
+    // We copy every manifest found in Chrome/Chromium dirs into the Tandem dir so
+    // that Electron's internal Chromium code finds them automatically.
+    this.mirrorManifestsToTandemDir();
+
     // Attempt to configure each existing directory
     let apiChecked = false;
     for (const dir of dirs) {
@@ -189,8 +205,8 @@ export class NativeMessagingSetup {
         } else if (!apiChecked) {
           // API not available — log once
           apiChecked = true;
-          log.info('🔌 Native messaging: session.setNativeMessagingHostDirectory() not available in this Electron version');
-          log.info('   Chromium may still read native messaging hosts from standard Chrome directories automatically');
+          log.info('🔌 Native messaging: session.setNativeMessagingHostDirectory() not available in Electron 40');
+          log.info('   Manifests mirrored to Tandem Browser/NativeMessagingHosts/ for Chromium auto-discovery');
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
@@ -243,7 +259,7 @@ export class NativeMessagingSetup {
    */
   isHostAvailable(extensionId: string): boolean {
     for (const [hostName, info] of Object.entries(KNOWN_HOSTS)) {
-      if (info.extensionId === extensionId) {
+      if (info.extensionIds.includes(extensionId)) {
         const host = this.hosts.find(h => h.name === hostName);
         return !!host && host.binaryExists;
       }
@@ -253,11 +269,74 @@ export class NativeMessagingSetup {
   }
 
   /**
+   * Mirror native messaging host manifests from Chrome/Chromium directories into
+   * the Tandem Browser userData directory so Electron's Chromium finds them.
+   *
+   * Electron 40 reads native messaging manifests from the app userData path
+   * (~/Library/Application Support/Tandem Browser/NativeMessagingHosts/) rather
+   * than Chrome's directory. This method copies manifests at startup so the
+   * extension's chrome.runtime.connectNative() calls succeed.
+   */
+  private mirrorManifestsToTandemDir(): void {
+    const tandemDir = path.join(os.homedir(), 'Library', 'Application Support', 'Tandem Browser', 'NativeMessagingHosts');
+
+    // Source directories (Chrome/Chromium) — skip Tandem dirs themselves
+    const sourceDirs = [
+      path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome', 'NativeMessagingHosts'),
+      '/Library/Google/Chrome/NativeMessagingHosts',
+      path.join(os.homedir(), 'Library', 'Application Support', 'Chromium', 'NativeMessagingHosts'),
+    ].filter(d => d !== tandemDir && fs.existsSync(d));
+
+    if (sourceDirs.length === 0) return;
+
+    try {
+      fs.mkdirSync(tandemDir, { recursive: true });
+    } catch {
+      log.warn('⚠️ Native messaging: failed to create Tandem NativeMessagingHosts directory');
+      return;
+    }
+
+    let mirrored = 0;
+    for (const srcDir of sourceDirs) {
+      try {
+        const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+          const src = path.join(srcDir, file);
+          const dst = path.join(tandemDir, file);
+          try {
+            const srcStat = fs.statSync(src);
+            let needsCopy = true;
+            try {
+              const dstStat = fs.statSync(dst);
+              // Only copy if source is newer
+              needsCopy = srcStat.mtimeMs > dstStat.mtimeMs;
+            } catch {
+              // dst doesn't exist — copy
+            }
+            if (needsCopy) {
+              fs.copyFileSync(src, dst);
+              mirrored++;
+            }
+          } catch {
+            // Skip unreadable files
+          }
+        }
+      } catch {
+        // Skip unreadable dirs
+      }
+    }
+
+    if (mirrored > 0) {
+      log.info(`🔌 Native messaging: mirrored ${mirrored} manifest(s) to ${tandemDir}`);
+    }
+  }
+
+  /**
    * Get known host info for a given extension ID, if any.
    */
   getHostForExtension(extensionId: string): { hostName: string; host: NativeMessagingHost | null } | null {
     for (const [hostName, info] of Object.entries(KNOWN_HOSTS)) {
-      if (info.extensionId === extensionId) {
+      if (info.extensionIds.includes(extensionId)) {
         const host = this.hosts.find(h => h.name === hostName) || null;
         return { hostName, host };
       }
