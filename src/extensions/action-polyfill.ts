@@ -355,6 +355,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
 /* Module-scope declarations — hoisted above the IIFE, shadow the globals */
 /* eslint-disable no-var */
 var chrome; var browser; // jshint ignore:line
+var TANDEM_PORT; TANDEM_PORT = ${apiPort}; // used by P$() patch below
 /* Tandem:polyfill:end */
 `;
 }
@@ -590,6 +591,18 @@ export class ActionPolyfill {
         if (existing.includes(webNavPattern) && !existing.includes(webNavPatch)) {
           existing = existing.replace(webNavPattern, webNavPatch);
           log.info(`🩹 Patched chrome.webNavigation guard for ${manifest.name || cwsId}`);
+        }
+
+        // Patch 9: P$() — async function that queries the active Chrome tab.
+        // browser.tabs.query({active:true,currentWindow:true}) returns empty in Electron
+        // because webviews are not surfaced as extension tabs. Replace P$() with a direct
+        // fetch to the Tandem API that returns the active webview as a Chrome tab object.
+        // TANDEM_PORT is declared at module scope by the polyfill (var TANDEM_PORT = N).
+        const pDollarOrig = 'async function P$(){let A=new Promise(e=>{browser.tabs.query({active:!0,currentWindow:!0}).then(j=>{if(j===void 0||j.length===0){e(void 0);return}e(j[0])})});return wt()?Ja.withTimeout(A,500,k`tab-manager:activeNativeTab`):A}';
+        const pDollarPatch = 'async function P$(){try{var _r=await fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/active-tab");var _d=await _r.json();if(_d&&_d.tab)return _d.tab;}catch(_e){console.error("[Tandem] P$ fetch failed:",_e);}return undefined;}';
+        if (existing.includes(pDollarOrig) && !existing.includes(pDollarPatch)) {
+          existing = existing.replace(pDollarOrig, pDollarPatch);
+          log.info(`🩹 Patched P$() active tab query for ${manifest.name || cwsId}`);
         }
 
         // Patch 8: browser.windows.create({type:'popup'}) — the extension opens its own
