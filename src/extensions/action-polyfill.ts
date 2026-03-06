@@ -669,6 +669,26 @@ export class ActionPolyfill {
           log.info(`🩹 Patched Bte registration (error telemetry) for ${manifest.name || cwsId}`);
         }
 
+        // Patch 12: Kfj() — called inside GmA.getItemDetails() to check if the popup is
+        // a "new window" popup. browser.windows.getCurrent() is undefined in Electron's
+        // Service Worker context and throws. Since Tandem never opens 1Password in a
+        // detached popup window, always return false (not a popup).
+        const kfjOrig  = 'async function Kfj(){return(await browser.windows.getCurrent()).type==="popup"}';
+        const kfjPatch = 'async function Kfj(){return false/* tandem-patch: windows.getCurrent() not available in SW */}';
+        if (existing.includes(kfjOrig) && !existing.includes(kfjPatch)) {
+          existing = existing.replace(kfjOrig, kfjPatch);
+          log.info(`🩹 Patched Kfj() isInNewWindow for ${manifest.name || cwsId}`);
+        }
+
+        // Patch 13: zj.getShortcuts() — called inside Bte() to fetch keyboard shortcuts.
+        // browser.commands is undefined in Electron. Guard with early return when absent.
+        const getShortcutsOrig  = 'static async getShortcuts(){return browser.commands.getAll().then(e=>{let j={browserAction:"",lock:""};try{let t=e.find(({name:a})=>a&&Afj(a)),r=e.find(({name:a})=>a&&amA(a));j={browserAction:this.normalizeCtrlOnMac(t?.shortcut)??"",lock:this.normalizeCtrlOnMac(r?.shortcut)??""}}catch{}return j})}';
+        const getShortcutsPatch = 'static async getShortcuts(){if(!browser.commands)return{browserAction:"",lock:""};return browser.commands.getAll().then(e=>{let j={browserAction:"",lock:""};try{let t=e.find(({name:a})=>a&&Afj(a)),r=e.find(({name:a})=>a&&amA(a));j={browserAction:this.normalizeCtrlOnMac(t?.shortcut)??"",lock:this.normalizeCtrlOnMac(r?.shortcut)??""}}catch{}return j})}';
+        if (existing.includes(getShortcutsOrig) && !existing.includes(getShortcutsPatch)) {
+          existing = existing.replace(getShortcutsOrig, getShortcutsPatch);
+          log.info(`🩹 Patched zj.getShortcuts() browser.commands guard for ${manifest.name || cwsId}`);
+        }
+
         fs.writeFileSync(swPath, existing, 'utf-8');
         patched.push(cwsId);
       } catch (err: unknown) {

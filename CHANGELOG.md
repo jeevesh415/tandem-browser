@@ -2,6 +2,21 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.44] - 2026-03-06
+
+- fix(autofill): patch Kfj() and zj.getShortcuts() via action-polyfill
+
+Two 1Password autofill errors eliminated:
+- `Kfj()` called `browser.windows.getCurrent()` which is undefined in
+  Electron's Service Worker context, causing `getItemDetails()` to throw.
+  Patched to always return `false` (Tandem never opens 1Password in a
+  detached popup window).
+- `zj.getShortcuts()` called `browser.commands.getAll()` which throws when
+  `browser.commands` is undefined in Electron. Guarded with early return
+  `{browserAction:"",lock:""}` when `browser.commands` is absent.
+Both patches are now applied via the `action-polyfill.ts` patch pipeline
+(not by direct edits to background.js) so they survive extension reloads.
+
 ## [v0.44.4] - 2026-03-04
 
 - fix: correct newtab.html path in ipc handlers
