@@ -1,5 +1,8 @@
 # AGENTS.md — Tandem Browser Development Guide
 
+> Internal development workflow document. This file exists for local developer
+> and coding-agent operations and is not the primary public project guide.
+
 ## Wie ben je?
 
 Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Wingman (AI) browsen samen het web. Jij schrijft de code.

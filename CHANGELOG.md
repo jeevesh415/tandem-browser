@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.54] - 2026-03-07
+
+- docs(repo): add public-facing repo docs and improve release metadata
+
+Rewrote the README around public-facing positioning and onboarding, added
+standard top-level `LICENSE`, `CONTRIBUTING.md`, and `SECURITY.md` files, and
+marked the remaining root internal workflow documents as internal-only.
+
+Updated `package.json` metadata with repository, homepage, issue tracker,
+keywords, and platform build categories so the repo and release configuration
+look more complete ahead of a future public release.
+
 ## [v0.44.53] - 2026-03-07
 
 - chore(repo): remove local artifacts and stale release metadata

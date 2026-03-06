@@ -1,10 +1,26 @@
 {
   "name": "tandem-browser",
-  "version": "0.44.53",
-  "description": "AI-Human symbiotic browser — Kees & Robin browse as one",
+  "version": "0.44.54",
+  "description": "Local-first human-AI collaborative browser with built-in security controls",
   "main": "dist/main.js",
   "author": "Robin Waslander <keesbeest78@proton.me>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hydro13/tandem-browser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hydro13/tandem-browser/issues"
+  },
+  "homepage": "https://github.com/hydro13/tandem-browser",
+  "keywords": [
+    "browser",
+    "electron",
+    "ai",
+    "automation",
+    "security",
+    "local-first"
+  ],
   "scripts": {
     "dev": "tsc && npx electron .",
     "start": "xattr -cr node_modules/electron/dist/Electron.app 2>/dev/null; npm run compile && node scripts/run-electron.js",
@@ -62,6 +78,12 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "category": "Utility"
     }
   }
 }

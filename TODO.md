@@ -1,5 +1,8 @@
 # Tandem Browser — Roadmap & TODO
 
+> Internal planning document. This file is maintained for local development and
+> release planning, not as the primary public roadmap artifact.
+
 > Twee trappen, één fiets. 🚲
 > Laatst bijgewerkt: 26 februari 2026
 
