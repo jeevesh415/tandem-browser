@@ -2,6 +2,24 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.70] - 2026-03-07
+
+- fix: bootstrap shell auth across internal pages
+
+What was built/changed:
+- Modified files: src/main.ts, shell/index.html, shell/newtab.html, shell/settings.html, shell/bookmarks.html
+- New file: shell/js/api-auth.js
+- Registered the get-api-token IPC handler before the shell window loads so the first authenticated shell requests do not race startup
+- Added a shared shell auth bootstrap that wraps local Tandem API fetch calls and retries token acquisition during early startup
+- Enabled the same auth bootstrap on shell subpages such as newtab, settings, and bookmarks
+
+Why this approach:
+- Internal shell pages were still failing closed because they either ran before the token IPC bridge was ready or were never using the shell auth wrapper at all; this makes the internal caller path explicit and consistent without reopening broad loopback trust
+
+Tested:
+- npm run compile: zero errors
+- Manual runtime verification still requires restarting the already-running Tandem app
+
 ## [v0.44.69] - 2026-03-07
 
 - fix: fetch shell API token via IPC
