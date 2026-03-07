@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.59] - 2026-03-07
+
+- docs(security): add self-tracking phase log and universal session prompt
+
+Updated the security hardening handoff guide so each future session can detect
+the next unfinished phase automatically, record its own completion state, and
+leave a structured handoff for the next session.
+
+Also added a reusable universal session prompt document for the security
+hardening track so new sessions can be started with the same scoped workflow
+without manually naming the phase each time.
+
 ## [v0.44.58] - 2026-03-07
 
 - docs(security): add phased security hardening roadmap

@@ -97,6 +97,65 @@ npx vitest run
 
 ---
 
+## Session Start Protocol
+
+Every new security-hardening session should begin the same way:
+
+1. `git pull origin main`
+2. Read `AGENTS.md`
+3. Read this file from top to bottom
+4. Read the `Progress Log` section below
+5. Identify the first phase whose status is not `Complete`
+6. Open only that phase file
+7. Verify the previous phase handoff notes and remaining risks before coding
+
+If the docs and the actual repo state disagree, stop and report the mismatch
+before making changes.
+
+---
+
+## Session Completion Protocol
+
+Every phase session must do all of the following before it ends:
+
+1. Complete the phase end-to-end
+2. Run `npm run compile`
+3. Update `CHANGELOG.md`
+4. Bump `package.json` with a patch release
+5. Update the `Progress Log` in this file
+6. Include:
+   - status
+   - date
+   - commit hash
+   - summary of completed work
+   - remaining risks for the next phase
+7. Commit in English
+8. Push to `origin main`
+
+If the phase is too large or blocked, the session must update this file with a
+clear blocked state and explain exactly what stopped progress.
+
+---
+
+## Phase Selection Rule
+
+Future sessions should **not** guess which phase to start.
+
+They must:
+
+- read this file
+- check the `Progress Log`
+- select the first phase in sequence whose status is one of:
+  - `Ready`
+  - `In progress`
+  - `Blocked`
+- continue from there
+
+They must **not** skip ahead to a later phase unless this file explicitly says
+the dependency order changed.
+
+---
+
 ## Progress Tracking Rules
 
 After each phase:
@@ -109,3 +168,55 @@ After each phase:
 
 This file exists so future sessions can restart from the documented state
 instead of depending on chat context.
+
+---
+
+## Progress Log
+
+### Phase 1 — API Auth
+
+- Status: Ready
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
+
+### Phase 2 — Gatekeeper Enforcement
+
+- Status: Waiting
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
+
+### Phase 3 — Per-Tab Monitoring
+
+- Status: Waiting
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
+
+### Phase 4 — Outbound Containment
+
+- Status: Waiting
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
+
+### Phase 5 — Extension Trust
+
+- Status: Waiting
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
+
+### Phase 6 — Containment Actions
+
+- Status: Waiting
+- Date: —
+- Commit: —
+- Summary: —
+- Remaining risks for next phase: —
