@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.76] - 2026-03-07
+
+- fix: isolate tabs per workspace
+
 ## [v0.44.75] - 2026-03-07
 
 - fix: restore workspace tab switching
