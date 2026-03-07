@@ -2,6 +2,26 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.74] - 2026-03-07
+
+- fix: restore 1password extension helper auth
+
+What was built/changed:
+- Modified files: src/api/server.ts, src/extensions/action-polyfill.ts
+- Added explicit extension ID propagation for local extension helper routes
+- Allowed trusted extension helper auth via origin, referer, or X-Tandem-Extension-Id for installed extensions
+- Upgraded existing on-disk 1Password patches so old active-tab/log bridge calls are rewritten on startup
+
+Why this approach:
+- Electron does not consistently send Origin for extension background/service-worker fetches to localhost
+- 1Password lost its active-tab and frame bridge after API hardening because those helper requests no longer authenticated reliably
+- The fix stays scoped to trusted extension helper routes and installed extension IDs
+
+Tested:
+- npm run compile: zero errors
+- npm start: 1Password helper patch upgrade applied at startup
+- Manual: user confirmed autofill flow works again
+
 ## [v0.44.73] - 2026-03-07
 
 - fix: remove fs access from sandboxed preload
