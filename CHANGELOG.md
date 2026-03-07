@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.83] - 2026-03-07
+
+- fix: add fast-start blocklist hydration (security-blocklist-refresh)
+
 ## [v0.44.82] - 2026-03-07
 
 ### Changed
