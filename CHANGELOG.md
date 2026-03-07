@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.68] - 2026-03-07
+
+- fix: restore shell and extension API auth
+
+What was built/changed:
+- Modified files: shell/index.html, src/preload.ts, src/api/server.ts
+- Added a shell bootstrap that patches page-world fetch for local Tandem API calls using the preload-exposed bearer token
+- Exposed getApiToken() from preload so shell scripts can recover the local API token consistently
+- Broadened trusted extension ID matching so runtime IDs and on-disk extension IDs both satisfy the Phase 1 extension auth checks
+
+Why this approach:
+- The earlier preload-only fetch patch ran in the isolated preload world, but the shell page was still issuing unauthenticated requests from the page world; this fix authenticates the actual caller while preserving the hardened API boundary
+
+Tested:
+- npm run compile: zero errors
+- Manual runtime verification still requires restarting the already-running Tandem app to load the updated preload and shell bootstrap
+
 ## [v0.44.67] - 2026-03-07
 
 - fix: restore shell auth for local API calls
