@@ -1,7 +1,7 @@
 # Security Blocklist Refresh — START HERE
 
 > **Date:** 2026-03-07
-> **Status:** Ready
+> **Status:** In Progress
 > **Goal:** Make Tandem's blocklist pipeline faster at startup, broader in feed support, and safer to update in the background without freezing the browser
 > **Order:** Phase 1 → 2 → 3 → 4
 
@@ -160,11 +160,11 @@ Do not start later phases early.
 
 ### Phase 2 — Fast-Start Hydration
 
-- Status: Planned
-- Date: —
-- Commit: —
-- Summary: Replace synchronous full reload assumptions with cached startup snapshots, background hydration, and atomic in-memory swap.
-- Remaining risks for next phase: Scheduling must not accidentally trigger overlapping refresh cycles or reload storms while a previous hydrate is still running.
+- Status: Complete
+- Date: 2026-03-07
+- Commit: `27abf6feff7aace748e050bfdbe46a69f8fb166b`
+- Summary: Replaced `NetworkShield`'s synchronous startup parse with a snapshot-first boot path, queued background hydration, and atomic Set swaps; wired startup hydration through `SecurityManager`; and added focused regression coverage for snapshot boot, no-clear reload behavior, cache promotion, and snapshot refresh persistence.
+- Remaining risks for next phase: The tiered scheduler must prevent overlapping refresh downloads and queued hydrates from turning into repeated reload storms, especially when stale-source checks and update intervals fire near the same time.
 
 ### Phase 3 — Tiered Update Scheduler
 
