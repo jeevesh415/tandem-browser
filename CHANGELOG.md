@@ -4,37 +4,16 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## [v0.44.78] - 2026-03-07
 
-- fix: scope privileged extension trust (security-hardening)
-
-What was built/changed:
-- Modified files: src/api/server.ts, src/api/routes/extensions.ts, src/extensions/manager.ts, src/extensions/native-messaging.ts, src/extensions/nm-proxy.ts, src/main.ts
-- Added tests: src/api/tests/server-auth.test.ts, src/extensions/tests/trust.test.ts, src/extensions/tests/native-messaging.test.ts
-- Added explicit trusted/limited/unknown extension trust levels and route-scoped helper authorization
-- Applied native messaging host allowlist checks to both HTTP and WebSocket extension bridges
-- Bumped package version to v0.44.77 and updated CHANGELOG + security-hardening phase log state
-
-Why this approach:
-- Extension helper routes were still relying on a broad installed-origin trust signal instead of permission-scoped actor policy
-- Native messaging needed the same decision path for HTTP and WebSocket bridges so trusted extensions keep working without reopening generic loopback trust
-- Centralizing the decision in ExtensionManager keeps auditing and future containment actions aligned
-
-Tested:
-- npm run compile: zero errors
-- Focused: npx vitest run src/extensions/tests/native-messaging.test.ts src/extensions/tests/trust.test.ts src/api/tests/server-auth.test.ts src/api/tests/routes/extensions.test.ts
-- Manual: npm start, curl http://127.0.0.1:8765/status, curl -H "Authorization: Bearer <token>" http://127.0.0.1:8765/extensions/native-messaging/status
-- Note: full npx vitest run still reports pre-existing failures in src/tabs/tests/tabs.test.ts and src/extensions/tests/action-polyfill.test.ts outside this phase scope
-
-## [v0.44.77] - 2026-03-07
-
 ### Changed
 - **Extension trust scoping** (`src/extensions/manager.ts`, `src/api/server.ts`, `src/api/routes/extensions.ts`) — added explicit `trusted` / `limited` / `unknown` extension trust levels and route-specific helper scopes so extension-origin callers must present the right permissions for `active-tab`, `webNavigation`, `identity`, and native messaging helpers
-- **Native messaging boundary checks** (`src/extensions/native-messaging.ts`, `src/extensions/nm-proxy.ts`, `src/main.ts`) — applied the same trust decision to the native messaging HTTP and WebSocket bridges, validated host manifests against allowed extension IDs, and bound bridge audit logs to the calling extension identity
-- **Tests** (`src/api/tests/server-auth.test.ts`, `src/extensions/tests/trust.test.ts`, `src/api/tests/routes/extensions.test.ts`) — added focused coverage for scoped extension helper auth, bridge identity mismatch rejection, and native messaging host allowlist enforcement
+- **Native messaging boundary checks** (`src/extensions/native-messaging.ts`, `src/extensions/nm-proxy.ts`, `src/main.ts`) — applied the same trust decision to the native messaging HTTP and WebSocket bridges, validated host manifests against allowed extension IDs plus known runtime/CWS host mappings, and bound bridge audit logs to the calling extension identity
+- **Tests** (`src/api/tests/server-auth.test.ts`, `src/extensions/tests/trust.test.ts`, `src/extensions/tests/native-messaging.test.ts`, `src/api/tests/routes/extensions.test.ts`) — added focused coverage for scoped helper auth, bridge identity mismatch rejection, and native messaging host allowlist enforcement
 
 ### Technical Details
 - Extension-origin helper routes now evaluate a central `ExtensionManager.evaluateApiRouteAccess()` decision instead of relying on a generic "installed extension" allow path
 - Tandem records extension helper allow/deny decisions with extension identity, trust level, and route scope in the API/NM proxy logs
 - `POST /extensions/identity/auth` now resolves installation status through the same stable extension identity lookup used by the trust model
+- Verification: `npm run compile` passed; focused extension/security Vitest coverage passed; `npm start` plus local `curl` checks succeeded; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
 
 ## [v0.44.76] - 2026-03-07
 
