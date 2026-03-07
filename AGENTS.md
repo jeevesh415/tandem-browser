@@ -50,7 +50,9 @@ tandem-browser/
 │   ├── templates/                # Templates for new features
 │   │   ├── design-template.md    # Template for design docs (plans/)
 │   │   ├── LEES-MIJ-EERST-template.md  # Template for implementation tracks
-│   │   └── fase-template.md      # Template for phase documents
+│   │   ├── fase-template.md      # Template for phase documents
+│   │   ├── multi-phase-track-template.md  # Self-tracking multi-phase handoff template
+│   │   └── session-prompt-template.md  # Reusable universal prompt template
 │   ├── implementations/          # Completed implementation plans
 │   │   ├── ai-integratie/        # MCP, EventStream, ChatRouter, autonomy
 │   │   ├── agent-browser-gaps/   # Snapshot, mock, sessions, CLI
@@ -101,6 +103,10 @@ tandem-browser/
 - **CHANGELOG.md:** Add an entry for each completed phase or feature
 - **Code comments:** Use JSDoc for public functions and inline comments for
   complex logic
+- **Multi-phase work:** If a task spans multiple sessions, create or update a
+  self-tracking `LEES-MIJ-EERST.md` handoff file using
+  `docs/templates/multi-phase-track-template.md` and reuse
+  `docs/templates/session-prompt-template.md`
 
 ### 4. Git Discipline
 

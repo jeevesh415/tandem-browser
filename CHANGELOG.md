@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.60] - 2026-03-07
+
+- docs(workflow): add reusable multi-phase execution templates
+
+Added generic templates for self-tracking multi-phase implementation tracks and
+for universal session prompts, so the same workflow used for security hardening
+can be reused for future larger feature or hardening efforts.
+
+Updated `AGENTS.md` to explicitly point maintainers and coding sessions to this
+template pattern whenever work spans multiple sessions.
+
 ## [v0.44.59] - 2026-03-07
 
 - docs(security): add self-tracking phase log and universal session prompt
