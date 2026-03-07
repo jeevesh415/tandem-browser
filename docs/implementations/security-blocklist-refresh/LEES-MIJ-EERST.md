@@ -96,7 +96,7 @@ See the active `fase-*.md` document.
 | File | Purpose | Status |
 |------|---------|--------|
 | `LEES-MIJ-EERST.md` | execution guide for the full track | Ready |
-| `fase-1-parser-foundation.md` | parser abstraction + source manifest | Ready |
+| `fase-1-parser-foundation.md` | parser abstraction + source manifest | Complete |
 | `fase-2-fast-start-hydration.md` | cached startup snapshot + atomic swap | Planned |
 | `fase-3-tiered-update-scheduler.md` | source freshness tiers + async update policy | Planned |
 | `fase-4-core-feed-expansion.md` | add curated JSON/CSV threat feeds | Planned |
@@ -152,11 +152,11 @@ Do not start later phases early.
 
 ### Phase 1 — Parser Foundation
 
-- Status: Ready
-- Date: —
-- Commit: —
-- Summary: Add source-driven parser definitions and shared parsing helpers for domain, URL, JSON, and CSV feeds without changing startup behavior yet.
-- Remaining risks for next phase: Fast-start work must preserve current request-time behavior while introducing snapshot loading and atomic in-memory replacement.
+- Status: Complete
+- Date: 2026-03-07
+- Commit: `beffe08d42ad3723f138716e6367e7618723374e`
+- Summary: Added shared blocklist parser/source types, moved updater and `NetworkShield` onto the same source manifest, preserved the existing text-feed behavior, and added declarative JSON/CSV parser support without expanding the feed set.
+- Remaining risks for next phase: Fast-start hydration must load cached snapshots without reintroducing startup stalls, and the snapshot swap must keep `blockedDomains` plus IP-origin data consistent so live request decisions never see mixed old/new blocklist state.
 
 ### Phase 2 — Fast-Start Hydration
 
