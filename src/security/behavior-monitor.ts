@@ -26,6 +26,18 @@ export interface ResourceSnapshot {
   cpuWarning: boolean;
 }
 
+export interface BehaviorCriticalDetection {
+  wcId: number;
+  domain: string | null;
+  reason: 'crypto-miner-suspected';
+  metrics: {
+    cpuUsage: number;
+    wasmCount: number;
+    taskDuration: number;
+    jsHeapUsedSize: number;
+  };
+}
+
 interface BehaviorTabState {
   cpuCheckInterval: NodeJS.Timeout | null;
   lastMetrics: { taskDuration: number; jsHeapUsedSize: number; timestamp: number } | null;
@@ -52,6 +64,7 @@ export class BehaviorMonitor {
   private scriptGuard: ScriptGuard | null = null;
   private permissionLog: PermissionRecord[] = [];
   private tabStates: Map<number, BehaviorTabState> = new Map();
+  onCriticalDetection: ((detection: BehaviorCriticalDetection) => void) | null = null;
 
   constructor(db: SecurityDB, guardian: Guardian, devToolsManager: DevToolsManager) {
     this.db = db;
@@ -171,6 +184,8 @@ export class BehaviorMonitor {
             cpuWarning = true;
             const wc = this.devToolsManager.getAttachedWebContents(resolvedWcId);
             const domain = wc ? this.extractDomain(wc.getURL()) : null;
+            const taskDurationMs = Math.round(taskDelta * 1000);
+            const jsHeapMb = Math.round(jsHeapUsedSize / 1048576);
 
             this.db.logEvent({
               timestamp: Date.now(),
@@ -183,11 +198,23 @@ export class BehaviorMonitor {
                 reason: 'crypto-miner-suspected',
                 cpuUsage: Math.round(cpuUsage * 100),
                 wasmCount,
-                taskDuration: Math.round(taskDelta * 1000),
-                jsHeapMB: Math.round(jsHeapUsedSize / 1048576),
+                taskDuration: taskDurationMs,
+                jsHeapMB: jsHeapMb,
               }),
               actionTaken: 'flagged',
               confidence: AnalysisConfidence.ANOMALY,
+            });
+
+            this.onCriticalDetection?.({
+              wcId: resolvedWcId,
+              domain,
+              reason: 'crypto-miner-suspected',
+              metrics: {
+                cpuUsage,
+                wasmCount,
+                taskDuration: taskDurationMs,
+                jsHeapUsedSize,
+              },
             });
           }
 
@@ -267,11 +294,15 @@ export class BehaviorMonitor {
   }
 
   /** Kill a script/worker via CDP (for emergency crypto miner termination) */
-  async killScript(scriptId: string): Promise<boolean> {
+  async killScript(scriptId: string, wcId?: number): Promise<boolean> {
     try {
       // Use Runtime.terminateExecution to stop the current page execution
-      await this.devToolsManager.sendCommand('Runtime.terminateExecution');
-      const wc = this.devToolsManager.getAttachedWebContents();
+      if (wcId !== undefined) {
+        await this.devToolsManager.sendCommandToTab(wcId, 'Runtime.terminateExecution');
+      } else {
+        await this.devToolsManager.sendCommand('Runtime.terminateExecution');
+      }
+      const wc = this.devToolsManager.getAttachedWebContents(wcId);
       const domain = wc ? this.extractDomain(wc.getURL()) : null;
 
       this.db.logEvent({

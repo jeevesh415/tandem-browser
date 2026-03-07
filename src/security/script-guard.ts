@@ -66,6 +66,14 @@ interface ScriptGuardTabState {
   analyzedUrls: Set<string>;
 }
 
+export interface ScriptCriticalDetection {
+  wcId: number | null;
+  domain: string;
+  analysis: ScriptAnalysisResult;
+  url: string;
+  source: 'script-analysis' | 'hash-correlation' | 'ast-correlation' | 'similarity-match';
+}
+
 /** Run JS_THREAT_RULES against script source, return scored analysis result */
 function analyzeScriptContent(source: string, url: string): ScriptAnalysisResult {
   const matches: ThreatRuleMatch[] = [];
@@ -121,8 +129,8 @@ export class ScriptGuard {
   private devToolsManager: DevToolsManager;
   private tabStates: Map<number, ScriptGuardTabState> = new Map();
 
-  /** Callback for critical script-analysis detections (wired by SecurityManager for Gatekeeper notification) */
-  onCriticalDetection: ((domain: string, analysis: ScriptAnalysisResult) => void) | null = null;
+  /** Callback for critical script-analysis detections (wired by SecurityManager for Gatekeeper + containment) */
+  onCriticalDetection: ((detection: ScriptCriticalDetection) => void) | null = null;
 
   /** Callback for checking if a domain is blocked (wired by SecurityManager to NetworkShield.checkDomain) */
   isDomainBlocked: ((domain: string) => boolean) | null = null;
@@ -213,7 +221,13 @@ export class ScriptGuard {
   }
 
   /** Cross-domain correlation: check if a script hash appears on blocked or many domains (Phase 3-A, extended in Phase 3-B for normalized hashes) */
-  private correlateScriptHash(hash: string, currentDomain: string, scriptUrl: string, hashType: 'original' | 'normalized' = 'original'): void {
+  private correlateScriptHash(
+    hash: string,
+    currentDomain: string,
+    scriptUrl: string,
+    hashType: 'original' | 'normalized' = 'original',
+    wcId?: number
+  ): void {
     // Get all domains where this script hash has been seen
     const domains = hashType === 'normalized'
       ? this.db.getDomainsForNormalizedHash(hash)
@@ -246,12 +260,18 @@ export class ScriptGuard {
             confidence: AnalysisConfidence.KNOWN_MALWARE_HASH,
           });
           // Notify Gatekeeper via critical detection callback
-          this.onCriticalDetection?.(currentDomain, {
-            totalScore: 100,
-            matches: [],
-            severity: 'critical',
-            scriptUrl,
-            scriptLength: 0,
+          this.onCriticalDetection?.({
+            wcId: wcId ?? this.resolveCurrentWcId(),
+            domain: currentDomain,
+            url: scriptUrl,
+            source: 'hash-correlation',
+            analysis: {
+              totalScore: 100,
+              matches: [],
+              severity: 'critical',
+              scriptUrl,
+              scriptLength: 0,
+            },
           });
           return; // One blocked-domain event is enough
         }
@@ -281,7 +301,7 @@ export class ScriptGuard {
   }
 
   /** Cross-domain AST correlation: catch obfuscated variants of malware (Phase 6-B) */
-  private correlateAstHash(astHash: string, currentDomain: string, scriptUrl: string): void {
+  private correlateAstHash(astHash: string, currentDomain: string, scriptUrl: string, wcId?: number): void {
     const domains = this.db.getDomainsForAstHash(astHash);
 
     // 1. Check if any domain with the same AST structure is blocked
@@ -306,12 +326,18 @@ export class ScriptGuard {
             actionTaken: 'flagged',
             confidence: AnalysisConfidence.KNOWN_MALWARE_HASH,
           });
-          this.onCriticalDetection?.(currentDomain, {
-            totalScore: 100,
-            matches: [],
-            severity: 'critical',
-            scriptUrl,
-            scriptLength: 0,
+          this.onCriticalDetection?.({
+            wcId: wcId ?? this.resolveCurrentWcId(),
+            domain: currentDomain,
+            url: scriptUrl,
+            source: 'ast-correlation',
+            analysis: {
+              totalScore: 100,
+              matches: [],
+              severity: 'critical',
+              scriptUrl,
+              scriptLength: 0,
+            },
           });
           return; // One blocked-domain event is enough
         }
@@ -347,7 +373,7 @@ export class ScriptGuard {
   }
 
   /** Approximate similarity matching for flagged scripts against stored feature vectors (Phase 6-B) */
-  private runSimilarityCheck(astNode: acorn.Node, currentDomain: string, scriptUrl: string): void {
+  private runSimilarityCheck(astNode: acorn.Node, currentDomain: string, scriptUrl: string, wcId?: number): void {
     const currentVector = computeASTFeatureVector(astNode);
     const currentAstHash = computeASTHash(astNode);
 
@@ -397,12 +423,18 @@ export class ScriptGuard {
           confidence: isBlocked ? AnalysisConfidence.HEURISTIC : AnalysisConfidence.ANOMALY,
         });
         if (isBlocked) {
-          this.onCriticalDetection?.(currentDomain, {
-            totalScore: 100,
-            matches: [],
-            severity: 'critical',
-            scriptUrl,
-            scriptLength: 0,
+          this.onCriticalDetection?.({
+            wcId: wcId ?? this.resolveCurrentWcId(),
+            domain: currentDomain,
+            url: scriptUrl,
+            source: 'similarity-match',
+            analysis: {
+              totalScore: 100,
+              matches: [],
+              severity: 'critical',
+              scriptUrl,
+              scriptLength: 0,
+            },
           });
         }
       } else if (similarity >= SIMILARITY_THRESHOLD) {
@@ -452,7 +484,7 @@ export class ScriptGuard {
       // 0. Compute reliable script_hash from source (Phase 8 — CDP hash param is unreliable)
       const sourceHash = createHash('sha256').update(source).digest('hex');
       this.db.updateScriptHash(domain, url, sourceHash);
-      this.correlateScriptHash(sourceHash, domain, url);
+      this.correlateScriptHash(sourceHash, domain, url, 'original', wcId);
 
       // 0-fast. Persistent hash cache — skip all expensive analysis if this exact script was analyzed before
       if (this.db.isScriptHashAnalyzed(sourceHash)) {
@@ -466,7 +498,7 @@ export class ScriptGuard {
       this.db.updateNormalizedHash(domain, url, normalizedHash);
 
       // 0b. Cross-domain correlation on normalized hash (Phase 3-B)
-      this.correlateScriptHash(normalizedHash, domain, url, 'normalized');
+      this.correlateScriptHash(normalizedHash, domain, url, 'normalized', wcId);
 
       // Check if this is a trusted CDN domain — skip expensive AST/entropy analysis
       const isTrustedCDN = TRUSTED_CDN_DOMAINS.has(domain);
@@ -485,7 +517,7 @@ export class ScriptGuard {
           this.db.updateAstFeatures(domain, url, serialized);
 
           // 0e. Cross-domain AST correlation (Phase 6-B)
-          this.correlateAstHash(astHash, domain, url);
+          this.correlateAstHash(astHash, domain, url, wcId);
         }
         // If parse fails (syntax error), ast_hash stays null — graceful degradation
       }
@@ -561,7 +593,13 @@ export class ScriptGuard {
 
         // 5. For critical severity: notify Gatekeeper via callback
         if (analysis.severity === 'critical') {
-          this.onCriticalDetection?.(domain, analysis);
+          this.onCriticalDetection?.({
+            wcId,
+            domain,
+            analysis,
+            url,
+            source: 'script-analysis',
+          });
         }
       }
 
@@ -569,7 +607,7 @@ export class ScriptGuard {
       // Only run for scripts that triggered rules or had high entropy (performance gate)
       const isFlagged = analysis.severity !== 'none' || (entropy !== undefined && entropy >= ENTROPY_THRESHOLD);
       if (isFlagged && astNode) {
-        this.runSimilarityCheck(astNode, domain, url);
+        this.runSimilarityCheck(astNode, domain, url, wcId);
       }
 
       // Mark as analyzed: in-memory (session) + persistent DB (cross-session)

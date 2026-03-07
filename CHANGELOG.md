@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.79] - 2026-03-07
+
+### Changed
+- **Automatic containment responses** (`src/security/security-manager.ts`, `src/security/guardian.ts`, `src/security/script-guard.ts`, `src/security/behavior-monitor.ts`, `src/main.ts`) — turned critical script and runtime detections into real containment actions that quarantine the affected tab, force strict mode, lower trust, and preserve an incident evidence snapshot for later review
+- **Shell-side recovery messaging** (`src/main.ts`) — routed containment incidents through the existing emergency-stop shell path and added a native warning dialog so Robin gets an immediate explanation plus a recovery instruction without exposing any UI inside the page
+
+### Technical Details
+- `class Guardian` now supports per-webContents quarantine so contained browsing tabs fail closed on subsequent network activity without widening trust for extension, sidebar, or shell traffic
+- `class SecurityManager` now records bounded containment incidents with parsed-script and recent resource evidence, downgrades the affected domain, and exposes the incidents for follow-up review
+- `class BehaviorMonitor` can terminate execution for the affected tab when miner-like WASM and CPU behavior trips a critical threshold
+- Verification: `npm run compile` passed; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
+
 ## [v0.44.78] - 2026-03-07
 
 ### Changed

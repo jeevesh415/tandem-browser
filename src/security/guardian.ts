@@ -34,6 +34,15 @@ interface GatekeeperRequestPolicy {
   context: Record<string, unknown>;
 }
 
+interface QuarantinedWebContents {
+  incidentId: string;
+  domain: string | null;
+  reason: string;
+  reviewMessage: string;
+  createdAt: number;
+  blockedRequests: number;
+}
+
 export class Guardian {
   private db: SecurityDB;
   private shield: NetworkShield;
@@ -47,6 +56,7 @@ export class Guardian {
   // Phase 4: Gatekeeper agent integration
   private gatekeeperWs: GatekeeperWebSocket | null = null;
   private decisionCallbacks: Map<string, (decision: GatekeeperDecision) => void> = new Map();
+  private quarantinedWebContents: Map<number, QuarantinedWebContents> = new Map();
 
   constructor(db: SecurityDB, shield: NetworkShield, outboundGuard: OutboundGuard) {
     this.db = db;
@@ -171,6 +181,34 @@ export class Guardian {
       // Skip internal URLs
       if (url.startsWith('devtools://') || url.startsWith('chrome://') || url.startsWith('file://')) {
         return null;
+      }
+
+      const quarantined = typeof details.webContentsId === 'number'
+        ? this.quarantinedWebContents.get(details.webContentsId)
+        : null;
+      if (quarantined) {
+        quarantined.blockedRequests += 1;
+        this.stats.blocked++;
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: quarantined.domain,
+          tabId: null,
+          eventType: 'containment_request_blocked',
+          severity: 'high',
+          category: 'network',
+          details: JSON.stringify({
+            incidentId: quarantined.incidentId,
+            url: url.substring(0, 200),
+            method: details.method,
+            resourceType,
+            reason: quarantined.reason,
+            reviewMessage: quarantined.reviewMessage,
+            blockedRequests: quarantined.blockedRequests,
+          }),
+          actionTaken: 'auto_block',
+          confidence: AnalysisConfidence.BEHAVIORAL,
+        });
+        return { cancel: true };
       }
 
       const domain = this.extractDomain(url);
@@ -967,6 +1005,30 @@ export class Guardian {
 
   setMode(domain: string, mode: GuardianMode): void {
     this.db.upsertDomain(domain, { guardianMode: mode });
+  }
+
+  quarantineWebContents(
+    wcId: number,
+    input: {
+      incidentId: string;
+      domain: string | null;
+      reason: string;
+      reviewMessage: string;
+    }
+  ): void {
+    this.quarantinedWebContents.set(wcId, {
+      ...input,
+      createdAt: Date.now(),
+      blockedRequests: 0,
+    });
+  }
+
+  releaseWebContentsQuarantine(wcId: number): void {
+    this.quarantinedWebContents.delete(wcId);
+  }
+
+  isWebContentsQuarantined(wcId: number): boolean {
+    return this.quarantinedWebContents.has(wcId);
   }
 
   setDefaultMode(mode: GuardianMode): void {

@@ -6,9 +6,9 @@ import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { Guardian } from './guardian';
 import { OutboundGuard } from './outbound-guard';
-import { ScriptGuard } from './script-guard';
+import { ScriptGuard, type ScriptCriticalDetection } from './script-guard';
 import { ContentAnalyzer, ContentAnalyzerPlugin } from './content-analyzer';
-import { BehaviorMonitor, BehaviorMonitorPlugin } from './behavior-monitor';
+import { BehaviorMonitor, BehaviorMonitorPlugin, type BehaviorCriticalDetection, type ResourceSnapshot } from './behavior-monitor';
 import { GatekeeperWebSocket } from './gatekeeper-ws';
 import { EvolutionEngine } from './evolution';
 import { ThreatIntel } from './threat-intel';
@@ -27,6 +27,27 @@ interface SecurityTabState {
   resourceMonitoringActive: boolean;
   strictModePolicy: boolean;
   lastUrl: string | null;
+}
+
+interface ContainmentEvidence {
+  scriptsParsed: Array<{ url: string; length: number }>;
+  recentResourceSnapshots: ResourceSnapshot[];
+  detection: Record<string, unknown>;
+}
+
+export interface SecurityContainmentIncident {
+  id: string;
+  createdAt: number;
+  wcId: number | null;
+  domain: string | null;
+  url: string | null;
+  severity: 'high' | 'critical';
+  trigger: 'script-critical' | 'behavior-critical';
+  reason: string;
+  actionSummary: string;
+  reviewMessage: string;
+  automationPaused: boolean;
+  evidence: ContainmentEvidence;
 }
 
 export class SecurityManager {
@@ -52,6 +73,7 @@ export class SecurityManager {
   // Phase 7-A: Analyzer plugin manager
   private analyzerManager: AnalyzerManager;
   private analyzerCascadeLogging: boolean = false;
+  private containmentIncidents: SecurityContainmentIncident[] = [];
 
   // Phase 0-B: Auto-correlation trigger
   private eventCounter: number = 0;
@@ -63,6 +85,7 @@ export class SecurityManager {
   // Phase 0-B: Blocklist update scheduling
   private blocklistInterval: ReturnType<typeof setInterval> | null = null;
   private tabStates: Map<number, SecurityTabState> = new Map();
+  onContainmentIncident: ((incident: SecurityContainmentIncident) => void) | null = null;
 
   constructor() {
     this.db = new SecurityDB();
@@ -170,6 +193,9 @@ export class SecurityManager {
   setDevToolsManager(devToolsManager: DevToolsManager): void {
     this.devToolsManager = devToolsManager;
     this.scriptGuard = new ScriptGuard(this.db, this.guardian, devToolsManager);
+    this.scriptGuard.onCriticalDetection = (detection) => {
+      void this.handleScriptCriticalDetection(detection);
+    };
     // Phase 3-A: Wire blocklist check for cross-domain script correlation
     this.scriptGuard.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
     this.contentAnalyzer = new ContentAnalyzer(this.db, devToolsManager);
@@ -181,6 +207,9 @@ export class SecurityManager {
     });
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
+    this.behaviorMonitor.onCriticalDetection = (detection) => {
+      void this.handleBehaviorCriticalDetection(detection);
+    };
     // Phase 7-C: Register BehaviorMonitor as plugin
     this.analyzerManager.register(new BehaviorMonitorPlugin(this.behaviorMonitor)).catch(e => {
       log.warn('Failed to register BehaviorMonitorPlugin:', e.message);
@@ -233,6 +262,7 @@ export class SecurityManager {
     this.behaviorMonitor?.clearTab(wcId);
     this.scriptGuard?.clearTab(wcId);
     this.devToolsManager?.detachFromTab(wcId);
+    this.guardian.releaseWebContentsQuarantine(wcId);
     this.tabStates.delete(wcId);
   }
 
@@ -243,19 +273,6 @@ export class SecurityManager {
   initGatekeeper(httpServer: HttpServer): void {
     this.gatekeeperWs = new GatekeeperWebSocket(httpServer, this.guardian, this.db);
     this.guardian.setGatekeeper(this.gatekeeperWs);
-
-    // Wire ScriptGuard critical detections to Gatekeeper (Phase 2-B)
-    if (this.scriptGuard) {
-      this.scriptGuard.onCriticalDetection = (domain, analysis) => {
-        this.gatekeeperWs?.sendAnomaly({
-          domain,
-          metric: 'script_threat_score',
-          expected: 0,
-          actual: analysis.totalScore,
-          severity: analysis.severity,
-        });
-      };
-    }
 
     log.info('Phase 4: GatekeeperWebSocket initialized');
   }
@@ -428,6 +445,7 @@ export class SecurityManager {
   getThreatIntel(): ThreatIntel { return this.threatIntel; }
   getBlocklistUpdater(): BlocklistUpdater { return this.blocklistUpdater; }
   getAnalyzerManager(): AnalyzerManager { return this.analyzerManager; }
+  getContainmentIncidents(): SecurityContainmentIncident[] { return [...this.containmentIncidents]; }
 
   destroy(): void {
     if (this.correlationInterval) clearInterval(this.correlationInterval);
@@ -436,9 +454,172 @@ export class SecurityManager {
     this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();
+    this.containmentIncidents = [];
     this.tabStates.clear();
     this.db.close();
     log.info('Destroyed');
+  }
+
+  private async handleScriptCriticalDetection(detection: ScriptCriticalDetection): Promise<void> {
+    this.gatekeeperWs?.sendAnomaly({
+      domain: detection.domain,
+      metric: 'script_threat_score',
+      expected: 0,
+      actual: detection.analysis.totalScore,
+      severity: detection.analysis.severity,
+    });
+
+    await this.activateContainment({
+      wcId: detection.wcId,
+      domain: detection.domain,
+      severity: detection.analysis.severity === 'critical' ? 'critical' : 'high',
+      trigger: 'script-critical',
+      reason: `Critical script detection (${detection.source})`,
+      actionSummary: 'The tab was quarantined, future network requests are blocked, and the site was forced into strict mode.',
+      reviewMessage: 'Tandem quarantined this tab after a critical script signal. Review the page, close the tab if it is unexpected, and only reopen the site manually if you trust it.',
+      detection: {
+        source: detection.source,
+        totalScore: detection.analysis.totalScore,
+        scriptUrl: detection.url,
+        matchCount: detection.analysis.matches.length,
+        entropy: detection.analysis.entropy,
+      },
+      terminateExecution: false,
+    });
+  }
+
+  private async handleBehaviorCriticalDetection(detection: BehaviorCriticalDetection): Promise<void> {
+    await this.activateContainment({
+      wcId: detection.wcId,
+      domain: detection.domain,
+      severity: 'critical',
+      trigger: 'behavior-critical',
+      reason: 'Crypto-miner style runtime behavior detected',
+      actionSummary: 'JavaScript execution was terminated for the tab, future network requests are quarantined, and the site was forced into strict mode.',
+      reviewMessage: 'Tandem detected sustained CPU usage with WebAssembly activity and stopped page execution. Review the tab before interacting with it again.',
+      detection: {
+        reason: detection.reason,
+        cpuUsage: Math.round(detection.metrics.cpuUsage * 100),
+        wasmCount: detection.metrics.wasmCount,
+        taskDuration: detection.metrics.taskDuration,
+        jsHeapMB: Math.round(detection.metrics.jsHeapUsedSize / 1048576),
+      },
+      terminateExecution: true,
+    });
+  }
+
+  private async activateContainment(input: {
+    wcId: number | null;
+    domain: string | null;
+    severity: 'high' | 'critical';
+    trigger: 'script-critical' | 'behavior-critical';
+    reason: string;
+    actionSummary: string;
+    reviewMessage: string;
+    detection: Record<string, unknown>;
+    terminateExecution: boolean;
+  }): Promise<void> {
+    if (input.wcId !== null && this.guardian.isWebContentsQuarantined(input.wcId)) {
+      return;
+    }
+
+    const incidentId = `${Date.now()}-${input.wcId ?? 'no-tab'}-${input.trigger}`;
+    const wc = input.wcId !== null ? this.devToolsManager?.getAttachedWebContents(input.wcId) ?? null : null;
+    const url = wc?.getURL() ?? null;
+    const domain = input.domain ?? this.extractDomain(url);
+    const domainInfo = domain ? this.db.getDomainInfo(domain) : null;
+    const previousMode = domain ? this.guardian.getModeForDomain(domain) : null;
+    const nextTrustLevel = domainInfo ? Math.min(domainInfo.trustLevel, 10) : 10;
+
+    if (domain) {
+      this.guardian.setMode(domain, 'strict');
+      this.db.upsertDomain(domain, {
+        trustLevel: nextTrustLevel,
+        lastSeen: Date.now(),
+      });
+    }
+
+    if (input.wcId !== null) {
+      this.guardian.quarantineWebContents(input.wcId, {
+        incidentId,
+        domain,
+        reason: input.reason,
+        reviewMessage: input.reviewMessage,
+      });
+    }
+
+    if (wc && !wc.isDestroyed()) {
+      wc.stop();
+    }
+
+    if (input.terminateExecution && this.behaviorMonitor && input.wcId !== null) {
+      await this.behaviorMonitor.killScript(`containment:${input.trigger}`, input.wcId);
+    }
+
+    const incident: SecurityContainmentIncident = {
+      id: incidentId,
+      createdAt: Date.now(),
+      wcId: input.wcId,
+      domain,
+      url,
+      severity: input.severity,
+      trigger: input.trigger,
+      reason: input.reason,
+      actionSummary: input.actionSummary,
+      reviewMessage: input.reviewMessage,
+      automationPaused: true,
+      evidence: {
+        scriptsParsed: input.wcId !== null
+          ? Array.from(this.scriptGuard?.getScriptsParsed(input.wcId).values() ?? []).slice(0, 25)
+          : [],
+        recentResourceSnapshots: input.wcId !== null
+          ? this.behaviorMonitor?.getResourceSnapshots(input.wcId).slice(-10) ?? []
+          : [],
+        detection: {
+          ...input.detection,
+          previousMode,
+          newMode: domain ? this.guardian.getModeForDomain(domain) : null,
+          previousTrustLevel: domainInfo?.trustLevel ?? null,
+          newTrustLevel: domain ? this.db.getDomainInfo(domain)?.trustLevel ?? nextTrustLevel : null,
+        },
+      },
+    };
+
+    this.containmentIncidents.unshift(incident);
+    if (this.containmentIncidents.length > 50) {
+      this.containmentIncidents.length = 50;
+    }
+
+    this.db.logEvent({
+      timestamp: incident.createdAt,
+      domain,
+      tabId: null,
+      eventType: 'containment_activated',
+      severity: input.severity,
+      category: 'behavior',
+      details: JSON.stringify({
+        incidentId: incident.id,
+        trigger: incident.trigger,
+        reason: incident.reason,
+        actionSummary: incident.actionSummary,
+        reviewMessage: incident.reviewMessage,
+        url: url?.substring(0, 500) ?? null,
+        evidence: incident.evidence,
+      }),
+      actionTaken: 'auto_block',
+      confidence: AnalysisConfidence.BEHAVIORAL,
+    });
+
+    this.onContainmentIncident?.(incident);
+  }
+
+  private extractDomain(url: string | null): string | null {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return null;
+    }
   }
 
   private async ensureTabCoverage(wcId: number, opts?: { fullMonitoring?: boolean; makePrimary?: boolean }): Promise<void> {

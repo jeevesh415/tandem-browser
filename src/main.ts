@@ -13,7 +13,7 @@ process.on('unhandledRejection', (reason) => {
 
 import { webContents, type WebContents } from 'electron';
 import fs from 'fs';
-import { app, BrowserWindow, session, ipcMain } from 'electron';
+import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
@@ -48,7 +48,7 @@ import { DevToolsManager } from './devtools/manager';
 import { WingmanStream } from './activity/wingman-stream';
 import { buildAppMenu } from './menu/app-menu';
 import { RequestDispatcher } from './network/dispatcher';
-import { SecurityManager } from './security/security-manager';
+import { SecurityManager, type SecurityContainmentIncident } from './security/security-manager';
 import { SnapshotManager } from './snapshot/manager';
 import { NetworkMocker } from './network/mocker';
 import { SessionManager } from './sessions/manager';
@@ -694,6 +694,35 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       devToolsManager: devToolsManager!,
       session: ses,
     });
+    securityManager.onContainmentIncident = (incident: SecurityContainmentIncident) => {
+      if (!canUseWindow(win)) {
+        return;
+      }
+
+      win.webContents.send('emergency-stop', {
+        source: 'security-containment',
+        incidentId: incident.id,
+        domain: incident.domain,
+        url: incident.url,
+        wcId: incident.wcId,
+        reason: incident.reason,
+        actionSummary: incident.actionSummary,
+        reviewMessage: incident.reviewMessage,
+        automationPaused: incident.automationPaused,
+      });
+
+      const domainLabel = incident.domain ?? 'the current site';
+      void dialog.showMessageBox(win, {
+        type: 'warning',
+        buttons: ['OK'],
+        defaultId: 0,
+        title: 'Security containment activated',
+        message: `Tandem contained ${domainLabel}.`,
+        detail: `${incident.actionSummary}\n\nWhy it happened: ${incident.reason}\n\nNext step: ${incident.reviewMessage}`,
+      }).catch((e) => {
+        log.warn('containment dialog failed:', e instanceof Error ? e.message : String(e));
+      });
+    };
   }
 
   while (pendingSecurityCoverageWebContentsIds.length > 0) {

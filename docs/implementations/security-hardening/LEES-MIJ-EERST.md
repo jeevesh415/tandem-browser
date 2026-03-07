@@ -1,7 +1,7 @@
 # Security Hardening — START HERE
 
 > **Date:** 2026-03-07
-> **Status:** Ready
+> **Status:** Complete
 > **Goal:** Strengthen Tandem's security model so the local API, Gatekeeper,
 > runtime monitoring, outbound controls, and extension trust boundaries provide
 > better protection for both Robin and OpenClaw
@@ -79,13 +79,13 @@ See the active `fase-*.md` document.
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `LEES-MIJ-EERST.md` | execution guide for the full track | Ready |
+| `LEES-MIJ-EERST.md` | execution guide for the full track | Complete |
 | `fase-1-api-auth.md` | API trust boundary and caller model | Complete |
 | `fase-2-gatekeeper-enforcement.md` | fail-closed decision flow | Complete |
 | `fase-3-per-tab-monitoring.md` | broader runtime monitoring coverage | Complete |
 | `fase-4-outbound-containment.md` | stronger outbound and WebSocket control | Complete |
-| `fase-5-extension-trust.md` | extension trust model and route scopes | Ready |
-| `fase-6-containment-actions.md` | automatic security response actions | Waiting for phase 5 |
+| `fase-5-extension-trust.md` | extension trust model and route scopes | Complete |
+| `fase-6-containment-actions.md` | automatic security response actions | Complete |
 
 ---
 
@@ -222,8 +222,8 @@ instead of depending on chat context.
 
 ### Phase 6 — Containment Actions
 
-- Status: Waiting
-- Date: —
-- Commit: —
-- Summary: —
-- Remaining risks for next phase: —
+- Status: Complete
+- Date: 2026-03-07
+- Commit: PENDING-IMPLEMENTATION-COMMIT
+- Summary: Added automatic containment orchestration in `class SecurityManager`, quarantined affected browsing tabs through `class Guardian`, turned critical ScriptGuard and BehaviorMonitor detections into real responses, terminated miner-like execution on the affected tab, persisted evidence snapshots for later review, and surfaced shell-side recovery messaging through the existing emergency-stop path plus a native dialog in `main.ts`.
+- Remaining risks for next phase: No remaining phase in this track. Residual post-track risk: containment currently keeps a quarantined tab blocked until Robin closes it or explicitly reopens the site later, so any future UX pass should add a deliberate shell-side review/release control backed by the recorded incident evidence instead of auto-releasing the tab.
