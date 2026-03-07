@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.69] - 2026-03-07
+
+- fix: fetch shell API token via IPC
+
+What was built/changed:
+- Modified files: src/ipc/handlers.ts, src/preload.ts, shell/index.html
+- Added an IPC handler for reading the local API token from the main process
+- Switched the preload getApiToken bridge to use ipcRenderer.invoke instead of relying on preload-side file access
+- Updated the shell bootstrap fetch wrapper to lazily await and cache the token before authenticating local Tandem API requests
+
+Why this approach:
+- The shell page still emitted unauthenticated requests because token retrieval in the sandboxed renderer path was not reliable; fetching the token from the main process makes the page-world auth wrapper deterministic
+
+Tested:
+- npm run compile: zero errors
+- Manual runtime still requires restarting the already-running Tandem app to load the new preload and shell bootstrap
+
 ## [v0.44.68] - 2026-03-07
 
 - fix: restore shell and extension API auth
