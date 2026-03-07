@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.63] - 2026-03-07
+
+- fix: enforce gatekeeper decisions for risky requests (security-hardening)
+
 ## [v0.44.62] - 2026-03-07
 
 - fix: tighten local API auth boundary (security-hardening)
