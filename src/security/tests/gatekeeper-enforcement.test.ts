@@ -40,8 +40,18 @@ function createGuardianHarness(domainInfo: DomainInfo | null) {
     checkUrl: vi.fn(() => ({ blocked: false })),
   };
   const outboundGuard = {
-    analyzeWebSocket: vi.fn(() => ({ action: 'allow', reason: 'same-origin-ws', severity: 'info' })),
-    analyzeOutbound: vi.fn(() => ({ action: 'allow', reason: 'no-threat-detected', severity: 'info' })),
+    analyzeWebSocket: vi.fn(() => ({
+      action: 'allow',
+      reason: 'same-origin-ws',
+      severity: 'info',
+      explanation: 'Allowed because the WebSocket stays on the same origin.',
+    })),
+    analyzeOutbound: vi.fn(() => ({
+      action: 'allow',
+      reason: 'no-threat-detected',
+      severity: 'info',
+      explanation: 'Allowed because outbound analysis found no containment signal.',
+    })),
   };
 
   return {
@@ -169,6 +179,97 @@ describe('Guardian gatekeeper enforcement', () => {
       method: 'GET',
       referrer: 'https://bank.example/dashboard',
       resourceType: 'script',
+    });
+
+    expect(result).toEqual({ cancel: true });
+    expect(events.map(event => event.eventType)).toContain('gatekeeper_blocked');
+  });
+
+  it('holds flagged mutating requests when outbound containment requests review', async () => {
+    const { guardian, outboundGuard, events } = createGuardianHarness(buildDomainInfo({
+      domain: 'collector.example',
+      trustLevel: 20,
+      guardianMode: 'balanced',
+      visitCount: 1,
+    }));
+
+    outboundGuard.analyzeOutbound.mockReturnValue({
+      action: 'flag',
+      reason: 'cross-origin-trusted-to-untrusted',
+      severity: 'medium',
+      explanation: 'Flagged because a trusted page is mutating a lower-trust destination.',
+      gatekeeperDecisionClass: 'hold_for_decision',
+      context: {
+        originDomain: 'dashboard.example',
+        destinationDomain: 'collector.example',
+      },
+    });
+
+    const gatekeeperWs = {
+      getStatus: vi.fn(() => ({
+        connected: true,
+        pendingDecisions: 0,
+        totalDecisions: 0,
+        lastAgentSeen: Date.now(),
+      })),
+      sendDecisionRequest: vi.fn((item: PendingDecision) => {
+        setTimeout(() => {
+          guardian.submitDecision(item.id, {
+            action: 'allow',
+            reason: 'agent-reviewed',
+            confidence: 91,
+          });
+        }, 20);
+      }),
+    };
+
+    guardian.setGatekeeper(gatekeeperWs as never);
+
+    const resultPromise = (guardian as any).checkRequest({
+      url: 'https://collector.example/ingest',
+      method: 'POST',
+      referrer: 'https://dashboard.example/app',
+      resourceType: 'xhr',
+      uploadData: [{ bytes: Buffer.from('status=ok') }],
+    });
+
+    await vi.advanceTimersByTimeAsync(20);
+
+    await expect(resultPromise).resolves.toBeNull();
+    expect(gatekeeperWs.sendDecisionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'collector.example',
+        decisionClass: 'hold_for_decision',
+      }),
+    );
+    expect(events.map(event => event.eventType)).toContain('gatekeeper_held');
+    expect(events.map(event => event.eventType)).toContain('gatekeeper_allowed');
+  });
+
+  it('fails closed for strict unknown websocket containment when Gatekeeper is unavailable', async () => {
+    const { guardian, outboundGuard, events } = createGuardianHarness(buildDomainInfo({
+      domain: 'socket.example',
+      trustLevel: 15,
+      guardianMode: 'strict',
+      visitCount: 1,
+    }));
+
+    outboundGuard.analyzeWebSocket.mockReturnValue({
+      action: 'flag',
+      reason: 'unknown-ws-endpoint',
+      severity: 'high',
+      explanation: 'Flagged because the WebSocket destination is still unknown.',
+      gatekeeperDecisionClass: 'deny_on_timeout',
+      context: {
+        destinationDomain: 'socket.example',
+      },
+    });
+
+    const result = await (guardian as any).checkRequest({
+      url: 'wss://socket.example/live',
+      method: 'GET',
+      referrer: 'https://app.example',
+      resourceType: 'webSocket',
     });
 
     expect(result).toEqual({ cancel: true });

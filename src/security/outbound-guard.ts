@@ -1,6 +1,6 @@
 import type { OnBeforeRequestListenerDetails } from 'electron';
 import type { SecurityDB } from './security-db';
-import type { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode} from './types';
+import type { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, GatekeeperDecisionClass } from './types';
 import { KNOWN_TRACKERS, KNOWN_WS_SERVICES } from './types';
 import { createLogger } from '../utils/logger';
 
@@ -46,33 +46,80 @@ export class OutboundGuard {
 
     const destDomain = this.extractDomain(details.url);
     if (!destDomain) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'invalid-url', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'invalid-url',
+        severity: 'info',
+        explanation: 'Allowed because the destination URL could not be parsed for outbound analysis.',
+      });
     }
 
     const originDomain = details.referrer ? this.extractDomain(details.referrer) : null;
+    const originProfile = originDomain ? this.getDomainProfile(originDomain) : null;
+    const destinationProfile = this.getDomainProfile(destDomain);
+    const isCrossOrigin = Boolean(originDomain && originDomain !== destDomain);
+    const isSameSite = Boolean(originDomain && this.isSameSiteDomain(originDomain, destDomain));
+    const isDestinationUnknown = !destinationProfile.isTrusted && !destinationProfile.isEstablished;
+    const bodyAnalysis = details.uploadData?.length ? this.analyzeBody(details.uploadData) : null;
 
     // 1. Same-origin POST = always allow (normal form submissions, login flows)
     if (originDomain && destDomain === originDomain) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'same-origin', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'same-origin',
+        severity: 'info',
+        explanation: 'Allowed because the mutating request stays on the same origin.',
+      });
     }
 
     // 2. Check whitelisted domain pair
     if (originDomain && this.db.isWhitelistedPair(originDomain, destDomain)) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'whitelisted-pair', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'whitelisted-pair',
+        severity: 'info',
+        explanation: 'Allowed because the origin/destination pair is explicitly whitelisted.',
+      });
+    }
+
+    if (isSameSite) {
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'same-site-cross-origin',
+        severity: 'info',
+        explanation: `Allowed because ${originDomain} and ${destDomain} are part of the same site boundary.`,
+        context: {
+          originDomain,
+          destinationDomain: destDomain,
+        },
+      });
     }
 
     // 3. Known analytics/tracker destination
     if (this.isKnownTracker(destDomain)) {
       if (mode === 'strict') {
-        this.stats.blocked++;
-        return { action: 'block', reason: 'tracker-blocked-strict', severity: 'low' };
+        return this.finishDecision({
+          action: 'block',
+          reason: 'tracker-blocked-strict',
+          severity: 'low',
+          explanation: 'Blocked because strict mode does not permit mutating requests to known tracker endpoints.',
+          context: {
+            destinationDomain: destDomain,
+            mode,
+          },
+        });
       }
       // balanced/permissive: flag but allow
-      this.stats.flagged++;
-      return { action: 'flag', reason: 'tracker-detected', severity: 'info' };
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'tracker-detected',
+        severity: 'info',
+        explanation: 'Flagged because the request targets a known tracker endpoint.',
+        context: {
+          destinationDomain: destDomain,
+          mode,
+        },
+      });
     }
 
     // 4. Content-Type whitelist — skip body scan for known-safe media types.
@@ -83,90 +130,266 @@ export class OutboundGuard {
     if (details.uploadData?.length) {
       const contentType = this.extractUploadContentType(details.uploadData);
       if (contentType && TRUSTED_OUTBOUND_CONTENT_TYPES.has(contentType)) {
-        this.stats.allowed++;
-        return { action: 'allow', reason: 'trusted-content-type', severity: 'info' };
+        return this.finishDecision({
+          action: 'allow',
+          reason: 'trusted-content-type',
+          severity: 'info',
+          explanation: `Allowed because the upload body looks like trusted media/binary content (${contentType}).`,
+          context: {
+            contentType,
+          },
+        });
       }
     }
 
     // 5. Check POST body for credential-like data
-    if (details.uploadData?.length) {
-      const bodyAnalysis = this.analyzeBody(details.uploadData);
-
+    if (bodyAnalysis) {
       // Cross-origin credential submission = ALWAYS BLOCK
-      if (bodyAnalysis.hasCredentials && originDomain !== destDomain) {
-        this.stats.blocked++;
-        return { action: 'block', reason: 'cross-origin-credentials', severity: 'critical' };
-      }
-
-      // File upload logging (always log, never block)
-      if (bodyAnalysis.hasFileUpload) {
-        this.stats.flagged++;
-        return { action: 'flag', reason: 'file-upload-detected', severity: 'info' };
-      }
-
-      // Abnormally large POST to unknown domain = FLAG
-      if (bodyAnalysis.sizeBytes > LARGE_BODY_THRESHOLD && !this.isTrustedDomain(destDomain)) {
-        this.stats.flagged++;
-        return { action: 'flag', reason: 'large-body-unknown-domain', severity: 'high' };
+      if (bodyAnalysis.hasCredentials && isCrossOrigin && !isSameSite) {
+        return this.finishDecision({
+          action: 'block',
+          reason: 'cross-origin-credentials',
+          severity: 'critical',
+          explanation: 'Blocked because credential-like data was detected in a cross-origin mutating request.',
+          context: {
+            originDomain,
+            destinationDomain: destDomain,
+            sizeBytes: bodyAnalysis.sizeBytes,
+          },
+        });
       }
     }
 
     // 6. Cross-origin POST from trusted to untrusted
-    if (originDomain && this.isTrustedDomain(originDomain) && !this.isTrustedDomain(destDomain)) {
-      this.stats.flagged++;
-      return { action: 'flag', reason: 'cross-origin-trusted-to-untrusted', severity: 'medium' };
+    if (isCrossOrigin && !isSameSite && originProfile?.isTrusted && !destinationProfile.isTrusted) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'cross-origin-trusted-to-untrusted',
+        severity: mode === 'strict' ? 'high' : 'medium',
+        explanation: `Flagged because trusted origin ${originDomain} is sending mutating traffic to lower-trust destination ${destDomain}.`,
+        gatekeeperDecisionClass: this.getCrossOriginGatekeeperClass(mode),
+        context: {
+          originDomain,
+          destinationDomain: destDomain,
+          originTrust: originProfile.trustLevel,
+          destinationTrust: destinationProfile.trustLevel,
+          destinationVisitCount: destinationProfile.visitCount,
+          destinationKnown: destinationProfile.isEstablished,
+          mode,
+        },
+      });
     }
 
-    this.stats.allowed++;
-    return { action: 'allow', reason: 'no-threat-detected', severity: 'info' };
+    // 7. First-time or low-confidence mutating request to an unknown destination
+    if (isCrossOrigin && !isSameSite && isDestinationUnknown) {
+      const shouldEscalateInBalanced = Boolean(
+        bodyAnalysis && (bodyAnalysis.hasFileUpload || bodyAnalysis.sizeBytes > LARGE_BODY_THRESHOLD)
+      );
+      const gatekeeperDecisionClass =
+        mode === 'strict'
+          ? 'deny_on_timeout'
+          : mode === 'balanced' && shouldEscalateInBalanced
+            ? 'hold_for_decision'
+            : undefined;
+
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'first-visit-mutating-destination',
+        severity: mode === 'strict' || shouldEscalateInBalanced ? 'high' : 'medium',
+        explanation: `Flagged because ${destDomain} has not earned trust yet and is receiving a cross-origin mutating request.`,
+        gatekeeperDecisionClass,
+        context: {
+          originDomain,
+          destinationDomain: destDomain,
+          destinationTrust: destinationProfile.trustLevel,
+          destinationVisitCount: destinationProfile.visitCount,
+          hasFileUpload: bodyAnalysis?.hasFileUpload ?? false,
+          sizeBytes: bodyAnalysis?.sizeBytes ?? 0,
+          mode,
+        },
+      });
+    }
+
+    // 8. File upload logging (always log, never block)
+    if (bodyAnalysis?.hasFileUpload) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'file-upload-detected',
+        severity: 'info',
+        explanation: 'Flagged because the mutating request includes a file upload.',
+        context: {
+          originDomain,
+          destinationDomain: destDomain,
+          sizeBytes: bodyAnalysis.sizeBytes,
+        },
+      });
+    }
+
+    // 9. Abnormally large POST to unknown or low-trust domain
+    if (bodyAnalysis && bodyAnalysis.sizeBytes > LARGE_BODY_THRESHOLD && !destinationProfile.isTrusted) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'large-body-unknown-domain',
+        severity: 'high',
+        explanation: `Flagged because a large mutating request body is leaving for low-trust destination ${destDomain}.`,
+        context: {
+          originDomain,
+          destinationDomain: destDomain,
+          destinationTrust: destinationProfile.trustLevel,
+          sizeBytes: bodyAnalysis.sizeBytes,
+        },
+      });
+    }
+
+    return this.finishDecision({
+      action: 'allow',
+      reason: 'no-threat-detected',
+      severity: 'info',
+      explanation: 'Allowed because outbound analysis did not find a containment signal.',
+    });
   }
 
   /**
    * Analyze a WebSocket upgrade request (connection-level only — frame inspection requires CDP).
    */
-  analyzeWebSocket(url: string, referrer: string | undefined): OutboundDecision {
+  analyzeWebSocket(url: string, referrer: string | undefined, mode: GuardianMode): OutboundDecision {
     this.stats.totalChecked++;
 
     const wsDomain = this.extractDomain(url);
     if (!wsDomain) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'invalid-ws-url', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'invalid-ws-url',
+        severity: 'info',
+        explanation: 'Allowed because the WebSocket URL could not be parsed for containment analysis.',
+      });
     }
 
     // Skip internal/Tandem WebSocket endpoints (e.g. ws://127.0.0.1:WEBHOOK_PORT/)
     try {
       const wsUrl = new URL(url);
       if (wsUrl.hostname === 'localhost' || wsUrl.hostname === '127.0.0.1' || wsUrl.hostname === '::1') {
-        this.stats.allowed++;
-        return { action: 'allow', reason: 'internal-ws', severity: 'info' };
+        return this.finishDecision({
+          action: 'allow',
+          reason: 'internal-ws',
+          severity: 'info',
+          explanation: 'Allowed because the WebSocket target is loopback/internal infrastructure.',
+        });
       }
     } catch {
       // invalid url — fall through to normal checks
     }
 
     const originDomain = referrer ? this.extractDomain(referrer) : null;
+    const originProfile = originDomain ? this.getDomainProfile(originDomain) : null;
+    const destinationProfile = this.getDomainProfile(wsDomain);
+    const isCrossOrigin = Boolean(originDomain && originDomain !== wsDomain);
+    const isSameSite = Boolean(originDomain && this.isSameSiteDomain(originDomain, wsDomain));
+    const isUnknownEndpoint = !destinationProfile.isTrusted && !destinationProfile.isEstablished;
 
     // Same domain = normal
     if (originDomain && wsDomain === originDomain) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'same-origin-ws', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'same-origin-ws',
+        severity: 'info',
+        explanation: 'Allowed because the WebSocket stays on the same origin as the referrer.',
+      });
     }
 
     // Whitelisted pair
     if (originDomain && this.db.isWhitelistedPair(originDomain, wsDomain)) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'whitelisted-ws-pair', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'whitelisted-ws-pair',
+        severity: 'info',
+        explanation: 'Allowed because the WebSocket origin/destination pair is explicitly whitelisted.',
+      });
     }
 
     // Known WebSocket service providers
     if (this.isKnownWSService(wsDomain)) {
-      this.stats.allowed++;
-      return { action: 'allow', reason: 'known-ws-service', severity: 'info' };
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'known-ws-service',
+        severity: 'info',
+        explanation: 'Allowed because the destination matches a known WebSocket service provider.',
+      });
     }
 
-    // Unknown WS endpoint = FLAG
-    this.stats.flagged++;
-    return { action: 'flag', reason: 'unknown-ws-endpoint', severity: 'medium' };
+    if (isSameSite) {
+      return this.finishDecision({
+        action: 'allow',
+        reason: 'same-site-ws',
+        severity: 'info',
+        explanation: `Allowed because ${originDomain} and ${wsDomain} are part of the same site boundary.`,
+      });
+    }
+
+    if (isCrossOrigin && !isSameSite && originProfile?.isTrusted && !destinationProfile.isTrusted) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'trusted-to-untrusted-websocket',
+        severity: mode === 'strict' ? 'high' : 'medium',
+        explanation: `Flagged because trusted origin ${originDomain} is opening a WebSocket to lower-trust destination ${wsDomain}.`,
+        gatekeeperDecisionClass: this.getCrossOriginGatekeeperClass(mode),
+        context: {
+          originDomain,
+          destinationDomain: wsDomain,
+          originTrust: originProfile.trustLevel,
+          destinationTrust: destinationProfile.trustLevel,
+          destinationVisitCount: destinationProfile.visitCount,
+          mode,
+        },
+      });
+    }
+
+    if (!originDomain && isUnknownEndpoint) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'unknown-ws-no-referrer',
+        severity: mode === 'strict' ? 'high' : 'medium',
+        explanation: `Flagged because unknown WebSocket endpoint ${wsDomain} was requested without a trustworthy referrer.`,
+        gatekeeperDecisionClass: this.getUnknownWebSocketGatekeeperClass(mode),
+        context: {
+          destinationDomain: wsDomain,
+          destinationTrust: destinationProfile.trustLevel,
+          destinationVisitCount: destinationProfile.visitCount,
+          mode,
+        },
+      });
+    }
+
+    if (isUnknownEndpoint) {
+      return this.finishDecision({
+        action: 'flag',
+        reason: 'unknown-ws-endpoint',
+        severity: mode === 'strict' ? 'high' : 'medium',
+        explanation: `Flagged because WebSocket endpoint ${wsDomain} is not established or trusted yet.`,
+        gatekeeperDecisionClass: this.getUnknownWebSocketGatekeeperClass(mode),
+        context: {
+          originDomain,
+          destinationDomain: wsDomain,
+          destinationTrust: destinationProfile.trustLevel,
+          destinationVisitCount: destinationProfile.visitCount,
+          mode,
+        },
+      });
+    }
+
+    return this.finishDecision({
+      action: 'flag',
+      reason: 'untrusted-cross-origin-ws',
+      severity: 'low',
+      explanation: `Flagged because ${originDomain ?? 'unknown origin'} opened a cross-origin WebSocket to ${wsDomain}.`,
+      context: {
+        originDomain,
+        destinationDomain: wsDomain,
+        destinationTrust: destinationProfile.trustLevel,
+        destinationVisitCount: destinationProfile.visitCount,
+        mode,
+      },
+    });
   }
 
   /**
@@ -204,6 +427,48 @@ export class OutboundGuard {
   }
 
   // === Helpers ===
+
+  private finishDecision(decision: OutboundDecision): OutboundDecision {
+    if (decision.action === 'allow') {
+      this.stats.allowed++;
+    } else if (decision.action === 'block') {
+      this.stats.blocked++;
+    } else {
+      this.stats.flagged++;
+    }
+
+    return decision;
+  }
+
+  private getDomainProfile(domain: string): {
+    trustLevel: number;
+    visitCount: number;
+    isTrusted: boolean;
+    isEstablished: boolean;
+  } {
+    const info = this.db.getDomainInfo(domain);
+    const trustLevel = info?.trustLevel ?? 30;
+    const visitCount = info?.visitCount ?? 0;
+
+    return {
+      trustLevel,
+      visitCount,
+      isTrusted: trustLevel >= TRUSTED_THRESHOLD,
+      isEstablished: visitCount >= 3,
+    };
+  }
+
+  private getCrossOriginGatekeeperClass(mode: GuardianMode): GatekeeperDecisionClass | undefined {
+    if (mode === 'strict') return 'deny_on_timeout';
+    if (mode === 'balanced') return 'hold_for_decision';
+    return undefined;
+  }
+
+  private getUnknownWebSocketGatekeeperClass(mode: GuardianMode): GatekeeperDecisionClass | undefined {
+    if (mode === 'strict') return 'deny_on_timeout';
+    if (mode === 'balanced') return 'hold_for_decision';
+    return undefined;
+  }
 
   /**
    * Extract Content-Type from upload data.
@@ -258,8 +523,17 @@ export class OutboundGuard {
     return false;
   }
 
-  private isTrustedDomain(domain: string): boolean {
-    const info = this.db.getDomainInfo(domain);
-    return info !== null && info.trustLevel >= TRUSTED_THRESHOLD;
+  private isSameSiteDomain(left: string, right: string): boolean {
+    return this.getSiteKey(left) === this.getSiteKey(right);
+  }
+
+  private getSiteKey(domain: string): string {
+    const parts = domain.split('.').filter(Boolean);
+    if (parts.length <= 2) return domain;
+
+    const tld = parts.at(-1) ?? '';
+    const secondLevel = parts.at(-2) ?? '';
+    const useThreeLabels = tld.length === 2 && secondLevel.length <= 3 && parts.length >= 3;
+    return useThreeLabels ? parts.slice(-3).join('.') : parts.slice(-2).join('.');
   }
 }

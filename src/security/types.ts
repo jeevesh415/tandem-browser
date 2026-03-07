@@ -77,6 +77,9 @@ export interface OutboundDecision {
   action: 'allow' | 'block' | 'flag';
   reason: string;
   severity: EventSeverity;
+  explanation: string;
+  gatekeeperDecisionClass?: GatekeeperDecisionClass;
+  context?: Record<string, unknown>;
 }
 
 export interface BodyAnalysis {

@@ -179,6 +179,7 @@ export class Guardian {
       let riskReasons: string[] = [];
       let dangerousDownloadExt: string | null = null;
       let wsResult: OutboundDecision | null = null;
+      let outboundResult: OutboundDecision | null = null;
 
       // 1. Blocklist check (instant — Set lookup)
       const blockResult = this.shield.checkUrl(url);
@@ -276,7 +277,8 @@ export class Guardian {
 
       // 4. WebSocket upgrade detection
       if (url.startsWith('ws://') || url.startsWith('wss://')) {
-        wsResult = this.outboundGuard.analyzeWebSocket(url, details.referrer);
+        const mode = domain ? this.getModeForDomain(domain) : this.defaultMode;
+        wsResult = this.outboundGuard.analyzeWebSocket(url, details.referrer, mode);
         if (wsResult.action === 'block') {
           this.stats.blocked++;
           this.db.logEvent({
@@ -286,7 +288,13 @@ export class Guardian {
             eventType: 'exfiltration_attempt',
             severity: wsResult.severity,
             category: 'outbound',
-            details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
+            details: JSON.stringify({
+              url: url.substring(0, 200),
+              reason: wsResult.reason,
+              explanation: wsResult.explanation,
+              referrer: details.referrer,
+              ...wsResult.context,
+            }),
             actionTaken: 'auto_block',
             confidence: AnalysisConfidence.BEHAVIORAL,
           });
@@ -300,7 +308,14 @@ export class Guardian {
             eventType: 'warned',
             severity: wsResult.severity,
             category: 'outbound',
-            details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
+            details: JSON.stringify({
+              url: url.substring(0, 200),
+              reason: wsResult.reason,
+              explanation: wsResult.explanation,
+              referrer: details.referrer,
+              gatekeeperDecisionClass: wsResult.gatekeeperDecisionClass,
+              ...wsResult.context,
+            }),
             actionTaken: 'flagged',
             confidence: AnalysisConfidence.HEURISTIC,
           });
@@ -310,7 +325,7 @@ export class Guardian {
       // 5. Outbound data check for POST/PUT/PATCH
       if (details.method && OUTBOUND_METHODS.has(details.method)) {
         const mode = domain ? this.getModeForDomain(domain) : this.defaultMode;
-        const outboundResult = this.outboundGuard.analyzeOutbound(details, mode);
+        outboundResult = this.outboundGuard.analyzeOutbound(details, mode);
         if (outboundResult.action === 'block') {
           this.stats.blocked++;
           this.db.logEvent({
@@ -324,7 +339,9 @@ export class Guardian {
               url: url.substring(0, 200),
               method: details.method,
               reason: outboundResult.reason,
+              explanation: outboundResult.explanation,
               referrer: details.referrer,
+              ...outboundResult.context,
             }),
             actionTaken: 'auto_block',
             confidence: AnalysisConfidence.CREDENTIAL_EXFIL,
@@ -343,7 +360,10 @@ export class Guardian {
               url: url.substring(0, 200),
               method: details.method,
               reason: outboundResult.reason,
+              explanation: outboundResult.explanation,
               referrer: details.referrer,
+              gatekeeperDecisionClass: outboundResult.gatekeeperDecisionClass,
+              ...outboundResult.context,
             }),
             actionTaken: 'flagged',
             confidence: AnalysisConfidence.HEURISTIC,
@@ -362,6 +382,7 @@ export class Guardian {
         riskReasons,
         dangerousDownloadExt,
         wsResult,
+        outboundResult,
       }) : null;
 
       if (domain && gatekeeperPolicy) {
@@ -394,6 +415,7 @@ export class Guardian {
     riskReasons: string[];
     dangerousDownloadExt: string | null;
     wsResult: OutboundDecision | null;
+    outboundResult: OutboundDecision | null;
   }): GatekeeperRequestPolicy | null {
     if (LOOPBACK_HOSTS.has(input.domain)) return null;
 
@@ -426,17 +448,30 @@ export class Guardian {
       };
     }
 
-    if (
-      input.wsResult?.action === 'flag' &&
-      input.wsResult.reason === 'unknown-ws-endpoint' &&
-      input.mode !== 'permissive'
-    ) {
+    if (input.wsResult?.action === 'flag' && input.wsResult.gatekeeperDecisionClass) {
       return {
-        decisionClass: input.mode === 'strict' ? 'deny_on_timeout' : 'hold_for_decision',
-        reason: 'unknown_websocket_endpoint',
-        severity: input.mode === 'strict' ? 'high' : 'medium',
+        decisionClass: input.wsResult.gatekeeperDecisionClass,
+        reason: input.wsResult.reason,
+        severity: input.wsResult.severity,
         context: {
+          explanation: input.wsResult.explanation,
+          ...input.wsResult.context,
           trust,
+          referrer: input.details.referrer,
+        },
+      };
+    }
+
+    if (input.outboundResult?.action === 'flag' && input.outboundResult.gatekeeperDecisionClass) {
+      return {
+        decisionClass: input.outboundResult.gatekeeperDecisionClass,
+        reason: input.outboundResult.reason,
+        severity: input.outboundResult.severity,
+        context: {
+          explanation: input.outboundResult.explanation,
+          ...input.outboundResult.context,
+          trust,
+          method: input.details.method,
           referrer: input.details.referrer,
         },
       };
