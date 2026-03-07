@@ -9,7 +9,9 @@ import type {
   BlocklistSourceDefinition,
   BlocklistSourceUpdateResult,
   BlocklistValueType,
+  CsvBlocklistRecordFilter,
   CsvBlocklistParser,
+  JsonBlocklistRecordFilter,
   JsonBlocklistParser,
   ParsedBlocklistSource,
   UpdateResult,
@@ -23,7 +25,13 @@ const log = createLogger('BlocklistUpdater');
 const DOWNLOAD_TIMEOUT = 60_000;
 const DEFAULT_CSV_DELIMITER = ',';
 
-/** Blocklist source definitions */
+/**
+ * Blocklist source definitions.
+ *
+ * Keep new browser-core sources limited to curated phishing, malware, and
+ * malicious-infrastructure feeds. Ad/tracker mega-lists stay out of scope for
+ * expansion, even if the parser can ingest them.
+ */
 export const BLOCKLIST_SOURCES: BlocklistSourceDefinition[] = [
   {
     name: 'urlhaus',
@@ -32,6 +40,8 @@ export const BLOCKLIST_SOURCES: BlocklistSourceDefinition[] = [
     category: 'malware',
     cacheFileName: 'urlhaus.txt',
     refreshTier: 'hourly',
+    signal: 'high',
+    scope: 'core_security',
   },
   {
     name: 'phishing',
@@ -40,6 +50,56 @@ export const BLOCKLIST_SOURCES: BlocklistSourceDefinition[] = [
     category: 'phishing',
     cacheFileName: 'phishing.txt',
     refreshTier: 'daily',
+    signal: 'curated',
+    scope: 'core_security',
+  },
+  {
+    name: 'openphish',
+    url: 'https://openphish.com/feed.txt',
+    parser: { type: 'url_list' },
+    category: 'phishing',
+    cacheFileName: 'openphish.txt',
+    refreshTier: 'daily',
+    signal: 'high',
+    scope: 'core_security',
+  },
+  {
+    name: 'threatfox-domains',
+    url: 'https://threatfox.abuse.ch/export/csv/recent/',
+    parser: {
+      type: 'csv',
+      column: 'ioc_value',
+      hasHeader: true,
+      valueType: 'domain',
+      filters: [
+        { column: 'ioc_type', equals: 'domain' },
+        { column: 'confidence_level', min: 75 },
+      ],
+    },
+    category: 'malware',
+    cacheFileName: 'threatfox-domains.csv',
+    refreshTier: 'hourly',
+    signal: 'high',
+    scope: 'core_security',
+  },
+  {
+    name: 'threatfox-urls',
+    url: 'https://threatfox.abuse.ch/export/csv/recent/',
+    parser: {
+      type: 'csv',
+      column: 'ioc_value',
+      hasHeader: true,
+      valueType: 'url',
+      filters: [
+        { column: 'ioc_type', equals: 'url' },
+        { column: 'confidence_level', min: 75 },
+      ],
+    },
+    category: 'malware',
+    cacheFileName: 'threatfox-urls.csv',
+    refreshTier: 'hourly',
+    signal: 'high',
+    scope: 'core_security',
   },
   {
     name: 'stevenblack',
@@ -48,6 +108,8 @@ export const BLOCKLIST_SOURCES: BlocklistSourceDefinition[] = [
     category: 'tracker',
     cacheFileName: 'hosts.txt',
     refreshTier: 'weekly',
+    signal: 'legacy',
+    scope: 'legacy_carryover',
   },
 ];
 
@@ -300,6 +362,10 @@ function parseJsonFeed(content: string, parser: JsonBlocklistParser): ParsedBloc
   const records = resolveJsonRecords(parsed, parser.recordPath);
 
   for (const record of records) {
+    if (!matchesJsonFilters(record, parser.filters)) {
+      continue;
+    }
+
     const values = parser.fieldPaths && parser.fieldPaths.length > 0
       ? parser.fieldPaths.flatMap((fieldPath) => resolveJsonPathValues(record, fieldPath))
       : [record];
@@ -312,34 +378,47 @@ function parseJsonFeed(content: string, parser: JsonBlocklistParser): ParsedBloc
 }
 
 function parseCsvFeed(content: string, parser: CsvBlocklistParser): ParsedBlocklistSource {
-  if ((parser.hasHeader ?? typeof parser.column === 'string') === false && typeof parser.column === 'string') {
-    throw new Error(`CSV parser for string column "${parser.column}" requires a header row`);
+  const requiresHeader = csvParserRequiresHeader(parser);
+  if ((parser.hasHeader ?? requiresHeader) === false && requiresHeader) {
+    throw new Error('CSV parser for string columns or filters requires a header row');
   }
 
   const result = createParsedBlocklistSource();
   const seenDomains = new Set<string>();
   const seenIpOrigins = new Set<string>();
   const delimiter = parser.delimiter ?? DEFAULT_CSV_DELIMITER;
-  const hasHeader = parser.hasHeader ?? typeof parser.column === 'string';
+  const hasHeader = parser.hasHeader ?? requiresHeader;
   const valueType = parser.valueType ?? 'domain';
   const lines = content.split(/\r?\n/);
   let columnIndex = typeof parser.column === 'number' ? parser.column : null;
+  let resolvedFilters = hasHeader ? [] : resolveCsvFilters(parser.filters);
   let headerProcessed = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+    if (!trimmed) continue;
 
-    const cells = parseCsvLine(line, delimiter);
     if (!headerProcessed && hasHeader) {
-      columnIndex = resolveCsvColumnIndex(cells, parser.column);
-      headerProcessed = true;
+      const header = tryParseCsvHeader(trimmed, delimiter, parser);
+      if (header) {
+        columnIndex = header.columnIndex;
+        resolvedFilters = header.filters;
+        headerProcessed = true;
+      }
       continue;
     }
 
+    if (trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+
+    const cells = parseCsvLine(line, delimiter);
     headerProcessed = true;
     if (columnIndex === null || columnIndex < 0 || columnIndex >= cells.length) continue;
+    if (!matchesCsvFilters(cells, resolvedFilters)) continue;
     addConfiguredValue(result, cells[columnIndex], valueType, seenDomains, seenIpOrigins);
+  }
+
+  if (hasHeader && !headerProcessed) {
+    throw new Error('CSV header row not found');
   }
 
   return result;
@@ -420,6 +499,132 @@ function isSafeUrlListDomain(domain: string): boolean {
 
 function isRawIpHost(domain: string): boolean {
   return /^(\d{1,3}\.){3}\d{1,3}$/.test(domain) || /^\[[\da-fA-F:]+\]$/.test(domain);
+}
+
+function matchesJsonFilters(record: unknown, filters?: JsonBlocklistRecordFilter[]): boolean {
+  if (!filters || filters.length === 0) {
+    return true;
+  }
+
+  return filters.every((filter) => resolveJsonPathValues(record, filter.fieldPath)
+    .some((value) => matchesFilterValue(value, filter)));
+}
+
+interface ResolvedCsvFilter extends Omit<CsvBlocklistRecordFilter, 'column'> {
+  columnIndex: number;
+}
+
+function csvParserRequiresHeader(parser: CsvBlocklistParser): boolean {
+  return typeof parser.column === 'string'
+    || (parser.filters?.some((filter) => typeof filter.column === 'string') ?? false);
+}
+
+interface ParsedCsvHeader {
+  columnIndex: number;
+  filters: ResolvedCsvFilter[];
+}
+
+function tryParseCsvHeader(line: string, delimiter: string, parser: CsvBlocklistParser): ParsedCsvHeader | null {
+  const candidate = unwrapCsvHeaderLine(line);
+  if (!candidate) {
+    return null;
+  }
+
+  const cells = parseCsvLine(candidate, delimiter);
+  try {
+    return {
+      columnIndex: resolveCsvColumnIndex(cells, parser.column),
+      filters: resolveCsvFilters(parser.filters, cells),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function unwrapCsvHeaderLine(line: string): string | null {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith('#')) {
+    return trimmed.replace(/^#+\s*/, '');
+  }
+
+  if (trimmed.startsWith('//')) {
+    return trimmed.replace(/^\/\/+\s*/, '');
+  }
+
+  return trimmed;
+}
+
+function resolveCsvFilters(filters?: CsvBlocklistRecordFilter[], header?: string[]): ResolvedCsvFilter[] {
+  if (!filters || filters.length === 0) {
+    return [];
+  }
+
+  return filters.map((filter) => ({
+    columnIndex: resolveCsvColumnIndex(header ?? [], filter.column),
+    equals: filter.equals,
+    oneOf: filter.oneOf,
+    min: filter.min,
+  }));
+}
+
+function matchesCsvFilters(cells: string[], filters: ResolvedCsvFilter[]): boolean {
+  if (filters.length === 0) {
+    return true;
+  }
+
+  return filters.every((filter) => {
+    if (filter.columnIndex < 0 || filter.columnIndex >= cells.length) {
+      return false;
+    }
+    return matchesFilterValue(cells[filter.columnIndex], filter);
+  });
+}
+
+function matchesFilterValue(
+  value: unknown,
+  filter: Pick<JsonBlocklistRecordFilter, 'equals' | 'oneOf' | 'min'>,
+): boolean {
+  const comparable = normalizeFilterComparable(value);
+  if (comparable === null) {
+    return false;
+  }
+
+  if (filter.equals !== undefined && !filterValuesEqual(comparable, filter.equals)) {
+    return false;
+  }
+
+  if (filter.oneOf && filter.oneOf.length > 0 && !filter.oneOf.some((candidate) => filterValuesEqual(comparable, candidate))) {
+    return false;
+  }
+
+  if (filter.min !== undefined) {
+    const numericValue = typeof comparable === 'number' ? comparable : Number(comparable);
+    if (!Number.isFinite(numericValue) || numericValue < filter.min) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function normalizeFilterComparable(value: unknown): string | number | boolean | null {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+
+  return null;
+}
+
+function filterValuesEqual(left: string | number | boolean, right: string | number | boolean): boolean {
+  return String(left) === String(right);
 }
 
 function resolveJsonRecords(value: unknown, recordPath?: string): unknown[] {

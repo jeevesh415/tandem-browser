@@ -9,7 +9,7 @@ vi.mock('../../utils/paths', () => ({
   tandemDir: (...segments: string[]) => path.join(mockedPaths.root, ...segments),
 }));
 
-import { BlocklistUpdater, BLOCKLIST_SOURCES } from '../blocklists/updater';
+import { BlocklistUpdater, BLOCKLIST_SOURCES, parseBlocklistContent } from '../blocklists/updater';
 import { BLOCKLIST_REFRESH_INTERVALS_MS, type BlocklistSourceDefinition, type BlocklistSourceFreshness } from '../types';
 
 interface StoredSourceFreshness {
@@ -92,6 +92,14 @@ function createDbStub() {
 
 let db = createDbStub();
 
+function getSource(name: string): BlocklistSourceDefinition {
+  const source = BLOCKLIST_SOURCES.find((candidate) => candidate.name === name);
+  if (!source) {
+    throw new Error(`Unknown blocklist source in test: ${name}`);
+  }
+  return source;
+}
+
 describe('BlocklistUpdater tiered refresh', () => {
   afterEach(() => {
     if (mockedPaths.root && fs.existsSync(mockedPaths.root)) {
@@ -108,19 +116,34 @@ describe('BlocklistUpdater tiered refresh', () => {
     const shield = { reload: vi.fn() };
     const updater = new BlocklistUpdater(db as never, shield as never);
     const now = Date.parse('2026-03-07T12:00:00.000Z');
+    const urlhausSource = getSource('urlhaus');
+    const phishingSource = getSource('phishing');
+    const openPhishSource = getSource('openphish');
+    const threatfoxDomainsSource = getSource('threatfox-domains');
+    const threatfoxUrlsSource = getSource('threatfox-urls');
+    const stevenblackSource = getSource('stevenblack');
 
-    db.setBlocklistSourceFreshness('phishing', {
+    db.setBlocklistSourceFreshness(phishingSource.name, {
       lastUpdated: new Date(now - 60_000).toISOString(),
     });
-    db.setBlocklistSourceFreshness('stevenblack', {
+    db.setBlocklistSourceFreshness(openPhishSource.name, {
+      lastUpdated: new Date(now - 60_000).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(threatfoxDomainsSource.name, {
+      lastUpdated: new Date(now - 60_000).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(threatfoxUrlsSource.name, {
+      lastUpdated: new Date(now - 60_000).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(stevenblackSource.name, {
       lastUpdated: new Date(now - (8 * 24 * 60 * 60 * 1000)).toISOString(),
     });
 
     vi.spyOn(updater as any, 'download').mockImplementation(async (url: string) => {
-      if (url === BLOCKLIST_SOURCES[0].url) {
+      if (url === urlhausSource.url) {
         return 'http://malware.example/path\n';
       }
-      if (url === BLOCKLIST_SOURCES[2].url) {
+      if (url === stevenblackSource.url) {
         throw new Error('weekly feed down');
       }
       throw new Error(`unexpected download: ${url}`);
@@ -138,7 +161,7 @@ describe('BlocklistUpdater tiered refresh', () => {
         error: null,
       },
       {
-        name: 'stevenblack',
+        name: stevenblackSource.name,
         refreshTier: 'weekly',
         domains: 0,
         added: 0,
@@ -146,26 +169,26 @@ describe('BlocklistUpdater tiered refresh', () => {
         error: 'weekly feed down',
       },
     ]);
-    expect(result.errors).toEqual(['stevenblack: weekly feed down']);
+    expect(result.errors).toEqual([`${stevenblackSource.name}: weekly feed down`]);
     expect(shield.reload).toHaveBeenCalledTimes(1);
 
     expect(db.isDomainBlocked('malware.example')).toEqual({
       blocked: true,
-      source: 'urlhaus',
+      source: urlhausSource.name,
       category: 'malware',
     });
 
-    const hourlyStatus = db.getBlocklistSourceFreshness(BLOCKLIST_SOURCES[0], now);
+    const hourlyStatus = db.getBlocklistSourceFreshness(urlhausSource, now);
     expect(hourlyStatus.lastUpdated).not.toBeNull();
     expect(hourlyStatus.lastError).toBeNull();
     expect(hourlyStatus.consecutiveFailures).toBe(0);
 
-    const weeklyStatus = db.getBlocklistSourceFreshness(BLOCKLIST_SOURCES[2], now);
+    const weeklyStatus = db.getBlocklistSourceFreshness(stevenblackSource, now);
     expect(weeklyStatus.lastUpdated).toBe(new Date(now - (8 * 24 * 60 * 60 * 1000)).toISOString());
     expect(weeklyStatus.lastError).toBe('weekly feed down');
     expect(weeklyStatus.consecutiveFailures).toBe(1);
 
-    const dailyStatus = db.getBlocklistSourceFreshness(BLOCKLIST_SOURCES[1], now);
+    const dailyStatus = db.getBlocklistSourceFreshness(phishingSource, now);
     expect(dailyStatus.lastAttempted).toBeNull();
     expect(db.getMetadataValue('lastUpdated')).not.toBeNull();
   });
@@ -176,12 +199,27 @@ describe('BlocklistUpdater tiered refresh', () => {
     const shield = { reload: vi.fn() };
     const updater = new BlocklistUpdater(db as never, shield as never);
     const now = Date.parse('2026-03-07T12:00:00.000Z');
+    const urlhausSource = getSource('urlhaus');
+    const phishingSource = getSource('phishing');
+    const openPhishSource = getSource('openphish');
+    const threatfoxDomainsSource = getSource('threatfox-domains');
+    const threatfoxUrlsSource = getSource('threatfox-urls');
+    const stevenblackSource = getSource('stevenblack');
 
-    db.setBlocklistSourceFreshness('urlhaus', {
+    db.setBlocklistSourceFreshness(urlhausSource.name, {
       lastUpdated: new Date(now - (30 * 60 * 1000)).toISOString(),
     });
-    db.setBlocklistSourceFreshness('phishing', {
+    db.setBlocklistSourceFreshness(phishingSource.name, {
       lastUpdated: new Date(now - (2 * 24 * 60 * 60 * 1000)).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(openPhishSource.name, {
+      lastUpdated: new Date(now - (6 * 60 * 60 * 1000)).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(threatfoxDomainsSource.name, {
+      lastUpdated: new Date(now - (2 * 60 * 60 * 1000)).toISOString(),
+    });
+    db.setBlocklistSourceFreshness(threatfoxUrlsSource.name, {
+      lastUpdated: new Date(now - (30 * 60 * 1000)).toISOString(),
     });
 
     const statuses = updater.getSourceStatuses(now);
@@ -190,9 +228,30 @@ describe('BlocklistUpdater tiered refresh', () => {
       refreshTier: status.refreshTier,
       due: status.due,
     }))).toEqual([
-      { name: 'urlhaus', refreshTier: 'hourly', due: false },
-      { name: 'phishing', refreshTier: 'daily', due: true },
-      { name: 'stevenblack', refreshTier: 'weekly', due: true },
+      { name: urlhausSource.name, refreshTier: 'hourly', due: false },
+      { name: phishingSource.name, refreshTier: 'daily', due: true },
+      { name: openPhishSource.name, refreshTier: 'daily', due: false },
+      { name: threatfoxDomainsSource.name, refreshTier: 'hourly', due: true },
+      { name: threatfoxUrlsSource.name, refreshTier: 'hourly', due: false },
+      { name: stevenblackSource.name, refreshTier: 'weekly', due: true },
     ]);
+  });
+
+  it('filters ThreatFox CSV feeds down to high-confidence domain and URL IOCs', () => {
+    const feed = [
+      '################################################################',
+      '# ThreatFox IOCs: recent additions - CSV format                #',
+      '################################################################',
+      '# "first_seen_utc","ioc_id","ioc_value","ioc_type","threat_type","fk_malware","malware_alias","malware_printable","last_seen_utc","confidence_level","is_compromised","reference","tags","anonymous","reporter"',
+      '"2026-03-07 13:29:53", "1760922", "fernsecur.windfield.in.net", "domain", "payload_delivery", "js.clearfake", "None", "ClearFake", "2026-03-07 13:30:20", "100", "False", "None", "ClearFake", "0", "threatcat_ch"',
+      '"2026-03-07 13:29:12", "1760921", "https://evil.example/payload", "url", "payload_delivery", "win.strelastealer", "None", "StrelaStealer", "", "90", "True", "None", "StrelaStealer", "0", "threatcat_ch"',
+      '"2026-03-07 13:19:55", "1760920", "low-confidence.example", "domain", "payload_delivery", "js.clearfake", "None", "ClearFake", "2026-03-07 13:20:17", "50", "False", "None", "ClearFake", "0", "threatcat_ch"',
+    ].join('\n');
+
+    const domains = parseBlocklistContent(getSource('threatfox-domains'), feed);
+    const urls = parseBlocklistContent(getSource('threatfox-urls'), feed);
+
+    expect(domains.domains).toEqual(['fernsecur.windfield.in.net']);
+    expect(urls.domains).toEqual(['evil.example']);
   });
 });

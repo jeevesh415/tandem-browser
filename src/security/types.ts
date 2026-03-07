@@ -47,6 +47,10 @@ export interface BlocklistEntry {
 
 export type BlocklistValueType = 'domain' | 'url';
 export type BlocklistRefreshTier = 'hourly' | 'daily' | 'weekly';
+export type BlocklistCategory = 'phishing' | 'malware' | 'tracker';
+export type BlocklistSourceSignal = 'high' | 'curated' | 'legacy';
+export type BlocklistSourceScope = 'core_security' | 'legacy_carryover';
+export type BlocklistFilterValue = string | number | boolean;
 
 export const BLOCKLIST_REFRESH_INTERVALS_MS: Record<BlocklistRefreshTier, number> = {
   hourly: 3_600_000,
@@ -71,6 +75,7 @@ export interface JsonBlocklistParser {
   recordPath?: string;
   fieldPaths?: string[];
   valueType?: BlocklistValueType;
+  filters?: JsonBlocklistRecordFilter[];
 }
 
 export interface CsvBlocklistParser {
@@ -79,6 +84,21 @@ export interface CsvBlocklistParser {
   delimiter?: string;
   hasHeader?: boolean;
   valueType?: BlocklistValueType;
+  filters?: CsvBlocklistRecordFilter[];
+}
+
+export interface JsonBlocklistRecordFilter {
+  fieldPath: string;
+  equals?: BlocklistFilterValue;
+  oneOf?: BlocklistFilterValue[];
+  min?: number;
+}
+
+export interface CsvBlocklistRecordFilter {
+  column: string | number;
+  equals?: BlocklistFilterValue;
+  oneOf?: BlocklistFilterValue[];
+  min?: number;
 }
 
 export type BlocklistParserConfig =
@@ -92,9 +112,11 @@ export interface BlocklistSourceDefinition {
   name: string;
   url: string;
   parser: BlocklistParserConfig;
-  category: string;
+  category: BlocklistCategory;
   cacheFileName: string;
   refreshTier: BlocklistRefreshTier;
+  signal: BlocklistSourceSignal;
+  scope: BlocklistSourceScope;
 }
 
 export interface ParsedBlocklistSource {

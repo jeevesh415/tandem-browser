@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.86] - 2026-03-07
+
+### Changed
+- **Curated security feed expansion** (`src/security/blocklists/updater.ts`, `src/security/types.ts`) — expanded the browser-core blocklist manifest with OpenPhish plus high-confidence ThreatFox domain and URL feeds, added explicit source signal/scope metadata, and kept new sources limited to phishing and malware intelligence instead of ad/tracker mega-lists
+- **Structured feed filtering** (`src/security/blocklists/updater.ts`) — taught the shared CSV/JSON parser layer to filter records by typed field criteria and to recognize comment-prefixed CSV header rows so mixed IOC exports can stay domain/url-first without feed-specific code paths
+- **Phase 4 regression coverage** (`src/security/tests/blocklist-updater.test.ts`) — added focused tests for the expanded source cadence map and ThreatFox CSV filtering behavior
+
+### Technical Details
+- `class BlocklistUpdater` now advertises six runtime blocklist sources through the shared manifest: URLhaus, Phishing Database, OpenPhish, ThreatFox domains, ThreatFox URLs, and the existing StevenBlack legacy carryover source
+- ThreatFox entries are constrained to high-confidence domain/url IOCs before they ever reach `NetworkShield`, which keeps the current domain-first lookup model intact and leaves CIDR/range blocking out of scope
+- Verification: `npm run compile` passed; `npx vitest run src/security/tests/blocklist-updater.test.ts` passed; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`; `npm start` plus `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/security/status` succeeded and returned the expanded source set
+
 ## [v0.44.85] - 2026-03-07
 
 ### Changed
