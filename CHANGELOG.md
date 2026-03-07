@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.58] - 2026-03-07
+
+- docs(security): add phased security hardening roadmap
+
+Added a dedicated security hardening planning track with one master design
+document plus six implementation phase documents covering API auth, Gatekeeper
+enforcement, per-tab monitoring, outbound containment, extension trust, and
+automatic containment actions.
+
+The goal of the new docs set is to let future sessions execute the security work
+in bounded steps without relying on chat context or losing sight of the overall
+hardening objective.
+
 ## [v0.44.57] - 2026-03-07
 
 - docs(repo): translate AGENTS guide to English
