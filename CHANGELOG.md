@@ -2,6 +2,24 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.73] - 2026-03-07
+
+- fix: remove fs access from sandboxed preload
+
+What was built/changed:
+- Modified files: src/preload.ts
+- Removed direct fs-based API token reads from the Electron preload
+- Kept the preload bridge minimal and Electron-safe under sandbox mode
+
+Why this approach:
+- The preload was crashing on startup with 'module not found: fs'
+- That removed window.tandem entirely, which broke tabs, sidebar rendering, and internal shell controls
+- Local API auth now lives in the main-process session hook and token IPC, not in the preload filesystem path
+
+Tested:
+- npm run compile: zero errors
+- npm start: preload no longer fails to load, shell starts without the preload fs crash
+
 ## [v0.44.72] - 2026-03-07
 
 - fix: normalize shell API auth header override
