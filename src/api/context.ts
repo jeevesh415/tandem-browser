@@ -12,10 +12,10 @@ export async function getActiveWC(ctx: RouteContext): Promise<Electron.WebConten
 }
 
 /** Run JS in the active tab's webview */
-export async function execInActiveTab(ctx: RouteContext, code: string): Promise<any> {
+export async function execInActiveTab<T = unknown>(ctx: RouteContext, code: string): Promise<T> {
   const wc = await getActiveWC(ctx);
   if (!wc) throw new Error('No active tab');
-  return wc.executeJavaScript(code);
+  return wc.executeJavaScript(code) as Promise<T>;
 }
 
 /** Resolve X-Session header to partition string */
@@ -40,8 +40,8 @@ export async function getSessionWC(ctx: RouteContext, req: Request): Promise<Ele
 }
 
 /** Run JS in a session's tab (via X-Session header) */
-export async function execInSessionTab(ctx: RouteContext, req: Request, code: string): Promise<any> {
+export async function execInSessionTab<T = unknown>(ctx: RouteContext, req: Request, code: string): Promise<T> {
   const wc = await getSessionWC(ctx, req);
   if (!wc) throw new Error('No active tab for this session');
-  return wc.executeJavaScript(code);
+  return wc.executeJavaScript(code) as Promise<T>;
 }
