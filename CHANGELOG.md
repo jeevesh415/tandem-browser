@@ -9,6 +9,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ## [Unreleased] - 2026-03-08
 
 ### Changed
+- **Extension update version comparison** (`src/extensions/update-checker.ts`, `src/extensions/tests/extensions.test.ts`) — replaced the fragile dot-split numeric comparison with segment-aware parsing that treats `1.2` and `1.2.0` as equal, compares multi-digit segments numerically, and handles prerelease suffixes such as `-beta` and `-rc.1` consistently during update checks
 - **Verification baseline** (`package.json`, `eslint.config.mjs`, `tsconfig.eslint.json`, `.github/workflows/verify.yml`) — restored ESLint coverage for the test tree, added a single `npm run verify` command, and wired the same verification command into GitHub Actions so compile, lint, and test can run from one entry point locally and in CI
 - **Planning source cleanup** (`TODO.md`, `docs/internal/README.md`, `docs/internal/ROADMAP.md`, `docs/internal/STATUS.md`) — made `TODO.md` the single active engineering backlog and downgraded the older internal roadmap/status files into explicit historical snapshots to reduce planning drift
 - **Documentation consistency** (`PROJECT.md`, `README.md`, `CONTRIBUTING.md`) — synchronized the current version and replaced machine-local documentation links with repo-relative links that work on GitHub and in local clones

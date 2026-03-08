@@ -777,20 +777,88 @@ export class UpdateChecker {
 
   /**
    * Compare two version strings. Returns true if `newer` is greater than `current`.
-   * Splits on '.', compares numerically left to right.
+   * Handles uneven segment lengths plus prerelease suffixes such as
+   * `1.2`, `1.2.0`, `1.10.0`, and `1.2.3-beta.1`.
    */
   private isNewerVersion(newer: string, current: string): boolean {
-    const newerParts = newer.split('.').map(Number);
-    const currentParts = current.split('.').map(Number);
+    const newerParts = newer.split('.');
+    const currentParts = current.split('.');
     const maxLen = Math.max(newerParts.length, currentParts.length);
 
     for (let i = 0; i < maxLen; i++) {
-      const n = newerParts[i] ?? 0;
-      const c = currentParts[i] ?? 0;
-      if (n > c) return true;
-      if (n < c) return false;
+      const newerPart = this.parseVersionPart(newerParts[i]);
+      const currentPart = this.parseVersionPart(currentParts[i]);
+
+      if (newerPart.numeric > currentPart.numeric) return true;
+      if (newerPart.numeric < currentPart.numeric) return false;
+
+      const suffixComparison = this.compareVersionSuffix(newerPart.suffix, currentPart.suffix);
+      if (suffixComparison > 0) return true;
+      if (suffixComparison < 0) return false;
     }
     return false; // equal
+  }
+
+  private parseVersionPart(part?: string): { numeric: number; suffix: string } {
+    if (!part) {
+      return { numeric: 0, suffix: '' };
+    }
+
+    const trimmed = part.trim();
+    const match = trimmed.match(/^(\d+)(.*)$/);
+    if (!match) {
+      return { numeric: 0, suffix: trimmed };
+    }
+
+    return {
+      numeric: Number.parseInt(match[1], 10),
+      suffix: match[2] ?? '',
+    };
+  }
+
+  private compareVersionSuffix(newerSuffix: string, currentSuffix: string): number {
+    const normalizedNewer = this.normalizeVersionSuffix(newerSuffix);
+    const normalizedCurrent = this.normalizeVersionSuffix(currentSuffix);
+
+    if (!normalizedNewer && !normalizedCurrent) return 0;
+    if (!normalizedNewer) return 1;
+    if (!normalizedCurrent) return -1;
+
+    const newerTokens = normalizedNewer.split(/[._-]+/).filter(Boolean);
+    const currentTokens = normalizedCurrent.split(/[._-]+/).filter(Boolean);
+    const maxLen = Math.max(newerTokens.length, currentTokens.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      const newerToken = newerTokens[i];
+      const currentToken = currentTokens[i];
+
+      if (newerToken === undefined) return -1;
+      if (currentToken === undefined) return 1;
+
+      const newerNumeric = /^\d+$/.test(newerToken);
+      const currentNumeric = /^\d+$/.test(currentToken);
+
+      if (newerNumeric && currentNumeric) {
+        const newerValue = Number.parseInt(newerToken, 10);
+        const currentValue = Number.parseInt(currentToken, 10);
+        if (newerValue > currentValue) return 1;
+        if (newerValue < currentValue) return -1;
+        continue;
+      }
+
+      if (newerNumeric !== currentNumeric) {
+        return newerNumeric ? -1 : 1;
+      }
+
+      if (newerToken > currentToken) return 1;
+      if (newerToken < currentToken) return -1;
+    }
+
+    return 0;
+  }
+
+  private normalizeVersionSuffix(suffix: string): string {
+    return suffix.trim().replace(/^[^A-Za-z0-9]+/, '');
   }
 
   // ─── HTTP Helpers ────────────────────────────────────────────────────────

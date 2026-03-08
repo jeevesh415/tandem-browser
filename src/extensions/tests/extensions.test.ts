@@ -2,6 +2,7 @@ import { describe, it, expect, afterAll, beforeEach, afterEach } from 'vitest';
 import { CrxDownloader } from '../crx-downloader';
 import { ChromeExtensionImporter } from '../chrome-importer';
 import { GALLERY_DEFAULTS } from '../gallery-defaults';
+import { UpdateChecker } from '../update-checker';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
@@ -53,6 +54,35 @@ function buildCrx3(zipPayload: Buffer): Buffer {
 
   return Buffer.concat([magic, version, headerSize, fakeHeader, zipPayload]);
 }
+
+// ─── UpdateChecker Version Comparison Tests ─────────────────────────────────
+
+describe('UpdateChecker version comparison', () => {
+  const checker = Object.create(UpdateChecker.prototype) as UpdateChecker & {
+    isNewerVersion: (newer: string, current: string) => boolean;
+  };
+
+  it('treats 1.2 and 1.2.0 as equal', () => {
+    expect(checker.isNewerVersion('1.2', '1.2.0')).toBe(false);
+    expect(checker.isNewerVersion('1.2.0', '1.2')).toBe(false);
+  });
+
+  it('compares multi-digit segments numerically instead of lexically', () => {
+    expect(checker.isNewerVersion('1.10.0', '1.9.9')).toBe(true);
+    expect(checker.isNewerVersion('1.9.9', '1.10.0')).toBe(false);
+  });
+
+  it('treats prerelease suffixes as older than the final release', () => {
+    expect(checker.isNewerVersion('1.2.3', '1.2.3-beta')).toBe(true);
+    expect(checker.isNewerVersion('1.2.3-beta', '1.2.3')).toBe(false);
+  });
+
+  it('compares prerelease suffix tokens consistently', () => {
+    expect(checker.isNewerVersion('1.2.3-beta.2', '1.2.3-beta.1')).toBe(true);
+    expect(checker.isNewerVersion('1.2.3-rc.1', '1.2.3-beta.9')).toBe(true);
+    expect(checker.isNewerVersion('1.2.3-alpha', '1.2.3-beta')).toBe(false);
+  });
+});
 
 // ─── Extension ID Extraction Tests ────────────────────────────────────────────
 
