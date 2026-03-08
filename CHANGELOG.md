@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.46.0] - 2026-03-08
+
+- feat: notify when wingman replies with panel closed
+
 ## [v0.45.3] - 2026-03-08
 
 - fix: harden extension update version comparison
