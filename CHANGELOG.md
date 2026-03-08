@@ -2,6 +2,22 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.45.1] - 2026-03-08
+
+- fix: english consistency cleanup pass 2 (ui-copy)
+
+What was built/changed:
+- Modified files: CHANGELOG.md, shell/*.html, shell/js/main.js, shell/js/shortcuts.js, shell/css/main.css, src/api/routes/browser.ts, src/api/routes/sessions.ts, src/api/routes/sidebar.ts, src/api/tests/routes/browser.test.ts, src/bridge/context-bridge.ts, src/config/manager.ts, src/downloads/manager.ts, src/headless/manager.ts, src/mcp/server.ts, src/sidebar/manager.ts, src/watch/watcher.ts
+- Translated remaining first-party Dutch UI strings, placeholders, alerts, comments, bookmark manager copy, ClaroNote states, and related test expectations
+- Left compatibility-sensitive identifiers and locale/config values unchanged where translation would risk regressions
+
+Why this approach:
+- Limits the pass to textual consistency changes and avoids renaming routes, persisted keys, IPC surfaces, CSS/DOM identifiers, or browser-fingerprint settings
+
+Tested:
+- npm run compile: passed
+- npx vitest run: fails with pre-existing unrelated failures in src/tabs/tests/tabs.test.ts, src/extensions/tests/action-polyfill.test.ts, src/api/tests/routes/agents.test.ts, src/api/tests/routes/browser.test.ts (unrelated GET /links case), and src/api/tests/routes/security.test.ts
+
 ## [v0.45.0] - 2026-03-08
 
 - feat: add session fetch relay and security containment design
