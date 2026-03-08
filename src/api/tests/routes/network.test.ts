@@ -113,6 +113,42 @@ describe('Network Routes', () => {
     });
   });
 
+  // ─── GET /network/har ─────────────────────────────
+
+  describe('GET /network/har', () => {
+    it('returns HAR export with default limit', async () => {
+      const fakeHar = { log: { version: '1.2', creator: { name: 'Tandem Browser', version: '0.49.0' }, pages: [], entries: [] } };
+      vi.mocked(ctx.networkInspector.toHar).mockReturnValue(fakeHar as any);
+
+      const res = await request(app).get('/network/har');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(fakeHar);
+      expect(res.headers['content-type']).toContain('application/json');
+      expect(res.headers['content-disposition']).toContain('.har');
+      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith(100, undefined);
+    });
+
+    it('parses limit and domain query params for har export', async () => {
+      vi.mocked(ctx.networkInspector.toHar).mockReturnValue({ log: { version: '1.2', creator: { name: 'Tandem Browser', version: '0.49.0' }, pages: [], entries: [] } } as any);
+
+      const res = await request(app).get('/network/har?limit=25&domain=example.com');
+
+      expect(res.status).toBe(200);
+      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith(25, 'example.com');
+      expect(res.headers['content-disposition']).toContain('example.com');
+    });
+
+    it('returns 500 when har export throws', async () => {
+      vi.mocked(ctx.networkInspector.toHar).mockImplementation(() => { throw new Error('har error'); });
+
+      const res = await request(app).get('/network/har');
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('har error');
+    });
+  });
+
   // ─── DELETE /network/clear ─────────────────────────
 
   describe('DELETE /network/clear', () => {

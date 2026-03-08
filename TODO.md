@@ -29,7 +29,7 @@ Last updated: March 8, 2026
 - [ ] Google Photos upload support for screenshots; the settings UI exists, but the upload path does not
 - [x] Configurable quick links on the new tab page; links are no longer hardcoded
 - [ ] Configurable diff modes for watches beyond SHA-256 hash comparison
-- [ ] HAR export for the network inspector
+- [x] HAR export for the network inspector
 - [ ] Design and build the `Personal News` experience; the sidebar currently has a placeholder slot, but the actual panel and feed model are not implemented yet
 - [ ] Full browsing session recording and replay; current code has behavior replay and audio recording, but not an end-to-end session recorder
 

@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { STATUS_CODES } from 'http';
 import type { RequestDispatcher } from './dispatcher';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
@@ -16,6 +17,9 @@ export interface NetworkRequest {
   timestamp: number;
   initiator: string;
   domain: string;
+  durationMs: number;
+  requestHeaders: Record<string, string>;
+  responseHeaders: Record<string, string[]>;
 }
 
 interface DomainData {
@@ -23,6 +27,70 @@ interface DomainData {
   requests: number;
   apis: string[];
   lastSeen: number;
+}
+
+interface HarHeader {
+  name: string;
+  value: string;
+}
+
+interface HarEntry {
+  startedDateTime: string;
+  time: number;
+  request: {
+    method: string;
+    url: string;
+    httpVersion: string;
+    cookies: unknown[];
+    headers: HarHeader[];
+    queryString: Array<{ name: string; value: string }>;
+    headersSize: number;
+    bodySize: number;
+  };
+  response: {
+    status: number;
+    statusText: string;
+    httpVersion: string;
+    cookies: unknown[];
+    headers: HarHeader[];
+    content: {
+      size: number;
+      mimeType: string;
+    };
+    redirectURL: string;
+    headersSize: number;
+    bodySize: number;
+  };
+  cache: Record<string, never>;
+  timings: {
+    blocked: number;
+    dns: number;
+    connect: number;
+    send: number;
+    wait: number;
+    receive: number;
+    ssl: number;
+  };
+}
+
+export interface HarExport {
+  log: {
+    version: '1.2';
+    creator: {
+      name: 'Tandem Browser';
+      version: string;
+    };
+    pages: Array<{
+      startedDateTime: string;
+      id: string;
+      title: string;
+      pageTimings: {
+        onContentLoad: number;
+        onLoad: number;
+      };
+    }>;
+    entries: HarEntry[];
+  };
 }
 
 /**
@@ -65,9 +133,36 @@ export class NetworkInspector {
             status: 0,
             contentType: '',
             size: 0,
+            durationMs: 0,
+            requestHeaders: {},
+            responseHeaders: {},
           });
         }
         return null;
+      }
+    });
+
+    dispatcher.registerBeforeSendHeaders({
+      name: 'NetworkInspector',
+      priority: 100,
+      handler: (details, headers) => {
+        const pending = this.pendingRequests.get(String(details.id ?? ''));
+        if (pending) {
+          pending.requestHeaders = { ...headers };
+        }
+        return headers;
+      }
+    });
+
+    dispatcher.registerHeadersReceived({
+      name: 'NetworkInspector',
+      priority: 100,
+      handler: (details, responseHeaders) => {
+        const pending = this.pendingRequests.get(String(details.id ?? ''));
+        if (pending) {
+          pending.responseHeaders = { ...responseHeaders };
+        }
+        return responseHeaders;
       }
     });
 
@@ -93,6 +188,9 @@ export class NetworkInspector {
             timestamp: pending.timestamp!,
             initiator: pending.initiator!,
             domain: pending.domain!,
+            durationMs: Math.max(0, Date.now() - pending.timestamp!),
+            requestHeaders: pending.requestHeaders || {},
+            responseHeaders: pending.responseHeaders || details.responseHeaders || {},
           };
 
           this.addRequest(req);
@@ -235,6 +333,32 @@ export class NetworkInspector {
     })).sort((a, b) => b.requests - a.requests);
   }
 
+  toHar(limit: number = 100, domain?: string): HarExport {
+    const entries = this.getLog(limit, domain).map((request) => this.toHarEntry(request));
+    const startedDateTime = entries[0]?.startedDateTime ?? new Date().toISOString();
+    const title = domain ? `Network log for ${domain}` : 'Tandem network log';
+
+    return {
+      log: {
+        version: '1.2',
+        creator: {
+          name: 'Tandem Browser',
+          version: process.env.npm_package_version || '0.0.0',
+        },
+        pages: [{
+          startedDateTime,
+          id: 'page_1',
+          title,
+          pageTimings: {
+            onContentLoad: -1,
+            onLoad: -1,
+          },
+        }],
+        entries,
+      },
+    };
+  }
+
   /** Clear all logged data */
   clear(): void {
     this.requests = [];
@@ -247,5 +371,59 @@ export class NetworkInspector {
     for (const domain of this.domainStats.keys()) {
       this.flushDomain(domain);
     }
+  }
+
+  private toHarEntry(request: NetworkRequest): HarEntry {
+    const parsedUrl = new URL(request.url);
+    const queryString = Array.from(parsedUrl.searchParams.entries()).map(([name, value]) => ({ name, value }));
+
+    return {
+      startedDateTime: new Date(request.timestamp).toISOString(),
+      time: request.durationMs,
+      request: {
+        method: request.method,
+        url: request.url,
+        httpVersion: 'HTTP/1.1',
+        cookies: [],
+        headers: this.flattenRequestHeaders(request.requestHeaders),
+        queryString,
+        headersSize: -1,
+        bodySize: -1,
+      },
+      response: {
+        status: request.status,
+        statusText: STATUS_CODES[request.status] || '',
+        httpVersion: 'HTTP/1.1',
+        cookies: [],
+        headers: this.flattenResponseHeaders(request.responseHeaders),
+        content: {
+          size: request.size,
+          mimeType: request.contentType || 'application/octet-stream',
+        },
+        redirectURL: '',
+        headersSize: -1,
+        bodySize: request.size || -1,
+      },
+      cache: {},
+      timings: {
+        blocked: 0,
+        dns: -1,
+        connect: -1,
+        send: 0,
+        wait: request.durationMs,
+        receive: 0,
+        ssl: -1,
+      },
+    };
+  }
+
+  private flattenRequestHeaders(headers: Record<string, string>): HarHeader[] {
+    return Object.entries(headers).map(([name, value]) => ({ name, value }));
+  }
+
+  private flattenResponseHeaders(headers: Record<string, string[]>): HarHeader[] {
+    return Object.entries(headers).flatMap(([name, values]) =>
+      values.map((value) => ({ name, value }))
+    );
   }
 }

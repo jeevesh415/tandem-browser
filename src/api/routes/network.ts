@@ -36,6 +36,21 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
+  router.get('/network/har', (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const domain = req.query.domain as string | undefined;
+      const har = ctx.networkInspector.toHar(limit, domain);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const suffix = domain ? `-${domain.replace(/[^a-zA-Z0-9.-]/g, '_')}` : '';
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="tandem-network${suffix}-${stamp}.har"`);
+      res.json(har);
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   router.delete('/network/clear', (_req: Request, res: Response) => {
     try {
       ctx.networkInspector.clear();

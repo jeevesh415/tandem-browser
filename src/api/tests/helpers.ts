@@ -179,6 +179,7 @@ export function createMockContext(): RouteContext {
       getLog: vi.fn().mockReturnValue([]),
       getApis: vi.fn().mockReturnValue([]),
       getDomains: vi.fn().mockReturnValue([]),
+      toHar: vi.fn().mockReturnValue({ log: { version: '1.2', creator: { name: 'Tandem Browser', version: '0.0.0' }, pages: [], entries: [] } }),
       clear: vi.fn(),
     } as any,
 
