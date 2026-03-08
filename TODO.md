@@ -25,7 +25,7 @@ Last updated: March 8, 2026
 ### Product Features
 
 - [ ] `WebSocket /watch/live` for live watch updates
-- [ ] Show a notification when the Wingman panel is closed and Wingman replies
+- [x] Show a notification when the Wingman panel is closed and Wingman replies
 - [ ] Google Photos upload support for screenshots; the settings UI exists, but the upload path does not
 - [ ] Configurable quick links on the new tab page; links are still hardcoded
 - [ ] Configurable diff modes for watches beyond SHA-256 hash comparison

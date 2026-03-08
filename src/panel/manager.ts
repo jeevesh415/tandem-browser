@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import type { ConfigManager } from '../config/manager';
+import { wingmanAlert } from '../notifications/alert';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
@@ -141,6 +142,8 @@ export class PanelManager {
       this.setWingmanTyping(false);
     }
 
+    this.maybeNotifyForIncomingReply(msg);
+
     // Fire webhook for robin messages (async, non-blocking)
     this.fireWebhook(msg).catch(e => log.warn('fireWebhook failed:', e instanceof Error ? e.message : e));
 
@@ -191,6 +194,31 @@ export class PanelManager {
   /** Get messages since a given ID (for polling) */
   getChatMessagesSince(sinceId: number): ChatMessage[] {
     return this.chatMessages.filter(m => m.id > sinceId);
+  }
+
+  private maybeNotifyForIncomingReply(msg: ChatMessage): void {
+    if (this.panelOpen) return;
+    if (msg.from === 'robin') return;
+
+    const sender = this.getReplySenderLabel(msg.from);
+    const body = this.buildReplyNotificationBody(msg);
+    wingmanAlert(`${sender} replied`, body);
+  }
+
+  private getReplySenderLabel(from: ChatMessage['from']): string {
+    if (from === 'claude') return 'Claude';
+    return 'Wingman';
+  }
+
+  private buildReplyNotificationBody(msg: ChatMessage): string {
+    const trimmed = msg.text.trim();
+    if (trimmed.length > 0) {
+      return trimmed.length > 140 ? `${trimmed.slice(0, 137)}...` : trimmed;
+    }
+    if (msg.image) {
+      return 'Sent an image.';
+    }
+    return 'Sent a new message.';
   }
 
   /** Set Wingman typing indicator */
