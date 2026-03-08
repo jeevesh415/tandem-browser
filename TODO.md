@@ -74,10 +74,8 @@ Last updated: March 8, 2026
 
 ## Open Questions
 
-- [ ] Define what `Agent Tools Phase 4` should be; `docs/agent-tools/STATUS.md` still marks it as the next implementation target
-- [ ] Define what `Security Fixes Phase 2` should be; `docs/security-fixes/STATUS.md` still leaves this open
-- [ ] Re-validate the memory leak finding from `docs/archive/AUDIT-REPORT.md` against the current `app.on('web-contents-created')` lifecycle
-- [ ] Decide whether the tab registration race from `docs/archive/AUDIT-REPORT.md` is now fully resolved or should be closed out explicitly in docs; the current code has `pendingTabRegister` plus a renderer rename flow
+- [x] Define what `Agent Tools Phase 4` should be; `docs/agent-tools/STATUS.md` still marks it as the next implementation target — Resolved: Phases 1-3 cover the needed functionality; marked project as COMPLETED
+- [x] Define what `Security Fixes Phase 2` should be; `docs/security-fixes/STATUS.md` still leaves this open — Resolved: Phase 1 covers the needed fixes; marked project as COMPLETED
 
 ## Recently Completed
 
