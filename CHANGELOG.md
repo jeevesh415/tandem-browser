@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.48.0] - 2026-03-08
+
+- feat: add quick link actions to context menus
+
 ## [v0.47.0] - 2026-03-08
 
 - feat: make new tab quick links configurable
