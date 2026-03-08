@@ -11,10 +11,12 @@ All notable changes to Tandem Browser will be documented in this file.
 - **Bootstrap composition split** (`src/main.ts`, `src/bootstrap/runtime.ts`, `src/bootstrap/tab-session.ts`, `src/bootstrap/types.ts`) — moved runtime manager composition, teardown logic, and initial-tab/session-restore orchestration out of `main.ts` so the Electron entrypoint is back to being an orchestration layer instead of a monolithic service factory
 - **Shell surface split** (`shell/index.html`, `shell/js/sidebar.js`, `shell/js/extensions.js`, `shell/js/modal.js`, `shell/css/main.css`, `shell/css/browser-shell.css`, `shell/css/sidebar.css`, `shell/css/wingman.css`, `shell/css/sidebar-panels.css`) — extracted the sidebar and modal inline scripts into dedicated renderer files, moved extension/about panel logic out of `main.js`, and turned the shell stylesheet into an import-based aggregator with surface-specific partials
 - **Wingman and ClaroNote split** (`shell/js/main.js`, `shell/js/wingman.js`, `shell/js/claronote.js`, `shell/index.html`) — moved the Wingman panel, chat, approvals, panel resizing, and ClaroNote renderer logic out of `main.js`, and replaced implicit file-scope coupling with an explicit renderer bridge on `window.__tandemRenderer`
+- **Browser tools split** (`shell/js/main.js`, `shell/js/browser-tools.js`, `shell/index.html`) — moved renderer-side bookmarks, history, find-in-page, voice input, settings navigation, and screenshot preview logic out of `main.js`, and kept the integration boundary explicit through `window.__tandemRenderer` instead of hidden file-scope access
 
 ### Technical Details
 - ESLint now uses a dedicated TypeScript project file so `src/**/tests/**/*.test.ts` no longer fails parser setup just because runtime `tsconfig.json` excludes test files from the build output
 - Verification now has one canonical entry point: `npm run verify`
+- The shell renderer split now leaves `shell/js/main.js` focused on tabs, drawing, and core orchestration, while `shell/js/browser-tools.js` owns the browser utility surface
 
 ## [v0.45.1] - 2026-03-08
 

@@ -44,8 +44,9 @@ Last updated: March 8, 2026
 - [x] Split `src/main.ts` bootstrap and teardown wiring into dedicated `src/bootstrap/` modules so manager composition stops growing in one file
 - [x] Extract the largest shell surfaces out of `shell/index.html` and `shell/css/main.css` so sidebar logic, modal helpers, and stylesheet sections stop living in single inline or monolithic files
 - [x] Split the Wingman and ClaroNote renderer surfaces out of `shell/js/main.js` into dedicated shell modules with explicit shared state instead of file-scope coupling
-- [ ] Continue splitting `shell/js/main.js` into smaller renderer modules by surface (`tabs`, `bookmarks`, `history/find`, shared renderer state)
-- [ ] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
+- [x] Extract browser tools (`bookmarks`, `history`, `find`, `voice`, `settings`, `screenshot`) out of `shell/js/main.js` into `shell/js/browser-tools.js` with the shared renderer bridge as the explicit integration surface
+- [ ] Continue splitting `shell/js/main.js` into smaller renderer modules by surface (`tabs`, shared renderer state, and remaining renderer-core orchestration)
+- [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later
 
