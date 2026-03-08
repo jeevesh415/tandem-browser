@@ -29,6 +29,28 @@ interface ToolbarState {
   order: string[];        // Extension display order
 }
 
+interface SessionExtensionAction {
+  default_popup?: string;
+  default_icon?: string | Record<string, string>;
+  default_title?: string;
+}
+
+interface LoadedSessionExtension {
+  id: string;
+  name?: string;
+  path: string;
+  manifest: Record<string, unknown>;
+}
+
+interface SessionExtensionRegistry {
+  getAllExtensions?: () => LoadedSessionExtension[];
+}
+
+type SessionWithExtensionSupport = Session & {
+  extensions?: SessionExtensionRegistry;
+  getAllExtensions?: () => LoadedSessionExtension[];
+};
+
 /**
  * ExtensionToolbar — Manages the extension toolbar state in the main process.
  *
@@ -58,13 +80,13 @@ export class ExtensionToolbar {
 
   /** Get all extensions that should appear in the toolbar */
   getToolbarExtensions(session: Session): ToolbarExtension[] {
-    const allExtensions = ((session as any).extensions?.getAllExtensions?.() || (session as any).getAllExtensions?.() || []);
+    const allExtensions = this.readLoadedExtensions(session);
     const results: ToolbarExtension[] = [];
 
     for (const ext of allExtensions) {
-      const manifest = ext.manifest as Record<string, unknown>;
+      const manifest = ext.manifest;
       const action = (manifest.action || manifest.browser_action || manifest.page_action) as
-        { default_popup?: string; default_icon?: string | Record<string, string>; default_title?: string } | undefined;
+        SessionExtensionAction | undefined;
 
       // Build popup URL
       let popupUrl: string | null = null;
@@ -121,7 +143,7 @@ export class ExtensionToolbar {
     _id: string,
     extPath: string,
     manifest: Record<string, unknown>,
-    action?: { default_popup?: string; default_icon?: string | Record<string, string>; default_title?: string } | null
+    action?: SessionExtensionAction | null
   ): string {
     // Try action icons first (best for toolbar), then manifest icons
     const iconSources = [
@@ -393,7 +415,7 @@ export class ExtensionToolbar {
   private pollBadgeUpdates(session: Session): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
 
-    const allExtensions = ((session as any).extensions?.getAllExtensions?.() || (session as any).getAllExtensions?.() || []);
+    const allExtensions = this.readLoadedExtensions(session);
 
     for (const ext of allExtensions) {
       // Ensure all extensions have a badge state entry.
@@ -451,10 +473,11 @@ export class ExtensionToolbar {
 
     // Listen for extension-action-updated if available in Electron 40
     try {
-      (session as any).on('extension-loaded', () => {
+      const extensionSession = session as SessionWithExtensionSupport;
+      extensionSession.on('extension-loaded', () => {
         this.notifyToolbarUpdate(session);
       });
-      (session as any).on('extension-unloaded', () => {
+      extensionSession.on('extension-unloaded', () => {
         this.notifyToolbarUpdate(session);
       });
     } catch {
@@ -485,6 +508,11 @@ export class ExtensionToolbar {
   }
 
   // ─── State Persistence ──────────────────────────────────────────────────────
+
+  private readLoadedExtensions(session: Session): LoadedSessionExtension[] {
+    const extensionSession = session as SessionWithExtensionSupport;
+    return extensionSession.extensions?.getAllExtensions?.() ?? extensionSession.getAllExtensions?.() ?? [];
+  }
 
   private loadState(): void {
     try {
