@@ -493,7 +493,7 @@ void app.whenReady().then(async () => {
     voiceManager: runtime?.voiceManager ?? null,
     pipManager: runtime?.pipManager ?? null,
     configManager: runtime?.configManager ?? null,
-    audioCaptureManager: runtime?.audioCaptureManager ?? null,
+    videoRecorderManager: runtime?.videoRecorderManager ?? null,
   });
 
   // Keep shortcuts always registered while app is running
@@ -512,7 +512,7 @@ void app.whenReady().then(async () => {
           voiceManager: runtime?.voiceManager ?? null,
           pipManager: runtime?.pipManager ?? null,
           configManager: runtime?.configManager ?? null,
-          audioCaptureManager: runtime?.audioCaptureManager ?? null,
+          videoRecorderManager: runtime?.videoRecorderManager ?? null,
         });
       }).catch((err) => {
         log.error('Failed to recreate window:', err);

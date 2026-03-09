@@ -253,12 +253,14 @@ export function createMockContext(): RouteContext {
       listActive: vi.fn().mockReturnValue([]),
     } as any,
 
-    // ── audioCaptureManager ─────────────────────
-    audioCaptureManager: {
+    // ── videoRecorderManager ─────────────────────
+    videoRecorderManager: {
       startRecording: vi.fn().mockResolvedValue({ ok: true }),
-      stopRecording: vi.fn().mockReturnValue({ ok: true }),
+      stopRecording: vi.fn().mockResolvedValue({ ok: true }),
+      isRecording: vi.fn().mockReturnValue(false),
       getStatus: vi.fn().mockReturnValue({ recording: false }),
       listRecordings: vi.fn().mockReturnValue([]),
+      forceStop: vi.fn(),
     } as any,
 
     // ── extensionLoader ─────────────────────────

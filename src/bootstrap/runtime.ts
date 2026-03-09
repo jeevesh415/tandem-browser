@@ -18,7 +18,7 @@ import { EventStreamManager } from '../events/stream';
 import { ChromeImporter } from '../import/chrome-importer';
 import type { Logger } from '../utils/logger';
 import type { ManagerRegistry } from '../registry';
-import { AudioCaptureManager } from '../audio/capture';
+import { VideoRecorderManager } from '../video/recorder';
 import { BookmarkManager } from '../bookmarks/manager';
 import { NetworkMocker } from '../network/mocker';
 import { ExtensionManager } from '../extensions/manager';
@@ -150,7 +150,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.bookmarkManager = new BookmarkManager();
   runtime.historyManager = new HistoryManager();
   runtime.downloadManager = new DownloadManager();
-  runtime.audioCaptureManager = new AudioCaptureManager();
+  runtime.videoRecorderManager = new VideoRecorderManager();
   runtime.extensionManager = new ExtensionManager();
   runtime.extensionLoader = runtime.extensionManager.getLoader();
   runtime.extensionToolbar = new ExtensionToolbar(runtime.extensionManager);
@@ -289,7 +289,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     bookmarkManager: runtime.bookmarkManager,
     historyManager: runtime.historyManager,
     downloadManager: runtime.downloadManager,
-    audioCaptureManager: runtime.audioCaptureManager,
+    videoRecorderManager: runtime.videoRecorderManager,
     extensionLoader: runtime.extensionLoader,
     extensionManager: runtime.extensionManager,
     claroNoteManager: runtime.claroNoteManager,
@@ -365,7 +365,7 @@ export function destroyRuntime(opts: DestroyRuntimeOptions): void {
     runtime.voiceManager.stop();
   }
 
-  runtime.audioCaptureManager.stopRecording();
+  runtime.videoRecorderManager.forceStop();
   runtime.chromeImporter.destroy();
   runtime.taskManager.destroy();
   runtime.tabLockManager.destroy();

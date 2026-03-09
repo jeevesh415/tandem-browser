@@ -22,7 +22,7 @@ import type { ChromeImporter } from './import/chrome-importer';
 import type { BookmarkManager } from './bookmarks/manager';
 import type { HistoryManager } from './history/manager';
 import type { DownloadManager } from './downloads/manager';
-import type { AudioCaptureManager } from './audio/capture';
+import type { VideoRecorderManager } from './video/recorder';
 import type { ExtensionLoader } from './extensions/loader';
 import type { ExtensionManager } from './extensions/manager';
 import type { ClaroNoteManager } from './claronote/manager';
@@ -67,7 +67,7 @@ export interface ManagerRegistry {
   bookmarkManager: BookmarkManager;
   historyManager: HistoryManager;
   downloadManager: DownloadManager;
-  audioCaptureManager: AudioCaptureManager;
+  videoRecorderManager: VideoRecorderManager;
   extensionLoader: ExtensionLoader;
   extensionManager: ExtensionManager;
   claroNoteManager: ClaroNoteManager;

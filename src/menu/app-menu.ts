@@ -6,7 +6,7 @@ import type { DrawOverlayManager } from '../draw/overlay';
 import type { VoiceManager } from '../voice/recognition';
 import type { PiPManager } from '../pip/manager';
 import type { ConfigManager } from '../config/manager';
-import type { AudioCaptureManager } from '../audio/capture';
+import type { VideoRecorderManager } from '../video/recorder';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('AppMenu');
@@ -19,7 +19,7 @@ export interface MenuDeps {
   voiceManager: VoiceManager | null;
   pipManager: PiPManager | null;
   configManager: ConfigManager | null;
-  audioCaptureManager: AudioCaptureManager | null;
+  videoRecorderManager: VideoRecorderManager | null;
 }
 
 export function buildAppMenu(deps: MenuDeps): void {
@@ -94,16 +94,16 @@ export function buildAppMenu(deps: MenuDeps): void {
         { label: 'Quick Screenshot', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('quick-screenshot') },
         { type: 'separator' },
         { label: 'Record Tab Audio', accelerator: 'CmdOrCtrl+R', click: () => {
-          if (deps.audioCaptureManager) {
-            if (deps.audioCaptureManager.isRecording()) {
-              deps.audioCaptureManager.stopRecording();
+          if (deps.videoRecorderManager) {
+            if (deps.videoRecorderManager.isRecording()) {
+              deps.videoRecorderManager.forceStop();
               deps.mainWindow?.webContents.send('audio-recording-status', { recording: false });
             } else {
-              const activeTab = deps.tabManager?.getActiveTab();
-              if (activeTab) {
-                deps.audioCaptureManager.startRecording(activeTab.webContentsId).then(() => {
-                  deps.mainWindow?.webContents.send('audio-recording-status', { recording: true });
-                }).catch((e) => log.warn('Audio capture start failed:', e.message));
+              const result = deps.videoRecorderManager.startRecording('application');
+              if (result.ok) {
+                deps.mainWindow?.webContents.send('audio-recording-status', { recording: true });
+              } else {
+                log.warn('Audio capture start failed:', result.error);
               }
             }
           }

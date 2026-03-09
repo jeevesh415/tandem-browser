@@ -17,7 +17,7 @@ import type { ChromeImporter } from '../import/chrome-importer';
 import type { BookmarkManager } from '../bookmarks/manager';
 import type { HistoryManager } from '../history/manager';
 import type { DownloadManager } from '../downloads/manager';
-import type { AudioCaptureManager } from '../audio/capture';
+import type { VideoRecorderManager } from '../video/recorder';
 import type { ExtensionManager } from '../extensions/manager';
 import type { ExtensionToolbar } from '../extensions/toolbar';
 import type { ClaroNoteManager } from '../claronote/manager';
@@ -66,7 +66,7 @@ export interface RuntimeManagers {
   bookmarkManager: BookmarkManager;
   historyManager: HistoryManager;
   downloadManager: DownloadManager;
-  audioCaptureManager: AudioCaptureManager;
+  videoRecorderManager: VideoRecorderManager;
   extensionManager: ExtensionManager;
   extensionLoader: ExtensionLoader;
   extensionToolbar: ExtensionToolbar;

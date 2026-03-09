@@ -144,18 +144,16 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
 
   router.post('/audio/start', async (_req: Request, res: Response) => {
     try {
-      const activeTab = ctx.tabManager.getActiveTab();
-      if (!activeTab) { res.status(400).json({ error: 'No active tab' }); return; }
-      const result = await ctx.audioCaptureManager.startRecording(activeTab.webContentsId);
+      const result = await ctx.videoRecorderManager.startRecording('application');
       res.json(result);
     } catch (e) {
       handleRouteError(res, e);
     }
   });
 
-  router.post('/audio/stop', (_req: Request, res: Response) => {
+  router.post('/audio/stop', async (_req: Request, res: Response) => {
     try {
-      const result = ctx.audioCaptureManager.stopRecording();
+      const result = await ctx.videoRecorderManager.stopRecording();
       res.json(result);
     } catch (e) {
       handleRouteError(res, e);
@@ -164,7 +162,7 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
 
   router.get('/audio/status', (_req: Request, res: Response) => {
     try {
-      res.json(ctx.audioCaptureManager.getStatus());
+      res.json(ctx.videoRecorderManager.getStatus());
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -173,7 +171,7 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   router.get('/audio/recordings', (req: Request, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
-      const recordings = ctx.audioCaptureManager.listRecordings(limit);
+      const recordings = ctx.videoRecorderManager.listRecordings(limit);
       res.json({ recordings });
     } catch (e) {
       handleRouteError(res, e);

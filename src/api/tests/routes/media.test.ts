@@ -448,25 +448,16 @@ describe('Media Routes', () => {
   // ═══════════════════════════════════════════════
 
   describe('POST /audio/start', () => {
-    it('starts audio recording for active tab', async () => {
+    it('starts audio recording in application mode', async () => {
       const res = await request(app).post('/audio/start').send({});
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true });
-      expect(ctx.audioCaptureManager.startRecording).toHaveBeenCalledWith(100);
-    });
-
-    it('returns 400 when no active tab', async () => {
-      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
-
-      const res = await request(app).post('/audio/start').send({});
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe('No active tab');
+      expect(ctx.videoRecorderManager.startRecording).toHaveBeenCalledWith('application');
     });
 
     it('returns 500 when startRecording throws', async () => {
-      vi.mocked(ctx.audioCaptureManager.startRecording).mockRejectedValue(new Error('audio error'));
+      vi.mocked(ctx.videoRecorderManager.startRecording).mockRejectedValue(new Error('audio error'));
 
       const res = await request(app).post('/audio/start').send({});
 
@@ -477,19 +468,17 @@ describe('Media Routes', () => {
 
   describe('POST /audio/stop', () => {
     it('stops audio recording', async () => {
-      vi.mocked(ctx.audioCaptureManager.stopRecording).mockReturnValue({ ok: true } as any);
+      vi.mocked(ctx.videoRecorderManager.stopRecording).mockResolvedValue({ ok: true } as any);
 
       const res = await request(app).post('/audio/stop').send({});
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true });
-      expect(ctx.audioCaptureManager.stopRecording).toHaveBeenCalled();
+      expect(ctx.videoRecorderManager.stopRecording).toHaveBeenCalled();
     });
 
     it('returns 500 when stopRecording throws', async () => {
-      vi.mocked(ctx.audioCaptureManager.stopRecording).mockImplementation(() => {
-        throw new Error('stop error');
-      });
+      vi.mocked(ctx.videoRecorderManager.stopRecording).mockRejectedValue(new Error('stop error'));
 
       const res = await request(app).post('/audio/stop').send({});
 
@@ -500,7 +489,7 @@ describe('Media Routes', () => {
 
   describe('GET /audio/status', () => {
     it('returns audio capture status', async () => {
-      vi.mocked(ctx.audioCaptureManager.getStatus).mockReturnValue({ recording: true } as any);
+      vi.mocked(ctx.videoRecorderManager.getStatus).mockReturnValue({ recording: true } as any);
 
       const res = await request(app).get('/audio/status');
 
@@ -509,7 +498,7 @@ describe('Media Routes', () => {
     });
 
     it('returns 500 when getStatus throws', async () => {
-      vi.mocked(ctx.audioCaptureManager.getStatus).mockImplementation(() => {
+      vi.mocked(ctx.videoRecorderManager.getStatus).mockImplementation(() => {
         throw new Error('status error');
       });
 
@@ -523,26 +512,26 @@ describe('Media Routes', () => {
   describe('GET /audio/recordings', () => {
     it('returns recordings with default limit', async () => {
       const fakeRecordings = [{ id: 'r1', duration: 10 }];
-      vi.mocked(ctx.audioCaptureManager.listRecordings).mockReturnValue(fakeRecordings as any);
+      vi.mocked(ctx.videoRecorderManager.listRecordings).mockReturnValue(fakeRecordings as any);
 
       const res = await request(app).get('/audio/recordings');
 
       expect(res.status).toBe(200);
       expect(res.body.recordings).toEqual(fakeRecordings);
-      expect(ctx.audioCaptureManager.listRecordings).toHaveBeenCalledWith(50);
+      expect(ctx.videoRecorderManager.listRecordings).toHaveBeenCalledWith(50);
     });
 
     it('supports ?limit= query parameter', async () => {
-      vi.mocked(ctx.audioCaptureManager.listRecordings).mockReturnValue([]);
+      vi.mocked(ctx.videoRecorderManager.listRecordings).mockReturnValue([]);
 
       const res = await request(app).get('/audio/recordings?limit=5');
 
       expect(res.status).toBe(200);
-      expect(ctx.audioCaptureManager.listRecordings).toHaveBeenCalledWith(5);
+      expect(ctx.videoRecorderManager.listRecordings).toHaveBeenCalledWith(5);
     });
 
     it('returns 500 when listRecordings throws', async () => {
-      vi.mocked(ctx.audioCaptureManager.listRecordings).mockImplementation(() => {
+      vi.mocked(ctx.videoRecorderManager.listRecordings).mockImplementation(() => {
         throw new Error('recordings error');
       });
 
