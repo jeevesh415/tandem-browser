@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.52.0] - 2026-03-09
+
+- feat: add VideoRecorderManager, remove AudioCaptureManager
+
 ## [v0.51.3] - 2026-03-08
 
 - fix: spell-check tab-snoozing section in opera research doc
