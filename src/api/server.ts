@@ -116,6 +116,12 @@ export class TandemAPI {
       allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tandem-Extension-Id'],
     }));
     this.app.use(express.json({ limit: '50mb' }));
+    this.app.use(createRateLimitMiddleware({
+      bucket: 'global-api',
+      windowMs: 60_000,
+      max: 600,
+      message: 'Too many API requests. Retry shortly.',
+    }));
 
     // API auth token — required for normal HTTP routes. Only a small set of
     // extension helper routes are allowlisted for installed extension origins.
@@ -141,12 +147,6 @@ export class TandemAPI {
       }
       res.status(decision.status).json({ error: decision.reason });
     });
-    this.app.use(createRateLimitMiddleware({
-      bucket: 'global-api',
-      windowMs: 60_000,
-      max: 600,
-      message: 'Too many API requests. Retry shortly.',
-    }));
 
     this.setupRoutes();
 

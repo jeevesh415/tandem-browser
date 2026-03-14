@@ -1,7 +1,7 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
-import * as fs from 'fs';
 import { createRateLimitMiddleware } from '../rate-limit';
+import { normalizeExistingDirectoryPath } from '../../utils/security';
 
 export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -47,12 +47,17 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
       const ds = patch.deviceSync as Record<string, unknown>;
       if (enabled !== undefined) ds.enabled = !!enabled;
       if (syncRoot !== undefined) {
-        // Validate syncRoot exists if enabling
-        if (enabled && syncRoot && !fs.existsSync(syncRoot)) {
-          res.status(400).json({ error: `syncRoot path does not exist: ${syncRoot}` });
+        if (syncRoot !== null && typeof syncRoot !== 'string') {
+          res.status(400).json({ error: 'syncRoot must be a string' });
           return;
         }
-        ds.syncRoot = syncRoot;
+
+        const trimmedSyncRoot = typeof syncRoot === 'string' ? syncRoot.trim() : '';
+        if (trimmedSyncRoot) {
+          ds.syncRoot = normalizeExistingDirectoryPath(trimmedSyncRoot, 'syncRoot');
+        } else {
+          ds.syncRoot = trimmedSyncRoot;
+        }
       }
       if (deviceName !== undefined) ds.deviceName = deviceName;
 

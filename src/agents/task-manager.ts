@@ -371,14 +371,20 @@ export class TaskManager extends EventEmitter {
     const task = this.getTask(taskId);
     if (!task || !this.isValidStepIndex(task, stepIndex)) return null;
 
-    task.steps[stepIndex].status = status;
+    const step = task.steps.at(stepIndex);
+    if (!step) return null;
+
+    step.status = status;
     if (result !== undefined) {
-      task.steps[stepIndex].result = result;
-      task.results[stepIndex] = result;
+      step.result = result;
+      if (stepIndex >= task.results.length) {
+        task.results.length = stepIndex + 1;
+      }
+      task.results.splice(stepIndex, 1, result);
     }
-    if (status === 'running') task.steps[stepIndex].startedAt = Date.now();
+    if (status === 'running') step.startedAt = Date.now();
     if (status === 'done' || status === 'skipped' || status === 'rejected') {
-      task.steps[stepIndex].completedAt = Date.now();
+      step.completedAt = Date.now();
     }
 
     // Update task status

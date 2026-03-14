@@ -304,15 +304,18 @@ export class DrawOverlayManager {
     const config = this.configManager.getConfig();
     if (!config.screenshots.applePhotos) return;
 
-    const script = `
-      tell application "Photos"
-        with timeout of 30 seconds
-          import POSIX file "${filePath.replace(/"/g, '\\"')}"
-        end timeout
-      end tell
-    `;
+    const scriptLines = [
+      'on run argv',
+      '  set importPath to item 1 of argv',
+      '  tell application "Photos"',
+      '    with timeout of 30 seconds',
+      '      import POSIX file importPath',
+      '    end timeout',
+      '  end tell',
+      'end run',
+    ];
 
-    execFile('osascript', ['-e', script], (error) => {
+    execFile('osascript', [...scriptLines.flatMap(line => ['-e', line]), filePath], (error) => {
       if (error) {
         log.warn('📸 Apple Photos import failed:', error.message);
       } else {

@@ -2,8 +2,33 @@ import type { Router, Request, Response } from 'express';
 import fs from 'fs';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
-import { escapeHtml, getErrorMessage } from '../../utils/security';
+import { getErrorMessage } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
+
+function renderGooglePhotosAuthPage(opts: { ok: boolean; message: string }): string {
+  const statusText = opts.ok ? 'connected' : 'failed';
+  return `<!doctype html>
+<html>
+  <body style="font-family: sans-serif; padding: 24px;">
+    <h1>Google Photos connection ${statusText}</h1>
+    <p id="status-message"></p>
+    <script>
+      const tandemAuthPayload = ${JSON.stringify({ type: 'tandem-google-photos-auth', ok: opts.ok })};
+      const tandemStatusMessage = ${JSON.stringify(opts.message)};
+      const statusEl = document.getElementById('status-message');
+      if (statusEl) {
+        statusEl.textContent = tandemStatusMessage;
+      }
+      if (window.opener) {
+        window.opener.postMessage(tandemAuthPayload, '*');
+      }
+      if (${opts.ok ? 'true' : 'false'}) {
+        window.close();
+      }
+    </script>
+  </body>
+</html>`;
+}
 
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -302,34 +327,16 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const state = typeof req.query.state === 'string' ? req.query.state : undefined;
       const error = typeof req.query.error === 'string' ? req.query.error : undefined;
       await ctx.googlePhotosManager.completeAuth({ code, state, error });
-      res.type('html').send(`<!doctype html>
-<html>
-  <body style="font-family: sans-serif; padding: 24px;">
-    <h1>Google Photos connected</h1>
-    <p>You can close this window and return to Tandem.</p>
-    <script>
-      if (window.opener) {
-        window.opener.postMessage({ type: 'tandem-google-photos-auth', ok: true }, '*');
-      }
-      window.close();
-    </script>
-  </body>
-</html>`);
+      res.type('html').send(renderGooglePhotosAuthPage({
+        ok: true,
+        message: 'You can close this window and return to Tandem.',
+      }));
     } catch (e) {
-      const message = getErrorMessage(e, 'Google Photos authorization failed');
-      const safeMessage = escapeHtml(message);
-      res.status(400).type('html').send(`<!doctype html>
-<html>
-  <body style="font-family: sans-serif; padding: 24px;">
-    <h1>Google Photos connection failed</h1>
-    <p>${safeMessage}</p>
-    <script>
-      if (window.opener) {
-        window.opener.postMessage({ type: 'tandem-google-photos-auth', ok: false, error: ${JSON.stringify(message)} }, '*');
-      }
-    </script>
-  </body>
-</html>`);
+      getErrorMessage(e, 'Google Photos authorization failed');
+      res.status(400).type('html').send(renderGooglePhotosAuthPage({
+        ok: false,
+        message: 'Google Photos authorization failed. Review Tandem logs for details.',
+      }));
     }
   });
 

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
-import { assertPathWithinRoot, resolvePathWithinRoot } from '../utils/security';
+import { assertChromeExtensionId, assertPathWithinRoot, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('ExtensionLoader');
 
@@ -49,7 +49,13 @@ export class ExtensionLoader {
         .filter(d => d.isDirectory());
 
       for (const dir of dirs) {
-        const extPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
+        let extPath: string;
+        try {
+          extPath = resolvePathWithinRoot(this.extensionsDir, assertChromeExtensionId(dir.name));
+        } catch {
+          log.warn(`⚠️ Extension ${dir.name}: invalid directory name, skipping`);
+          continue;
+        }
         const manifestPath = resolvePathWithinRoot(extPath, 'manifest.json');
 
         if (!fs.existsSync(manifestPath)) {
@@ -137,7 +143,12 @@ export class ExtensionLoader {
         .filter(d => d.isDirectory());
 
       for (const dir of dirs) {
-        const extPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
+        let extPath: string;
+        try {
+          extPath = resolvePathWithinRoot(this.extensionsDir, assertChromeExtensionId(dir.name));
+        } catch {
+          continue;
+        }
         const hasManifest = fs.existsSync(resolvePathWithinRoot(extPath, 'manifest.json'));
         const isLoaded = this.loaded.some(e => e.path === extPath);
 

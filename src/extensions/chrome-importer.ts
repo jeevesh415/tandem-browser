@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { assertChromeExtensionId, assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('ChromeImporter');
 
@@ -56,7 +57,7 @@ export class ChromeExtensionImporter {
   private tandemExtensionsDir: string;
 
   constructor(profile: string = 'Default') {
-    this.profile = profile;
+    this.profile = assertSinglePathSegment(profile, 'Chrome profile');
     this.tandemExtensionsDir = tandemDir('extensions');
   }
 
@@ -119,13 +120,14 @@ export class ChromeExtensionImporter {
           continue;
         }
 
-        const extPath = path.join(chromeDir, dir.name);
+        const extId = assertChromeExtensionId(dir.name);
+        const extPath = resolvePathWithinRoot(chromeDir, extId);
         const versionDir = this.findLatestVersionDir(extPath);
         if (!versionDir) {
           continue;
         }
 
-        const manifestPath = path.join(versionDir, 'manifest.json');
+        const manifestPath = resolvePathWithinRoot(versionDir, 'manifest.json');
         if (!fs.existsSync(manifestPath)) {
           continue;
         }
@@ -140,7 +142,7 @@ export class ChromeExtensionImporter {
           }
 
           results.push({
-            id: dir.name,
+            id: extId,
             name,
             version: manifest.version || '0.0.0',
             chromePath: versionDir,
@@ -168,11 +170,13 @@ export class ChromeExtensionImporter {
       return { id: extensionId, name: extensionId, success: false, error: 'Invalid extension ID format' };
     }
 
+    const safeExtensionId = assertChromeExtensionId(extensionId);
+
     // Find the extension in Chrome
     const extensions = this.listChromeExtensions();
-    const ext = extensions.find(e => e.id === extensionId);
+    const ext = extensions.find(e => e.id === safeExtensionId);
     if (!ext) {
-      return { id: extensionId, name: extensionId, success: false, error: 'Extension not found in Chrome profile' };
+      return { id: safeExtensionId, name: safeExtensionId, success: false, error: 'Extension not found in Chrome profile' };
     }
 
     return this.importExtensionFromInfo(ext);
@@ -211,8 +215,9 @@ export class ChromeExtensionImporter {
    * Check if an extension is already imported in Tandem.
    */
   isAlreadyImported(extensionId: string): boolean {
-    const destPath = path.join(this.tandemExtensionsDir, extensionId);
-    return fs.existsSync(destPath) && fs.existsSync(path.join(destPath, 'manifest.json'));
+    const safeExtensionId = assertChromeExtensionId(extensionId);
+    const destPath = resolvePathWithinRoot(this.tandemExtensionsDir, safeExtensionId);
+    return fs.existsSync(destPath) && fs.existsSync(resolvePathWithinRoot(destPath, 'manifest.json'));
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────
@@ -221,12 +226,20 @@ export class ChromeExtensionImporter {
    * Import a single extension from its ChromeExtensionInfo.
    */
   private importExtensionFromInfo(ext: ChromeExtensionInfo): ImportResult {
+    const chromeDir = this.getChromeExtensionsDir();
+    if (!chromeDir) {
+      return { id: ext.id, name: ext.name, success: false, error: 'Chrome extensions directory not found' };
+    }
+
     // Check if already imported
     if (this.isAlreadyImported(ext.id)) {
       return { id: ext.id, name: ext.name, success: true, skipped: true };
     }
 
-    const destPath = path.join(this.tandemExtensionsDir, ext.id);
+    const safeExtensionId = assertChromeExtensionId(ext.id);
+    const versionName = assertSinglePathSegment(path.basename(ext.chromePath), 'extension version');
+    const safeChromePath = resolvePathWithinRoot(chromeDir, safeExtensionId, versionName);
+    const destPath = resolvePathWithinRoot(this.tandemExtensionsDir, safeExtensionId);
 
     try {
       // Ensure Tandem extensions directory exists
@@ -235,10 +248,10 @@ export class ChromeExtensionImporter {
       }
 
       // Copy the Chrome extension version folder to Tandem
-      fs.cpSync(ext.chromePath, destPath, { recursive: true });
+      fs.cpSync(safeChromePath, destPath, { recursive: true });
 
       // Verify manifest.json exists after copy
-      const manifestPath = path.join(destPath, 'manifest.json');
+      const manifestPath = resolvePathWithinRoot(destPath, 'manifest.json');
       if (!fs.existsSync(manifestPath)) {
         // Clean up failed copy
         fs.rmSync(destPath, { recursive: true, force: true });
@@ -263,7 +276,7 @@ export class ChromeExtensionImporter {
         importedVersion: ext.version,
       };
       fs.writeFileSync(
-        path.join(destPath, '.tandem-meta.json'),
+        resolvePathWithinRoot(destPath, '.tandem-meta.json'),
         JSON.stringify(meta, null, 2),
         'utf-8'
       );
@@ -296,8 +309,8 @@ export class ChromeExtensionImporter {
       if (dirs.length === 0) return null;
 
       // Take the last (highest version) directory
-      const latest = dirs[dirs.length - 1];
-      return path.join(extPath, latest);
+      const latest = assertSinglePathSegment(dirs[dirs.length - 1], 'extension version');
+      return resolvePathWithinRoot(extPath, latest);
     } catch {
       return null;
     }

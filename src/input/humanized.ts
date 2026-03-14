@@ -1,6 +1,8 @@
 import type { WebContents } from 'electron';
 import { behaviorReplay } from '../behavior/replay';
 
+const MAX_TYPED_CHARS = 10_000;
+
 /**
  * Gaussian random number (Box-Muller transform).
  * Returns a value centered on mean with given stddev.
@@ -141,10 +143,12 @@ export async function humanizedType(wc: WebContents, selector: string, text: str
     await humanDelay(80, 150);
   }
 
+  const chars = Array.from(text).slice(0, MAX_TYPED_CHARS);
+
   // Type each character with humanized delays
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = i + 1 < text.length ? text[i + 1] : '';
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    const nextChar = i + 1 < chars.length ? chars[i + 1] : '';
     wc.sendInputEvent({ type: 'char', keyCode: char });
     await typingDelay(char, nextChar);
   }

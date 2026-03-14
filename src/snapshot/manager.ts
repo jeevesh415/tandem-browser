@@ -28,6 +28,8 @@ interface CDPAXNode {
   properties?: CDPAXProperty[];
 }
 
+const MAX_TYPED_CHARS = 10_000;
+
 /**
  * SnapshotManager — Provides accessibility tree snapshots via CDP.
  *
@@ -246,9 +248,10 @@ export class SnapshotManager {
     await this.delay(50);
 
     // Type each character with BehaviorReplay timing (Robin's real typing rhythm)
-    for (let i = 0; i < value.length; i++) {
-      const char = value[i];
-      const nextChar = i + 1 < value.length ? value[i + 1] : '';
+    const chars = Array.from(value).slice(0, MAX_TYPED_CHARS);
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i];
+      const nextChar = i + 1 < chars.length ? chars[i + 1] : '';
       wc.sendInputEvent({ type: 'char', keyCode: char });
       await this.delay(behaviorReplay.getTypingDelay(char, nextChar));
     }

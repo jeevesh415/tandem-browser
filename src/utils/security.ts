@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 
 const HTML_ESCAPE_RE = /[&<>"']/g;
@@ -114,6 +115,39 @@ export function assertPathWithinRoot(rootDir: string, candidatePath: string): st
     throw new Error('Path escapes root directory');
   }
   return resolvedCandidate;
+}
+
+export function resolvePathInAllowedRoots(candidatePath: string, allowedRoots: string[]): string {
+  const trimmed = candidatePath.trim();
+  if (!trimmed) {
+    throw new Error('Path is required');
+  }
+
+  const resolvedCandidate = path.resolve(trimmed);
+  for (const root of allowedRoots) {
+    try {
+      return assertPathWithinRoot(root, resolvedCandidate);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error('Path is outside the allowed directories');
+}
+
+export function normalizeExistingDirectoryPath(value: string, label: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${label} is required`);
+  }
+
+  const resolved = path.resolve(trimmed);
+  const stat = fs.statSync(resolved);
+  if (!stat.isDirectory()) {
+    throw new Error(`${label} must be a directory`);
+  }
+
+  return resolved;
 }
 
 const CHROME_EXTENSION_ID_RE = /^[a-p]{32}$/;

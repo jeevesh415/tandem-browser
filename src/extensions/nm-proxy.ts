@@ -395,6 +395,10 @@ export class NativeMessagingProxy {
       if (path.basename(safeManifestPath) !== 'manifest.json') {
         throw new Error('Manifest path must target manifest.json');
       }
+      const safeExtensionDir = assertPathWithinRoot(extensionsRoot, path.dirname(safeManifestPath));
+      if (safeExtensionDir === extensionsRoot) {
+        throw new Error('Manifest path must be inside an extension directory');
+      }
 
       const raw = fs.readFileSync(safeManifestPath, 'utf-8');
       const manifest = JSON.parse(raw) as Record<string, unknown>;

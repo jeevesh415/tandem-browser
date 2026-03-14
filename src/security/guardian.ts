@@ -78,7 +78,7 @@ export class Guardian {
   submitDecision(id: string, decision: GatekeeperDecision): void {
     const callback = this.decisionCallbacks.get(id);
     if (callback) {
-      callback(decision);
+      this.invokeDecisionCallback(callback, decision);
       this.decisionCallbacks.delete(id);
     }
   }
@@ -126,6 +126,15 @@ export class Guardian {
     });
     this.gatekeeperWs.sendDecisionRequest(item);
     return { id: item.id, decision: decisionPromise };
+  }
+
+  private invokeDecisionCallback(
+    callback: ((decision: GatekeeperDecision) => void) | unknown,
+    decision: GatekeeperDecision,
+  ): void {
+    if (typeof callback === 'function') {
+      callback(decision);
+    }
   }
 
   registerWith(dispatcher: RequestDispatcher): void {

@@ -8,6 +8,20 @@ const SALT_LENGTH = 16;
 const IV_LENGTH = 12; // Standard for GCM
 const AUTH_TAG_LENGTH = 16;
 
+function getUnbiasedRandomIndex(maxExclusive: number): number {
+    if (!Number.isInteger(maxExclusive) || maxExclusive <= 0 || maxExclusive > 256) {
+        throw new Error('Invalid random index bound');
+    }
+
+    const limit = Math.floor(256 / maxExclusive) * maxExclusive;
+    while (true) {
+        const value = crypto.randomBytes(1)[0];
+        if (value < limit) {
+            return value % maxExclusive;
+        }
+    }
+}
+
 export class PasswordCrypto {
     /**
      * Derive an AES-256-GCM key from a master password.
@@ -67,9 +81,8 @@ export class PasswordCrypto {
     static generatePassword(length = 24): string {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+~|}{[]:;?><,./-=';
         let pswd = '';
-        const randomBytes = crypto.randomBytes(length);
         for (let i = 0; i < length; i++) {
-            pswd += chars[randomBytes[i] % chars.length];
+            pswd += chars[getUnbiasedRandomIndex(chars.length)];
         }
         return pswd;
     }

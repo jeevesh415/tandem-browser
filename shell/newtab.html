@@ -303,12 +303,18 @@
 
         // If it looks like a URL, navigate directly
         if (/^https?:\/\//i.test(q) || /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/.test(q)) {
-          const url = q.startsWith('http') ? q : 'https://' + q;
-          window.location.href = url;
+          const parsedUrl = parseSafeNavigationUrl(q.startsWith('http') ? q : 'https://' + q);
+          if (parsedUrl) {
+            window.location.assign(parsedUrl.href);
+            return;
+          }
         } else {
           // Search with DuckDuckGo
-          window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
+          window.location.assign('https://duckduckgo.com/?q=' + encodeURIComponent(q));
+          return;
         }
+
+        window.location.assign('https://duckduckgo.com/?q=' + encodeURIComponent(q));
       }
     });
 

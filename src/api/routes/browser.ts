@@ -9,6 +9,7 @@ import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
+import { resolvePathInAllowedRoots } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
 
 /** Maximum allowed code length for JS execution endpoints (1 MB) */
@@ -238,19 +239,13 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const png = image.toPNG();
 
       if (req.query.save) {
-        const filePath = path.resolve(req.query.save as string);
-
         const allowedDirs = [
           path.join(os.homedir(), 'Desktop'),
           path.join(os.homedir(), 'Downloads'),
           tandemDir(),
         ];
-        const isAllowed = allowedDirs.some(dir => filePath.startsWith(dir + path.sep) || filePath === dir);
-
-        if (!isAllowed) {
-          res.status(400).json({ error: 'Save path must be in ~/Desktop, ~/Downloads, or ~/.tandem' });
-          return;
-        }
+        const rawSavePath = typeof req.query.save === 'string' ? req.query.save : '';
+        const filePath = resolvePathInAllowedRoots(rawSavePath, allowedDirs);
 
         fs.writeFileSync(filePath, png);
         res.json({ ok: true, path: filePath, size: png.length });
@@ -258,6 +253,10 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         res.type('png').send(png);
       }
     } catch (e) {
+      if (e instanceof Error && e.message === 'Path is outside the allowed directories') {
+        res.status(400).json({ error: 'Save path must be in ~/Desktop, ~/Downloads, or ~/.tandem' });
+        return;
+      }
       handleRouteError(res, e);
     }
   });
