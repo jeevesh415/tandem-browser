@@ -152,6 +152,13 @@ describe('TaskManager', () => {
         expect.any(String)
       );
     });
+
+    it('ignores prototype-polluting keys in autonomy patches', () => {
+      const patch = JSON.parse('{"__proto__":{"polluted":true},"autoApproveClick":true}') as any;
+      tm.updateAutonomySettings(patch);
+      expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+      expect(tm.getAutonomySettings().autoApproveClick).toBe(true);
+    });
   });
 
   describe('emergencyStop()', () => {
@@ -257,6 +264,13 @@ describe('TaskManager', () => {
       expect(written.status).toBe('done');
       expect(written.completedAt).toBeDefined();
       expect(written.results).toEqual(['result1', 'result2']);
+    });
+
+    it('updateStepStatus ignores invalid step indexes', () => {
+      const writesBefore = vi.mocked(fs.writeFileSync).mock.calls.length;
+      const result = tm.updateStepStatus(task.id, '__proto__' as any, 'done');
+      expect(result).toBeNull();
+      expect(vi.mocked(fs.writeFileSync).mock.calls.length).toBe(writesBefore);
     });
 
     it('markTaskFailed changes status and adds error', () => {

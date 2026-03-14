@@ -3,6 +3,8 @@ import { CrxDownloader } from '../crx-downloader';
 import { ChromeExtensionImporter } from '../chrome-importer';
 import { GALLERY_DEFAULTS } from '../gallery-defaults';
 import { UpdateChecker } from '../update-checker';
+import { ExtensionLoader } from '../loader';
+import { nmProxy } from '../nm-proxy';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
@@ -153,6 +155,23 @@ describe('Extension ID Extraction', () => {
     // Bitwarden
     expect(downloader.extractExtensionId('nngceckbapebfimnlniiiahkandclblb'))
       .toBe('nngceckbapebfimnlniiiahkandclblb');
+  });
+});
+
+describe('Extension path validation', () => {
+  it('rejects loading extensions outside the Tandem extensions directory', async () => {
+    const loader = new ExtensionLoader();
+    const sessionMock = {
+      extensions: {
+        loadExtension: async () => ({ id: 'test-extension-id' }),
+      },
+    } as any;
+
+    await expect(loader.loadExtension(sessionMock, '/tmp/not-allowed')).rejects.toThrow('Path escapes root directory');
+  });
+
+  it('refuses to patch manifest CSP outside the Tandem extensions directory', () => {
+    expect(nmProxy.patchManifestCSP('/tmp/manifest.json')).toBe(false);
   });
 });
 

@@ -29,6 +29,8 @@ import path from 'path';
 import os from 'os';
 import type { ExtensionRouteAccessDecision } from './manager';
 import { createLogger } from '../utils/logger';
+import { tandemDir } from '../utils/paths';
+import { assertNativeMessagingHostName, assertPathWithinRoot, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('NMProxy');
 
@@ -81,9 +83,14 @@ interface HostInfo {
 }
 
 function findHostManifest(hostName: string): HostInfo | null {
-  const resolvedHostName = HOST_ALIASES[hostName] ?? hostName;
+  let resolvedHostName: string;
+  try {
+    resolvedHostName = assertNativeMessagingHostName(HOST_ALIASES[hostName] ?? hostName);
+  } catch {
+    return null;
+  }
   for (const dir of MANIFEST_DIRS) {
-    const manifestPath = path.join(dir, `${resolvedHostName}.json`);
+    const manifestPath = resolvePathWithinRoot(dir, `${resolvedHostName}.json`);
     if (!fs.existsSync(manifestPath)) continue;
     try {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as { path?: string };
@@ -278,6 +285,14 @@ export class NativeMessagingProxy {
         return;
       }
 
+      try {
+        assertNativeMessagingHostName(host);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        res.status(400).json({ error: msg });
+        return;
+      }
+
       const hostInfo = findHostManifest(host);
       if (!hostInfo) {
         log.warn(`⚠️ NM proxy: host "${host}" not found for ${actorLabel}`);
@@ -347,6 +362,14 @@ export class NativeMessagingProxy {
         return;
       }
 
+      try {
+        assertNativeMessagingHostName(host);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        ws.close(1008, msg);
+        return;
+      }
+
       const hostInfo = findHostManifest(host);
       if (!hostInfo) {
         log.warn(`⚠️ NM proxy WS: host "${host}" not found for ${actorLabel}`);
@@ -367,7 +390,13 @@ export class NativeMessagingProxy {
    */
   patchManifestCSP(manifestPath: string): boolean {
     try {
-      const raw = fs.readFileSync(manifestPath, 'utf-8');
+      const extensionsRoot = tandemDir('extensions');
+      const safeManifestPath = assertPathWithinRoot(extensionsRoot, manifestPath);
+      if (path.basename(safeManifestPath) !== 'manifest.json') {
+        throw new Error('Manifest path must target manifest.json');
+      }
+
+      const raw = fs.readFileSync(safeManifestPath, 'utf-8');
       const manifest = JSON.parse(raw) as Record<string, unknown>;
       let changed = false;
 
@@ -400,8 +429,8 @@ export class NativeMessagingProxy {
       }
 
       if (changed) {
-        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
-        log.info(`🔌 NM proxy: patched CSP in ${manifestPath}`);
+        fs.writeFileSync(safeManifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+        log.info(`🔌 NM proxy: patched CSP in ${safeManifestPath}`);
       }
       return changed;
     } catch (err) {

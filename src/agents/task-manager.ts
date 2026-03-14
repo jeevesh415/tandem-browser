@@ -12,9 +12,9 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { EventEmitter } from 'events';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { assertSinglePathSegment, hostnameMatches, resolvePathWithinRoot, tryParseUrl } from '../utils/security';
 
 // ═══════════════════════════════════════════════
 // Interfaces
@@ -113,6 +113,35 @@ const DEFAULT_AUTONOMY: AutonomySettings = {
   trustedSites: ['google.com', 'wikipedia.org', 'duckduckgo.com'],
 };
 
+function sanitizeTrustedSites(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_AUTONOMY.trustedSites];
+  }
+
+  const sanitized = value
+    .filter((site): site is string => typeof site === 'string')
+    .map((site) => site.trim().toLowerCase())
+    .filter((site) => site.length > 0 && !site.includes('/') && !site.includes('\\'))
+    .filter((site, index, arr) => arr.indexOf(site) === index);
+
+  return sanitized.length > 0 ? sanitized : [...DEFAULT_AUTONOMY.trustedSites];
+}
+
+function sanitizeAutonomySettings(raw: unknown, base: AutonomySettings = DEFAULT_AUTONOMY): AutonomySettings {
+  const patch = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? raw as Partial<Record<keyof AutonomySettings, unknown>>
+    : {};
+
+  return {
+    autoApproveRead: typeof patch.autoApproveRead === 'boolean' ? patch.autoApproveRead : base.autoApproveRead,
+    autoApproveNavigate: typeof patch.autoApproveNavigate === 'boolean' ? patch.autoApproveNavigate : base.autoApproveNavigate,
+    autoApproveClick: typeof patch.autoApproveClick === 'boolean' ? patch.autoApproveClick : base.autoApproveClick,
+    autoApproveType: typeof patch.autoApproveType === 'boolean' ? patch.autoApproveType : base.autoApproveType,
+    autoApproveForms: typeof patch.autoApproveForms === 'boolean' ? patch.autoApproveForms : base.autoApproveForms,
+    trustedSites: patch.trustedSites !== undefined ? sanitizeTrustedSites(patch.trustedSites) : [...base.trustedSites],
+  };
+}
+
 export class TaskManager extends EventEmitter {
   private tasksDir: string;
   private activityLog: TaskActivityEntry[] = [];
@@ -133,7 +162,7 @@ export class TaskManager extends EventEmitter {
     try {
       if (fs.existsSync(settingsPath)) {
         const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        return { ...DEFAULT_AUTONOMY, ...raw };
+        return sanitizeAutonomySettings(raw);
       }
     } catch { /* use defaults */ }
     return { ...DEFAULT_AUTONOMY };
@@ -151,12 +180,18 @@ export class TaskManager extends EventEmitter {
   }
 
   updateAutonomySettings(patch: Partial<AutonomySettings>): AutonomySettings {
-    this.autonomy = { ...this.autonomy, ...patch };
-    if (patch.trustedSites) {
-      this.autonomy.trustedSites = patch.trustedSites;
-    }
+    this.autonomy = sanitizeAutonomySettings(patch, this.autonomy);
     this.saveAutonomySettings();
     return this.getAutonomySettings();
+  }
+
+  private getTaskFilePath(taskId: string): string {
+    const safeTaskId = assertSinglePathSegment(taskId, 'task id');
+    return resolvePathWithinRoot(this.tasksDir, `${safeTaskId}.json`);
+  }
+
+  private isValidStepIndex(task: AITask, stepIndex: number): boolean {
+    return Number.isInteger(stepIndex) && stepIndex >= 0 && stepIndex < task.steps.length;
   }
 
   // ── Task CRUD ──
@@ -185,8 +220,8 @@ export class TaskManager extends EventEmitter {
   }
 
   getTask(id: string): AITask | null {
-    const filePath = path.join(this.tasksDir, `${id}.json`);
     try {
+      const filePath = this.getTaskFilePath(id);
       if (fs.existsSync(filePath)) {
         return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
       }
@@ -200,7 +235,7 @@ export class TaskManager extends EventEmitter {
       const files = fs.readdirSync(this.tasksDir).filter(f => f.endsWith('.json'));
       for (const file of files) {
         try {
-          const task = JSON.parse(fs.readFileSync(path.join(this.tasksDir, file), 'utf-8'));
+          const task = JSON.parse(fs.readFileSync(resolvePathWithinRoot(this.tasksDir, file), 'utf-8'));
           if (!status || task.status === status) {
             tasks.push(task);
           }
@@ -214,7 +249,7 @@ export class TaskManager extends EventEmitter {
     task.updatedAt = Date.now();
     try {
       fs.writeFileSync(
-        path.join(this.tasksDir, `${task.id}.json`),
+        this.getTaskFilePath(task.id),
         JSON.stringify(task, null, 2)
       );
     } catch { /* silent */ }
@@ -234,9 +269,12 @@ export class TaskManager extends EventEmitter {
     // Check trusted sites for medium risk
     if (risk === 'medium' && targetUrl) {
       try {
-        const domain = new URL(targetUrl).hostname;
+        const parsedUrl = tryParseUrl(targetUrl);
+        if (!parsedUrl) {
+          return true;
+        }
         const isTrusted = this.autonomy.trustedSites.some(
-          site => domain === site || domain.endsWith(`.${site}`)
+          site => hostnameMatches(parsedUrl, site)
         );
         if (isTrusted && this.autonomy.autoApproveClick) return false;
       } catch { /* not a valid URL, require approval */ }
@@ -331,7 +369,7 @@ export class TaskManager extends EventEmitter {
 
   updateStepStatus(taskId: string, stepIndex: number, status: StepStatus, result?: unknown): AITask | null {
     const task = this.getTask(taskId);
-    if (!task || !task.steps[stepIndex]) return null;
+    if (!task || !this.isValidStepIndex(task, stepIndex)) return null;
 
     task.steps[stepIndex].status = status;
     if (result !== undefined) {

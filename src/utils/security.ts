@@ -106,3 +106,36 @@ export function resolvePathWithinRoot(rootDir: string, ...segments: string[]): s
   }
   return candidate;
 }
+
+export function assertPathWithinRoot(rootDir: string, candidatePath: string): string {
+  const resolvedRoot = path.resolve(rootDir);
+  const resolvedCandidate = path.resolve(candidatePath);
+  if (resolvedCandidate !== resolvedRoot && !resolvedCandidate.startsWith(resolvedRoot + path.sep)) {
+    throw new Error('Path escapes root directory');
+  }
+  return resolvedCandidate;
+}
+
+const CHROME_EXTENSION_ID_RE = /^[a-p]{32}$/;
+
+export function isChromeExtensionId(value: string): boolean {
+  return CHROME_EXTENSION_ID_RE.test(value);
+}
+
+export function assertChromeExtensionId(value: string): string {
+  const segment = assertSinglePathSegment(value, 'extension ID');
+  if (!isChromeExtensionId(segment)) {
+    throw new Error('Invalid extension ID');
+  }
+  return segment;
+}
+
+const NATIVE_MESSAGING_HOST_RE = /^[A-Za-z0-9._-]+$/;
+
+export function assertNativeMessagingHostName(value: string): string {
+  const segment = assertSinglePathSegment(value, 'native messaging host');
+  if (!NATIVE_MESSAGING_HOST_RE.test(segment)) {
+    throw new Error('Invalid native messaging host');
+  }
+  return segment;
+}

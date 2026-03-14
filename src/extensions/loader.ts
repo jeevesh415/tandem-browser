@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { assertPathWithinRoot, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('ExtensionLoader');
 
@@ -48,8 +49,8 @@ export class ExtensionLoader {
         .filter(d => d.isDirectory());
 
       for (const dir of dirs) {
-        const extPath = path.join(this.extensionsDir, dir.name);
-        const manifestPath = path.join(extPath, 'manifest.json');
+        const extPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
+        const manifestPath = resolvePathWithinRoot(extPath, 'manifest.json');
 
         if (!fs.existsSync(manifestPath)) {
           log.warn(`⚠️ Extension ${dir.name}: no manifest.json, skipping`);
@@ -78,20 +79,21 @@ export class ExtensionLoader {
    * Load a single unpacked extension from the given path.
    */
   async loadExtension(ses: Session, extPath: string): Promise<LoadedExtension | null> {
-    const manifestPath = path.join(extPath, 'manifest.json');
+    const safeExtPath = assertPathWithinRoot(this.extensionsDir, extPath);
+    const manifestPath = resolvePathWithinRoot(safeExtPath, 'manifest.json');
     if (!fs.existsSync(manifestPath)) {
-      throw new Error(`No manifest.json found at ${extPath}`);
+      throw new Error(`No manifest.json found at ${safeExtPath}`);
     }
 
     let manifest: { name?: string; version?: string };
     try {
       manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
     } catch {
-      throw new Error(`Invalid manifest.json at ${extPath}`);
+      throw new Error(`Invalid manifest.json at ${safeExtPath}`);
     }
 
     // Check if already loaded
-    const existing = this.loaded.find(e => e.path === extPath);
+    const existing = this.loaded.find(e => e.path === safeExtPath);
     if (existing) {
       return existing;
     }
@@ -106,14 +108,14 @@ export class ExtensionLoader {
       // Non-fatal — extension will still load, but native messaging proxy won't work
     }
 
-    const ext = await ses.extensions.loadExtension(extPath, { allowFileAccess: true });
-    this.writeRuntimeMetadata(extPath, ext.id);
+    const ext = await ses.extensions.loadExtension(safeExtPath, { allowFileAccess: true });
+    this.writeRuntimeMetadata(safeExtPath, ext.id);
 
     const loaded: LoadedExtension = {
       id: ext.id,
-      name: manifest.name || path.basename(extPath),
+      name: manifest.name || path.basename(safeExtPath),
       version: manifest.version || '0.0.0',
-      path: extPath,
+      path: safeExtPath,
       loadedAt: Date.now(),
     };
 
@@ -135,14 +137,14 @@ export class ExtensionLoader {
         .filter(d => d.isDirectory());
 
       for (const dir of dirs) {
-        const extPath = path.join(this.extensionsDir, dir.name);
-        const hasManifest = fs.existsSync(path.join(extPath, 'manifest.json'));
+        const extPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
+        const hasManifest = fs.existsSync(resolvePathWithinRoot(extPath, 'manifest.json'));
         const isLoaded = this.loaded.some(e => e.path === extPath);
 
         let name = dir.name;
         if (hasManifest) {
           try {
-            const manifest = JSON.parse(fs.readFileSync(path.join(extPath, 'manifest.json'), 'utf-8'));
+            const manifest = JSON.parse(fs.readFileSync(resolvePathWithinRoot(extPath, 'manifest.json'), 'utf-8'));
             name = manifest.name || dir.name;
           } catch (e) { log.warn('Extension manifest parse failed for', dir.name + ':', e instanceof Error ? e.message : String(e)); }
         }
@@ -155,7 +157,7 @@ export class ExtensionLoader {
   }
 
   private getMetaPath(extPath: string): string {
-    return path.join(extPath, '.tandem-meta.json');
+    return resolvePathWithinRoot(extPath, '.tandem-meta.json');
   }
 
   private writeRuntimeMetadata(extPath: string, runtimeId: string): void {

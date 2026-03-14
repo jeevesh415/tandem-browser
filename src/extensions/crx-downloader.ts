@@ -4,6 +4,7 @@ import fs from 'fs';
 import AdmZip from 'adm-zip';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { assertChromeExtensionId, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('CrxDownloader');
 
@@ -38,7 +39,6 @@ interface DownloadResult {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CRX_MAGIC = Buffer.from('Cr24');
-const EXTENSION_ID_REGEX = /^[a-p]{32}$/;
 const CWS_URL_REGEX = /\/([a-p]{32})(?:[/?]|$)/;
 const GOOGLE_HOST_REGEX = /\.(google\.com|googleapis\.com|googleusercontent\.com)$/;
 const MAX_RETRIES = 3;
@@ -75,7 +75,7 @@ export class CrxDownloader {
     }
 
     // Already-installed check
-    const existingPath = path.join(this.extensionsDir, extensionId);
+    const existingPath = resolvePathWithinRoot(this.extensionsDir, extensionId);
     if (fs.existsSync(existingPath)) {
       const manifestPath = path.join(existingPath, 'manifest.json');
       if (fs.existsSync(manifestPath)) {
@@ -224,8 +224,10 @@ export class CrxDownloader {
     const trimmed = input.trim();
 
     // Bare extension ID
-    if (EXTENSION_ID_REGEX.test(trimmed)) {
-      return trimmed;
+    try {
+      return assertChromeExtensionId(trimmed);
+    } catch {
+      // Fall through to CWS URL parsing.
     }
 
     // CWS URL
@@ -376,6 +378,7 @@ export class CrxDownloader {
    * Parse CRX header, extract ZIP payload, and save to extensions directory.
    */
   private extractCrx(crxBuffer: Buffer, extensionId: string, format: 'crx2' | 'crx3'): string {
+    const safeExtensionId = assertChromeExtensionId(extensionId);
     let zipStart: number;
 
     if (format === 'crx2') {
@@ -410,7 +413,7 @@ export class CrxDownloader {
     }
 
     // Extract to extension directory
-    const installPath = path.join(this.extensionsDir, extensionId);
+    const installPath = resolvePathWithinRoot(this.extensionsDir, safeExtensionId);
     if (fs.existsSync(installPath)) {
       fs.rmSync(installPath, { recursive: true, force: true });
     }
@@ -425,7 +428,7 @@ export class CrxDownloader {
    * Read and parse manifest.json from an extension directory.
    */
   private readManifest(extPath: string): Record<string, unknown> | null {
-    const manifestPath = path.join(extPath, 'manifest.json');
+    const manifestPath = resolvePathWithinRoot(this.extensionsDir, path.relative(this.extensionsDir, extPath), 'manifest.json');
     if (!fs.existsSync(manifestPath)) {
       return null;
     }
