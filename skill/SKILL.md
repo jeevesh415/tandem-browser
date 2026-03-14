@@ -1,307 +1,509 @@
-# Tandem Browser - OpenClaw Skill
+# Tandem Browser
 
-Tandem Browser is a specialized Electron browser designed for AI-human symbiosis. It provides a comprehensive HTTP API for automated web browsing, content extraction, and workflow automation while maintaining human oversight and anti-detection capabilities.
+Tandem Browser is a first-party OpenClaw companion browser with a local HTTP API
+at `http://127.0.0.1:8765`. Use this skill when an agent needs to browse, inspect,
+interact with pages, analyze SPAs, or coordinate browser work without touching
+Robin's active tab unnecessarily.
 
-## Quick Start
+## Setup
 
-**Base URL:** `http://localhost:8765`
-**Authentication:** None required (localhost only)
-**API Style:** RESTful JSON
+Always read the API token first. Bearer auth is required for normal Tandem API
+routes. Query-string token auth was removed.
 
-## Core Capabilities
-
-### 1. Navigation & Page Interaction
 ```bash
-# Navigate to a URL
-curl -X POST http://localhost:8765/navigate \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com"}'
+API="http://127.0.0.1:8765"
+TOKEN="$(cat ~/.tandem/api-token)"
+AUTH_HEADER="Authorization: Bearer $TOKEN"
+JSON_HEADER="Content-Type: application/json"
 
-# Click an element
-curl -X POST http://localhost:8765/click \
-  -H "Content-Type: application/json" \
-  -d '{"selector": ".button", "x": 100, "y": 200}'
-
-# Type text
-curl -X POST http://localhost:8765/type \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Hello World", "selector": "input[type=\"text\"]"}'
-
-# Take screenshot
-curl -X GET http://localhost:8765/screenshot \
-  -o screenshot.png
-```
-
-### 2. Content Extraction ⭐ NEW
-```bash
-# Extract structured content from current page
-curl -X POST http://localhost:8765/content/extract
-
-# Extract from specific URL (headless)
-curl -X POST http://localhost:8765/content/extract/url \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://linkedin.com/in/johndoe"}'
-```
-
-**Returns structured JSON for:**
-- **Articles:** title, author, date, body (markdown), images
-- **Profiles:** name, headline, experience, education (LinkedIn, etc.)
-- **Products:** name, price, description, reviews (Amazon, etc.)
-- **Search Results:** query, results array with title/url/snippet
-- **Generic:** title, text content, images, links
-
-### 3. Multi-step Workflows ⭐ NEW
-```bash
-# Run a predefined workflow
-curl -X POST http://localhost:8765/workflow/run \
-  -H "Content-Type: application/json" \
-  -d '{"workflowId": "linkedin-profile-scan", "variables": {"username": "johndoe"}}'
-
-# Check workflow status
-curl -X GET http://localhost:8765/workflow/status/exec123
-
-# Stop running workflow
-curl -X POST http://localhost:8765/workflow/stop \
-  -H "Content-Type: application/json" \
-  -d '{"executionId": "exec123"}'
-```
-
-**Workflow Steps:**
-- `navigate` - Go to URL
-- `wait` - Wait for condition or duration
-- `click` - Click element
-- `type` - Type text
-- `extract` - Extract data to variables
-- `screenshot` - Take screenshot
-- `scroll` - Scroll page
-- `condition` - Conditional branching (if/else/goto)
-
-### 4. Login State Management ⭐ NEW
-```bash
-# Check login status for domain
-curl -X GET http://localhost:8765/auth/state/linkedin.com
-
-# Get all login states
-curl -X GET http://localhost:8765/auth/states
-
-# Check current page login status
-curl -X POST http://localhost:8765/auth/check
-```
-
-**Login Detection:**
-- Automatically detects login/logout state
-- Recognizes login pages
-- Tracks username when logged in
-- Confidence scoring for reliability
-
-## Common Workflows
-
-### Browse and Extract Article
-```bash
-# 1. Navigate to article
-curl -X POST http://localhost:8765/navigate \
-  -d '{"url": "https://techcrunch.com/article-url"}'
-
-# 2. Wait for load
-sleep 3
-
-# 3. Extract structured content
-curl -X POST http://localhost:8765/content/extract
-```
-
-### LinkedIn Profile Extraction
-```bash
-# Navigate and extract in one call (headless)
-curl -X POST http://localhost:8765/content/extract/url \
-  -d '{"url": "https://linkedin.com/in/username"}'
-```
-
-### Fill and Submit Form
-```bash
-# 1. Navigate to form page
-curl -X POST http://localhost:8765/navigate \
-  -d '{"url": "https://example.com/contact"}'
-
-# 2. Fill form fields
-curl -X POST http://localhost:8765/type \
-  -d '{"selector": "#name", "text": "John Doe"}'
-curl -X POST http://localhost:8765/type \
-  -d '{"selector": "#email", "text": "john@example.com"}'
-
-# 3. Submit form
-curl -X POST http://localhost:8765/click \
-  -d '{"selector": "button[type=\"submit\"]"}'
-```
-
-### Multi-step Workflow Example
-```json
-{
-  "name": "LinkedIn Profile Scan",
-  "description": "Navigate to LinkedIn profile and extract information",
-  "steps": [
-    {
-      "id": "nav1",
-      "type": "navigate",
-      "params": {"url": "https://linkedin.com/in/{{username}}"},
-      "description": "Navigate to profile"
-    },
-    {
-      "id": "wait1", 
-      "type": "wait",
-      "params": {"duration": 3000},
-      "description": "Wait for page load"
-    },
-    {
-      "id": "check_login",
-      "type": "condition", 
-      "params": {
-        "condition": "elementExists",
-        "selector": ".login-form",
-        "onTrue": "abort",
-        "onFalse": "continue"
-      },
-      "description": "Check if logged in"
-    },
-    {
-      "id": "extract1",
-      "type": "extract",
-      "params": {"saveAs": "profile_data"},
-      "description": "Extract profile information"
-    },
-    {
-      "id": "screenshot1",
-      "type": "screenshot", 
-      "params": {"filename": "profile-{{username}}.png"},
-      "description": "Take screenshot"
-    }
-  ]
+json_get_tab_id() {
+  python3 -c 'import json,sys; print(json.load(sys.stdin)["tab"]["id"])'
 }
+
+# Optional sanity check. /status is public, but keep using the bearer token
+# for all normal API work.
+curl -sS "$API/status"
 ```
 
-## Advanced Features
+## Golden Rules
 
-### Page Memory & Context
+| Do | Do not |
+| --- | --- |
+| Open new work in a separate tab with `POST /tabs/open` and `focus:false` | Do not start with `POST /navigate` for a new target URL |
+| Focus the new tab before snapshot/devtools/browser actions, because those routes act on the active tab | Do not assume snapshot or page routes target a background tab automatically |
+| Use `GET /snapshot?compact=true` first for page analysis | Do not start with screenshots when a snapshot is enough |
+| Use `@eN` refs or `POST /find` for interaction | Do not default to raw CSS click/type flows if refs or locators can do the job |
+| Close temporary tabs with `POST /tabs/close` when done | Do not leave Wingman tabs open after the task ends |
+| Use `POST /execute-js` with `window.scrollTo(...)` for SPA lazy loading | Do not rely on `POST /scroll` for SPA content loading |
+| Use `GET /devtools/network?type=XHR` to inspect live SPA/API traffic | Do not guess hidden APIs if the network log already shows them |
+| Warn Robin with `POST /wingman-alert` for captchas, login walls, or hard blockers | Do not keep retrying a blocked flow silently |
+
+## Primary Workflow
+
+For new browsing work, follow this pattern:
+
 ```bash
-# Get site memory for domain
-curl -X GET http://localhost:8765/memory/site/linkedin.com
+# 1. Open a separate tab without stealing Robin's focus immediately.
+OPEN_JSON="$(curl -sS -X POST "$API/tabs/open" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"url":"https://example.com","focus":false,"source":"wingman"}')"
 
-# Search across all visited pages
-curl -X GET "http://localhost:8765/memory/search?q=artificial+intelligence"
+TAB_ID="$(printf '%s' "$OPEN_JSON" | json_get_tab_id)"
 
-# Get recent browsing context
-curl -X GET http://localhost:8765/context/recent
+# 2. Focus that tab before using snapshot, page-content, devtools, find, click,
+#    fill, screenshot, or other active-tab routes.
+curl -sS -X POST "$API/tabs/focus" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
+
+# 3. Analyze the page with a compact accessibility snapshot.
+curl -sS "$API/snapshot?compact=true" \
+  -H "$AUTH_HEADER"
+
+# 4. Interact by ref or locator.
+curl -sS -X POST "$API/find" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"text","value":"Sign in"}'
+
+# 5. Clean up the temporary tab when finished.
+curl -sS -X POST "$API/tabs/close" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
 ```
 
-### Tab Management
+## Snapshot / Ref System
+
+`GET /snapshot` returns an accessibility-tree snapshot with stable refs such as
+`@e1`, `@e2`, and `@e3`. Those refs are the preferred interaction surface.
+
+Use the snapshot first, then interact by ref:
+
 ```bash
-# Open new tab
-curl -X POST http://localhost:8765/tabs/open \
-  -d '{"url": "https://example.com"}'
+# Get a compact snapshot.
+curl -sS "$API/snapshot?compact=true" \
+  -H "$AUTH_HEADER"
 
-# List all tabs
-curl -X GET http://localhost:8765/tabs/list
+# Click a ref from the snapshot.
+curl -sS -X POST "$API/snapshot/click" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"ref":"@e2"}'
 
-# Focus specific tab
-curl -X POST http://localhost:8765/tabs/focus \
-  -d '{"tabId": "tab123"}'
+# Fill a ref from the snapshot.
+curl -sS -X POST "$API/snapshot/fill" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"ref":"@e3","value":"hello@example.com"}'
+
+# Read text from a ref.
+curl -sS "$API/snapshot/text?ref=@e4" \
+  -H "$AUTH_HEADER"
 ```
 
-### Headless Browsing
+Use semantic locators when you do not want to manually parse refs:
+
 ```bash
-# Open headless tab (invisible)
-curl -X POST http://localhost:8765/headless/open \
-  -d '{"url": "https://example.com"}'
+# Supported locator strategies: role, text, placeholder, label, testid
+curl -sS -X POST "$API/find" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"label","value":"Email"}'
 
-# Get content from headless tab
-curl -X GET http://localhost:8765/headless/content/head123
+curl -sS -X POST "$API/find/click" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"text","value":"Continue"}'
 
-# Show headless tab to user if needed
-curl -X POST http://localhost:8765/headless/show \
-  -d '{"headlessId": "head123"}'
+curl -sS -X POST "$API/find/fill" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"label","value":"Password","fillValue":"correct horse battery staple"}'
+
+curl -sS -X POST "$API/find/all" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"role","value":"button"}'
 ```
 
-### Network Monitoring
-```bash
-# Get network traffic log
-curl -X GET http://localhost:8765/network/log
+## Core Endpoints by Use Case
 
-# Discover APIs on current site
-curl -X GET http://localhost:8765/network/apis
+### Safe Tab Lifecycle
+
+```bash
+# Open a new tab. For background work, prefer focus:false.
+curl -sS -X POST "$API/tabs/open" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"url":"https://example.com","focus":false,"source":"wingman"}'
+
+# List tabs and groups.
+curl -sS "$API/tabs/list" \
+  -H "$AUTH_HEADER"
+
+# Focus a tab before active-tab operations.
+curl -sS -X POST "$API/tabs/focus" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"tabId":"tab-123"}'
+
+# Close a temporary tab after use.
+curl -sS -X POST "$API/tabs/close" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"tabId":"tab-123"}'
 ```
 
-### Voice Integration
-```bash
-# Start voice recognition
-curl -X POST http://localhost:8765/voice/start
+### Page Analysis and Basic Browser Actions
 
-# Get voice status and transcript
-curl -X GET http://localhost:8765/voice/status
+```bash
+# Preferred page analysis.
+curl -sS "$API/snapshot?compact=true" \
+  -H "$AUTH_HEADER"
+
+# Broader text extraction.
+curl -sS "$API/page-content" \
+  -H "$AUTH_HEADER"
+
+# Raw outerHTML for full DOM inspection.
+curl -sS "$API/page-html" \
+  -H "$AUTH_HEADER"
+
+# Execute JS in the active tab.
+curl -sS -X POST "$API/execute-js" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"document.title"}'
+
+# Wait for page load or a selector.
+curl -sS -X POST "$API/wait" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"selector":"main","timeout":10000}'
+
+# Fallback CSS-driven click/type routes. Prefer refs/locators when possible.
+curl -sS -X POST "$API/click" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"selector":"button[type=\"submit\"]"}'
+
+curl -sS -X POST "$API/type" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"selector":"input[name=\"q\"]","text":"OpenClaw","clear":true}'
+
+# Screenshot only when a visual artifact is actually needed.
+curl -sS "$API/screenshot" \
+  -H "$AUTH_HEADER" \
+  -o screenshot.png
+
+# Human escalation.
+curl -sS -X POST "$API/wingman-alert" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"title":"Human help needed","body":"Captcha or login wall encountered."}'
+```
+
+### Sessions and Same-Origin API Relay
+
+```bash
+# Create an isolated session. Optional url opens a tab in that partition.
+curl -sS -X POST "$API/sessions/create" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"name":"research","url":"https://example.com"}'
+
+# List sessions.
+curl -sS "$API/sessions/list" \
+  -H "$AUTH_HEADER"
+
+# Switch the active named session.
+curl -sS -X POST "$API/sessions/switch" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"name":"research"}'
+
+# Save/load session state.
+curl -sS -X POST "$API/sessions/state/save" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"name":"research-state"}'
+
+curl -sS -X POST "$API/sessions/state/load" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"name":"research-state"}'
+
+# Same-origin fetch from inside the tab context.
+# Important: no Authorization/Cookie/Origin/Referer headers allowed here.
+curl -sS -X POST "$API/sessions/fetch" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"tabId":"tab-123","url":"/api/me","method":"GET"}'
+```
+
+### DevTools and Network Inspection
+
+```bash
+# DevTools health.
+curl -sS "$API/devtools/status" \
+  -H "$AUTH_HEADER"
+
+# Live network entries. Use type=XHR or type=Fetch for SPA API traffic.
+curl -sS "$API/devtools/network?type=XHR&limit=50" \
+  -H "$AUTH_HEADER"
+
+# Fetch the response body of a recorded request.
+curl -sS "$API/devtools/network/REQUEST_ID/body" \
+  -H "$AUTH_HEADER"
+
+# Console entries and errors.
+curl -sS "$API/devtools/console?limit=100" \
+  -H "$AUTH_HEADER"
+
+curl -sS "$API/devtools/console/errors?limit=50" \
+  -H "$AUTH_HEADER"
+
+# DOM query helpers.
+curl -sS -X POST "$API/devtools/dom/query" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"selector":"main a","maxResults":10}'
+
+curl -sS -X POST "$API/devtools/dom/xpath" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"expression":"//button[contains(.,\"Continue\")]","maxResults":10}'
+
+# Evaluate via CDP Runtime.
+curl -sS -X POST "$API/devtools/evaluate" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"expression":"window.location.href"}'
+
+# Storage and performance.
+curl -sS "$API/devtools/storage" \
+  -H "$AUTH_HEADER"
+
+curl -sS "$API/devtools/performance" \
+  -H "$AUTH_HEADER"
+```
+
+### Network Mocking and Request Discovery
+
+```bash
+# Simple network log.
+curl -sS "$API/network/log?limit=100" \
+  -H "$AUTH_HEADER"
+
+# Discovered API endpoints and domains.
+curl -sS "$API/network/apis" \
+  -H "$AUTH_HEADER"
+
+curl -sS "$API/network/domains" \
+  -H "$AUTH_HEADER"
+
+# HAR export.
+curl -sS "$API/network/har?limit=100" \
+  -H "$AUTH_HEADER" \
+  -o tandem-network.har
+
+# Add a mock/route rule.
+curl -sS -X POST "$API/network/mock" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"pattern":"*://api.example.com/*","status":200,"body":"{\"ok\":true}","headers":{"content-type":"application/json"}}'
+
+# List and remove mock rules.
+curl -sS "$API/network/mocks" \
+  -H "$AUTH_HEADER"
+
+curl -sS -X POST "$API/network/unmock" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"id":"rule-123"}'
+```
+
+### Agent Workflow / Coordination Endpoints
+
+```bash
+# Inspect existing tasks.
+curl -sS "$API/tasks" \
+  -H "$AUTH_HEADER"
+
+curl -sS "$API/tasks/TASK_ID" \
+  -H "$AUTH_HEADER"
+
+# Approval-gated JS execution.
+curl -sS -X POST "$API/execute-js/confirm" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"document.body.innerText.slice(0, 500)"}'
+
+# Emergency stop and tab locks.
+curl -sS -X POST "$API/emergency-stop" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{}'
+
+curl -sS -X POST "$API/tab-locks/acquire" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"tabId":"tab-123","agentId":"openclaw-main"}'
+
+curl -sS -X POST "$API/tab-locks/release" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"tabId":"tab-123","agentId":"openclaw-main"}'
+```
+
+## SPA Tips
+
+Use these rules on dynamic apps such as Discord, Slack, GitHub dashboards,
+single-page admin panels, or React/Vue/Next interfaces:
+
+```bash
+# Lazy loading or infinite scroll:
+# prefer execute-js with window.scrollTo(), not /scroll.
+curl -sS -X POST "$API/execute-js" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"window.scrollTo({ top: document.body.scrollHeight, behavior: \"smooth\" })"}'
+
+# Inspect real API traffic:
+curl -sS "$API/devtools/network?type=XHR&limit=100" \
+  -H "$AUTH_HEADER"
+
+# If /page-content is weak, too short, or obviously raw for the SPA,
+# fall back to direct JS extraction.
+curl -sS -X POST "$API/execute-js" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"document.body.innerText"}'
+```
+
+Interpretation tip: `/page-content` uses DOM-settling heuristics and is still
+worth trying first, but on complex SPAs you should treat `/devtools/network`
+and `POST /execute-js` as the more reliable fallback tools.
+
+## Example Workflow: Simple Inspection
+
+```bash
+API="http://127.0.0.1:8765"
+TOKEN="$(cat ~/.tandem/api-token)"
+AUTH_HEADER="Authorization: Bearer $TOKEN"
+JSON_HEADER="Content-Type: application/json"
+
+OPEN_JSON="$(curl -sS -X POST "$API/tabs/open" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"url":"https://example.com","focus":false,"source":"wingman"}')"
+
+TAB_ID="$(printf '%s' "$OPEN_JSON" | json_get_tab_id)"
+
+curl -sS -X POST "$API/tabs/focus" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
+
+curl -sS "$API/snapshot?compact=true" \
+  -H "$AUTH_HEADER"
+
+curl -sS -X POST "$API/find" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"by":"text","value":"More information"}'
+
+curl -sS -X POST "$API/tabs/close" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
+```
+
+## Example Workflow: SPA Investigation With Human Escalation
+
+```bash
+API="http://127.0.0.1:8765"
+TOKEN="$(cat ~/.tandem/api-token)"
+AUTH_HEADER="Authorization: Bearer $TOKEN"
+JSON_HEADER="Content-Type: application/json"
+
+OPEN_JSON="$(curl -sS -X POST "$API/tabs/open" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"url":"https://app.example.com/dashboard","focus":false,"source":"wingman"}')"
+
+TAB_ID="$(printf '%s' "$OPEN_JSON" | json_get_tab_id)"
+
+curl -sS -X POST "$API/tabs/focus" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
+
+curl -sS "$API/snapshot?compact=true" \
+  -H "$AUTH_HEADER"
+
+curl -sS -X POST "$API/execute-js" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"window.scrollTo({ top: document.body.scrollHeight, behavior: \"smooth\" })"}'
+
+curl -sS "$API/devtools/network?type=XHR&limit=100" \
+  -H "$AUTH_HEADER"
+
+curl -sS -X POST "$API/execute-js" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"code":"document.body.innerText"}'
+
+# If a captcha, login wall, or hard block appears:
+curl -sS -X POST "$API/wingman-alert" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d '{"title":"Robin needed","body":"Blocked by login wall or captcha in the SPA flow."}'
+
+curl -sS -X POST "$API/tabs/close" \
+  -H "$AUTH_HEADER" \
+  -H "$JSON_HEADER" \
+  -d "{\"tabId\":\"$TAB_ID\"}"
 ```
 
 ## Error Handling
 
-All endpoints return JSON responses with consistent error format:
+Common failure cases and the correct reaction:
 
-```json
-{
-  "success": false,
-  "error": "Element not found",
-  "code": "ELEMENT_NOT_FOUND",
-  "details": {
-    "selector": ".non-existent",
-    "timestamp": "2026-02-11T15:23:45Z"
-  }
-}
+```bash
+# 401 Unauthorized
+# Cause: missing or wrong bearer token.
+# Fix: re-read ~/.tandem/api-token and retry with Authorization: Bearer <token>.
+
+# 400 from /sessions/fetch
+# Cause: cross-origin URL, forbidden headers, unsupported method, or invalid body.
+# Fix: keep the fetch same-origin and do not send Authorization/Cookie/Origin/Referer headers.
+
+# "Ref not found" from snapshot routes
+# Cause: refs were reset after navigation or page change.
+# Fix: call GET /snapshot again and use the fresh @eN refs.
+
+# Empty or weak /page-content on an SPA
+# Cause: the page is client-rendered or still loading data.
+# Fix: use POST /execute-js with window.scrollTo(), inspect GET /devtools/network?type=XHR,
+# and fall back to POST /execute-js with document.body.innerText.
+
+# Captcha, login wall, MFA, blocked action, or unclear human decision
+# Fix: send POST /wingman-alert immediately and wait for Robin.
 ```
 
-Common error codes:
-- `NAVIGATION_FAILED` - URL could not be loaded
-- `ELEMENT_NOT_FOUND` - CSS selector matched no elements
-- `TIMEOUT` - Operation timed out
-- `CAPTCHA_DETECTED` - Human intervention needed
-- `LOGIN_REQUIRED` - Authentication needed
+## Final Reminder
 
-## Anti-Detection Features
+The one rule that must stay prominent:
 
-Tandem is designed to be undetectable:
-- ✅ Human-like timing and mouse movements
-- ✅ Real Chrome fingerprint (WebGL, Canvas, Audio)
-- ✅ Event.isTrusted = true for all interactions
-- ✅ No injected DOM elements visible to pages
-- ✅ Persistent cookies and sessions
-- ✅ Behavioral learning from human usage
-
-**⚠️ Always respect website terms or service and robots.txt**
-
-## Best Practices
-
-1. **Wait for page loads:** Add delays after navigation
-2. **Check login state:** Use `/auth/check` before sensitive operations  
-3. **Handle captchas:** Use `/wingman-alert` system for human intervention
-4. **Use workflows:** For complex multi-step tasks
-5. **Monitor confidence:** Check extraction confidence scores
-6. **Graceful failures:** Always handle error responses
-
-## Configuration
-
-Tandem stores configuration in `~/.tandem/config.json`:
-- Screenshot destinations
-- Voice recognition language
-- Stealth settings
-- Behavioral learning preferences
-
-## Dependencies
-
-- Node.js 14+
-- Electron
-- Chrome/Chromium engine
-- macOS (primary), Linux (experimental)
-
-## Support
-
-For issues or feature requests, contact the development team or check the project repository at `hydro13/tandem-browser`.
-
----
-
-*Last updated: February 2026*
-*API Version: 5.0 (Phase 5 OpenClaw Integration)*
+```bash
+# Do not start new work with /navigate.
+# /navigate loads into the active tab and can overwrite Robin's context.
+# For new URLs, open a separate tab with /tabs/open, focus it only when needed,
+# and close it when the task is done.
+```
