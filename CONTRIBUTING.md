@@ -6,8 +6,28 @@ Thanks for contributing to Tandem Browser.
 
 - Read [README.md](README.md) for the product overview
 - Read [PROJECT.md](PROJECT.md) for architecture context
+- Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for collaboration expectations
 - Keep changes local-first and privacy-preserving
 - Avoid introducing new dependencies unless they are clearly justified
+
+## Project Status
+
+The repository is currently maintained as a public developer preview.
+
+- macOS is the primary development target
+- Linux is supported but still has rough edges in some media workflows
+- Windows is not actively validated
+
+Please keep changes honest about current product maturity. Do not present
+unfinished features as production-ready.
+
+Tandem is also intentionally OpenClaw-first. Contributions should preserve that
+positioning in public docs, UX wording, and architecture decisions unless the
+project direction explicitly changes.
+
+Public-facing changes should also avoid framing Tandem as a gimmick or a loose
+plugin integration. The project is intended as a first-party OpenClaw companion
+browser maintained from the same ecosystem.
 
 ## Development Workflow
 
@@ -21,6 +41,10 @@ For manual app testing:
 ```bash
 npm start
 ```
+
+If your change affects the Electron shell, screenshots, permissions, packaging,
+or the local API lifecycle, do a manual app sanity check in addition to
+`npm run verify`.
 
 `TODO.md` is the active engineering backlog. Treat `docs/internal/ROADMAP.md`
 and `docs/internal/STATUS.md` as historical snapshots, not the live source of
@@ -66,6 +90,9 @@ A good pull request should include:
 - test or verification notes
 - screenshots when UI changes are visible
 - what is still open or risky, if anything
+
+If a change depends on local OpenClaw services, call that out clearly so other
+contributors know what they can and cannot validate on a clean machine.
 
 ## Session Closeout
 

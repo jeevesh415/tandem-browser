@@ -213,18 +213,18 @@ function renderAboutPanel() {
     <div class="about-panel-wrapper">
       <img class="about-logo" src="tandem-bike.png" alt="Tandem">
       <div class="about-title"><span class="about-t">T</span><span class="about-rest">andem</span></div>
-      <div class="about-subtitle">Wingman Browser</div>
-      <div class="about-quote">"Jij bent mij en ik ben jou, samen zijn we 1"</div>
-      <div class="about-version">v0.44.2</div>
+      <div class="about-subtitle">First-Party OpenClaw Companion Browser</div>
+      <div class="about-quote">Public developer preview for serious OpenClaw workflows</div>
+      <div class="about-version">v0.57.4</div>
       <div class="about-info">
-        AI-Human symbiotic browser<br>
-        Built for browsing together — human eyes, AI mind
+        Built specifically for human-AI collaboration with OpenClaw.<br>
+        Maintained in the same ecosystem as OpenClaw, with local control and security built in.
       </div>
       <div class="about-link-wrapper">
         <a href="https://github.com/hydro13" class="about-link" id="about-github-link">GitHub — hydro13</a>
       </div>
-      <div class="about-copyright">© 2026 Mblock BV — Robin Waslander</div>
-      <div class="about-team">Built by Robin & the GenX Team (Kees 🧀 + Max ⚡)</div>
+      <div class="about-copyright">© 2026 Robin Waslander</div>
+      <div class="about-team">A first-party companion browser for OpenClaw</div>
     </div>
   `;
   

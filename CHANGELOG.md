@@ -2,6 +2,11 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [Unreleased]
+
+- fix: make application screenshot capture fall back cleanly when macOS window capture metadata is unavailable
+- docs: align public-facing repo docs for developer preview and first-party OpenClaw positioning
+
 ## [v0.57.4] - 2026-03-09
 
 - fix: use screen source for system audio capture
@@ -47,15 +52,6 @@ Tested:
 - Stop button: works (single click + Esc shortcut)
 - ffmpeg MP4 conversion: works
 - Known limitation: Tab/webview audio not captured on Linux due to Electron process isolation (documented in TODO.md)
-
-## [Unreleased]
-
-- fix: Linux video recorder compatibility with Wayland/Pipewire
-  - Use native `getDisplayMedia()` on Linux instead of Electron's `desktopCapturer` to avoid Wayland screencast portal conflicts
-  - Add error handling for `get-desktop-source` IPC to prevent renderer crashes
-  - Fix stop button event bubbling (prevent double-click triggering fullscreen)
-  - Add debug logging for audio track detection
-  - **Known limitation:** Tab/webview audio capture not working on Linux due to Electron process isolation; mic audio works correctly
 
 ## [v0.57.0] - 2026-03-09
 
@@ -152,36 +148,6 @@ Tested:
 ## [v0.45.2] - 2026-03-08
 
 - fix: remove tandem extension header helper dependency in 1password patches
-
-## [Unreleased] - 2026-03-08
-
-### Changed
-- **Network HAR export** (`src/network/inspector.ts`, `src/api/routes/network.ts`) — the network inspector can now export recent traffic as a standard HAR 1.2 payload through `/network/har`, including request headers, response headers, query params, sizes, and basic timing data for downstream debugging or agent analysis
-- **Google Photos screenshot uploads** (`src/integrations/google-photos.ts`, `src/draw/overlay.ts`, `shell/settings.html`) — screenshots can now auto-upload to Google Photos after a local desktop OAuth connection, with connect/disconnect controls and local client ID storage in Settings
-- **Screenshot capture modes** (`src/draw/overlay.ts`, `src/ipc/handlers.ts`, `shell/js/wingman.js`) — the toolbar screenshot button now offers `Web Page`, `Application`, and in-app `Region` capture, with region selection scoped to the Tandem window rather than the full desktop
-- **New-tab quick-link shortcut** (`shell/newtab.html`) — the new tab page now shows an `Edit Quick Links` action above the shortcut grid so you can jump straight into managing them without hunting through the app chrome
-- **Quick-link context menus** (`shell/js/sidebar.js`, `src/context-menu/menu-builder.ts`, `src/config/manager.ts`) — quick links can now be added or removed directly from the tab right-click menu and from the new-tab page link context menu, instead of only through Settings
-- **Configurable new-tab quick links** (`shell/newtab.html`, `shell/settings.html`, `src/config/manager.ts`) — the new tab page now reads quick links from shared config instead of a hardcoded HTML list, and settings now expose a small editor to add, remove, and save those shortcuts
-- **Closed-panel Wingman reply notifications** (`src/panel/manager.ts`, `src/panel/tests/manager.test.ts`) — incoming AI chat replies now trigger the existing Wingman alert path when the side panel is closed, so replies are surfaced even if the user is browsing with the panel hidden
-- **Extension update version comparison** (`src/extensions/update-checker.ts`, `src/extensions/tests/extensions.test.ts`) — replaced the fragile dot-split numeric comparison with segment-aware parsing that treats `1.2` and `1.2.0` as equal, compares multi-digit segments numerically, and handles prerelease suffixes such as `-beta` and `-rc.1` consistently during update checks
-- **Verification baseline** (`package.json`, `eslint.config.mjs`, `tsconfig.eslint.json`, `.github/workflows/verify.yml`) — restored ESLint coverage for the test tree, added a single `npm run verify` command, and wired the same verification command into GitHub Actions so compile, lint, and test can run from one entry point locally and in CI
-- **Planning source cleanup** (`TODO.md`, `docs/internal/README.md`, `docs/internal/ROADMAP.md`, `docs/internal/STATUS.md`) — made `TODO.md` the single active engineering backlog and downgraded the older internal roadmap/status files into explicit historical snapshots to reduce planning drift
-- **Documentation consistency** (`PROJECT.md`, `README.md`, `CONTRIBUTING.md`) — synchronized the current version and replaced machine-local documentation links with repo-relative links that work on GitHub and in local clones
-- **Bootstrap composition split** (`src/main.ts`, `src/bootstrap/runtime.ts`, `src/bootstrap/tab-session.ts`, `src/bootstrap/types.ts`) — moved runtime manager composition, teardown logic, and initial-tab/session-restore orchestration out of `main.ts` so the Electron entrypoint is back to being an orchestration layer instead of a monolithic service factory
-- **Shell surface split** (`shell/index.html`, `shell/js/sidebar.js`, `shell/js/extensions.js`, `shell/js/modal.js`, `shell/css/main.css`, `shell/css/browser-shell.css`, `shell/css/sidebar.css`, `shell/css/wingman.css`, `shell/css/sidebar-panels.css`) — extracted the sidebar and modal inline scripts into dedicated renderer files, moved extension/about panel logic out of `main.js`, and turned the shell stylesheet into an import-based aggregator with surface-specific partials
-- **Wingman and ClaroNote split** (`shell/js/main.js`, `shell/js/wingman.js`, `shell/js/claronote.js`, `shell/index.html`) — moved the Wingman panel, chat, approvals, panel resizing, and ClaroNote renderer logic out of `main.js`, and replaced implicit file-scope coupling with an explicit renderer bridge on `window.__tandemRenderer`
-- **Browser tools split** (`shell/js/main.js`, `shell/js/browser-tools.js`, `shell/index.html`) — moved renderer-side bookmarks, history, find-in-page, voice input, settings navigation, and screenshot preview logic out of `main.js`, and kept the integration boundary explicit through `window.__tandemRenderer` instead of hidden file-scope access
-- **Tabs and renderer bridge split** (`shell/js/tabs.js`, `shell/js/main.js`, `shell/index.html`, `src/main.ts`) — moved tab creation, focus, navigation, zoom, activity tracking, and the shared renderer bridge out of `main.js` into a dedicated tabs module, and restored the early `tab-register` queue in the Electron main process so the shell can bootstrap safely before runtime managers are ready
-- **Draw overlay split** (`shell/js/draw.js`, `shell/js/main.js`, `shell/index.html`) — moved annotation state, scroll tracking, draw-mode lifecycle handling, and screenshot compositing out of `main.js` into a dedicated draw module, leaving the shell entrypoint focused on window chrome and shortcut orchestration
-- **Final shell entrypoint split** (`shell/js/window-chrome.js`, `shell/js/shortcut-router.js`, `shell/index.html`) — replaced the last mixed shell entrypoint with dedicated modules for window chrome and shortcut routing, so the renderer shell no longer relies on `shell/js/main.js` as a catch-all loader
-
-### Technical Details
-- ESLint now uses a dedicated TypeScript project file so `src/**/tests/**/*.test.ts` no longer fails parser setup just because runtime `tsconfig.json` excludes test files from the build output
-- Verification now has one canonical entry point: `npm run verify`
-- The shell renderer split now leaves `shell/js/main.js` focused on tabs, drawing, and core orchestration, while `shell/js/browser-tools.js` owns the browser utility surface
-- `shell/js/main.js` is now down to the remaining titlebar, keyboard shortcut orchestration, and draw overlay flow, while `shell/js/tabs.js` owns the renderer tab lifecycle and shared state bridge
-- The shell entrypoint is now down to window chrome plus shortcut orchestration, with `shell/js/draw.js` owning the draw overlay lifecycle and screenshot composition path
-- The shell renderer now loads by surface-specific modules (`tabs`, `browser-tools`, `draw`, `wingman`, `claronote`, `extensions`, `window-chrome`, `shortcut-router`) instead of routing current behavior through a single generic `main.js`
 
 ## [v0.45.1] - 2026-03-08
 

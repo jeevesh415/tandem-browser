@@ -26,6 +26,16 @@ Security issues or particular interest include:
 - extension privilege escalation
 - stealth or fingerprinting regressions that create a unique browser signature
 - credential leakage or insecure local storage
+- unsafe defaults around localhost services, agent bridges, or automation
+
+## What Helps Triage
+
+Strong reports usually include:
+
+- whether the issue requires local machine access or can be triggered by a web page
+- whether it affects only macOS, only Linux, or both
+- whether OpenClaw integration is required for reproduction
+- whether the issue leaks data, breaks containment, or creates a detectable fingerprint
 
 ## Disclosure
 

@@ -39,7 +39,7 @@ body:
     id: version
     attributes:
       label: Version
-      placeholder: 0.44.55
+      placeholder: 0.57.4
   - type: dropdown
     id: platform
     attributes:
@@ -49,6 +49,14 @@ body:
         - Linux
         - Windows
         - Other
+  - type: dropdown
+    id: openclaw
+    attributes:
+      label: OpenClaw running locally?
+      options:
+        - "No"
+        - "Yes"
+        - Not relevant
   - type: textarea
     id: logs
     attributes:

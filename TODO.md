@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: March 8, 2026
+Last updated: March 14, 2026
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Last updated: March 8, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.57.0`
+- Current app version: `0.57.4`
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -37,6 +37,7 @@ Last updated: March 8, 2026
 
 ### Maintenance Sweep
 
+- [x] Align public-facing docs, repo metadata, and contribution guidance for a public developer preview
 - [x] Fix the `Snoze` typo in `docs/research/opera-browser-research.md` and do a quick spell-check in the same tab-snoozing section
 - [x] Harden extension update version comparison in `src/extensions/update-checker.ts`; `isNewerVersion()` now handles uneven segment lengths and prerelease suffixes such as `1.2.3-beta`
 - [x] Add focused tests for extension version comparison edge cases in `src/extensions/tests/`, including `1.2` vs `1.2.0`, `1.10.0` vs `1.9.9`, and pre-release suffix input
@@ -50,6 +51,7 @@ Last updated: March 8, 2026
 - [x] Extract tab rendering, navigation, zoom, and shared renderer state out of `shell/js/main.js` into `shell/js/tabs.js`, and keep active-tab coordination explicit through the renderer bridge
 - [x] Extract the draw overlay surface out of `shell/js/main.js` into `shell/js/draw.js` so annotation state, screenshot compositing, and draw-mode lifecycles stop sharing a file with window chrome and shortcuts
 - [x] Replace the last mixed shell entrypoint with dedicated `shell/js/window-chrome.js` and `shell/js/shortcut-router.js` modules so `main.js` is no longer needed as a catch-all shell loader
+- [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`
 - [ ] Investigate the remaining 1Password MV3 service-worker startup noise (`DidStartWorkerFail ...: 5` and policy calculation errors) and determine whether it affects any real user-facing behavior; the old `__tandemExtensionHeaders` background error is fixed, and current manual checks indicate the extension still works for normal use
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 

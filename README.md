@@ -1,61 +1,91 @@
 # Tandem Browser
 
-Tandem Browser is a local-first Electron browser built for human-AI
-collaboration with OpenClaw as a first-class runtime. The human browses
-normally. The AI gets a local API on `127.0.0.1:8765` for navigation,
-extraction, automation, and observability. Websites should only see an
-ordinary Chromium browser on macOS or Linux, not an “AI browser”.
+Tandem Browser is a local-first Electron browser built specifically for
+human-AI collaboration with OpenClaw.
 
-Tandem is opinionated about security. If an AI can read and act on live web
-content, the browser becomes part or the threat model. Tandem puts a six-layer
-security system between external content and the agent, with local-only data
-handling and no cloud dependency in the browser itself. Those layers are built
-so OpenClaw can operate against the live web with tighter guardrails than a
-normal desktop browser shell.
+This repository is a public `developer preview`.
 
-## What It Does
+The human browses normally. OpenClaw gets a local API on `127.0.0.1:8765` for
+navigation, extraction, automation, and observability. Tandem is not a generic
+"AI browser" shell with OpenClaw added later. It is an OpenClaw-first browser
+environment designed so the human and OpenClaw can browse together on the same
+machine.
 
-- Human + AI shared browsing: a normal browser UI for the human, a local HTTP API for the agent
-- OpenClaw-first runtime: Tandem is designed so OpenClaw can browse, inspect, and automate safely on the local machine
-- Local API for automation: navigation, page content, screenshots, tabs, sessions, devtools-style endpoints, and more
-- Security-by-default browsing: blocklists, outbound checks, script analysis, behavior monitoring, and an agent decision layer
-- Extension support: Chrome-style extension loading, native messaging compatibility work, and extension update management
-- Local-first data model: sessions, settings, history, workspaces, and browser state stay on the machine
+Tandem is maintained by the same maintainer behind OpenClaw and should be read
+as a first-party OpenClaw companion browser rather than a third-party
+integration experiment.
 
-## UI Highlights
+Tandem is built around a two-layer model:
 
-The browser surface is broader than a simple tab shell.
+- visible layer: Chromium webviews, tabs, sidebar tools, downloads, and the
+  human-facing shell
+- invisible layer: Electron services, the local HTTP API, security systems,
+  OpenClaw integration, and agent tooling
 
-- Left sidebar: workspaces, messenger-style panels, bookmarks, history, downloads, and other utility surfaces
-- Main browsing area: Chromium webviews with tab management and session state
-- Right-side Wingman panel: AI chat, activity, screenshots, and related agent tools
-- Overlay tooling: annotations, screenshots, and other shell-level controls that stay out or the page context
+## Status
 
-## Current Status
+Tandem is currently a public `developer preview`.
 
-- Primary platform: macOS
-- Secondary platform: Linux
-- Windows: not actively validated yet
-- Current release: see [package.json](package.json) and [CHANGELOG.md](CHANGELOG.md)
+- primary platform: macOS
+- secondary platform: Linux
+- Windows is not actively validated yet
+- current version: `0.57.4`
+- current release history: [CHANGELOG.md](CHANGELOG.md)
 
-## Architecture
+The repository is intended to be public and usable by contributors, but not
+everything is polished to end-user distribution quality yet.
 
-Tandem runs two layers in parallel:
+## OpenClaw-First Positioning
 
-1. The visible browsing layer: Chromium webviews, tabs, downloads, bookmarks, workspaces, and the human-facing UI.
-2. The invisible control layer: Electron main process services, the local HTTP API, security systems, OpenClaw integration, and the agent tooling.
+Tandem is built around collaboration with OpenClaw.
 
-This split matters because Tandem is designed to keep AI control out or the page
-JavaScript context whenever possible while still giving OpenClaw a useful local
-browser surface.
+- the right-side Wingman workflow is designed around OpenClaw as the primary AI runtime
+- the local browser API exists so OpenClaw can inspect, navigate, extract, and automate safely
+- the security model is shaped by the fact that OpenClaw has access to a live browser
+- Tandem is maintained by the same maintainer behind OpenClaw and is intended as a first-party companion browser
+- the repository may still be useful for general Electron browser experimentation, but the product itself is intentionally OpenClaw-first
 
-For the broader system overview, see [PROJECT.md](PROJECT.md).
+## What Tandem Does
+
+- Human + AI shared browsing with one local browser session
+- Local HTTP API for tabs, navigation, screenshots, content extraction,
+  sessions, devtools surfaces, and automation
+- Security-by-default browsing with multi-layer filtering and review points
+- OpenClaw-first runtime integration for chat, browser control, and local agent workflows
+- Local-first persistence for sessions, history, workspaces, bookmarks, and
+  settings
+- Chrome-style extension loading and related compatibility work
+
+## Key Product Surfaces
+
+- left sidebar for workspaces, communication panels, bookmarks, history,
+  downloads, and utilities
+- main Chromium browsing surface with multi-tab session management
+- right-side Wingman panel for chat, activity, screenshots, and agent context
+- shell-level overlays for screenshots and annotations that stay outside the
+  page JavaScript context
+
+## Security Model
+
+If an AI can read and act on live web content, the browser becomes part of the
+threat model. Tandem treats external content as hostile by default and adds a
+multi-layer security stack before content reaches the page or the agent.
+
+Current protections include:
+
+- network-level threat feed blocking
+- outbound request checks
+- runtime script inspection
+- behavior monitoring
+- agent-facing decision points for ambiguous cases
+
+This project is intentionally more paranoid than a normal desktop browser shell.
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js
+- Node.js 20+
 - npm
 - macOS or Linux
 
@@ -65,10 +95,10 @@ For the broader system overview, see [PROJECT.md](PROJECT.md).
 npm install
 ```
 
-### Compile
+### Verify
 
 ```bash
-npm run compile
+npm run verify
 ```
 
 ### Start
@@ -79,18 +109,20 @@ npm start
 
 On macOS, the start script clears Electron quarantine flags before launch.
 
-## Development
+## OpenClaw Integration
 
-Useful commands:
+Tandem is designed first and foremost for OpenClaw.
 
-```bash
-npm run compile
-npm test
-npm run lint
-npm run build
-```
+The browser can run without OpenClaw for shell or API development work, but the
+full product experience expects a local OpenClaw gateway and configuration on
+the same machine.
 
-The local API binds to `127.0.0.1:8765`.
+If you are only working on browser shell, tabs, screenshots, security, or API
+behavior, you do not need every OpenClaw feature running first.
+
+If you are evaluating Tandem as a product, assume OpenClaw integration is a
+core part of the intended workflow rather than an optional extra. Tandem should
+be understood as a first-party OpenClaw companion browser.
 
 ## Public API Snapshot
 
@@ -112,28 +144,29 @@ curl -X POST http://127.0.0.1:8765/sessions/fetch \
   -d '{"tabId":"tab-7","url":"/api/me","method":"GET"}'
 ```
 
-## Security Model
+The local API binds to `127.0.0.1:8765`.
 
-Tandem treats external web content as hostile by default. The current stack includes:
+## Known Limitations
 
-- network-level blocking and threat feeds
-- outbound request checks
-- runtime script inspection
-- behavior monitoring
-- an AI-facing decision layer for ambiguous cases
-
-This is a browser for agent-assisted work, so the project is intentionally more
-paranoid than a normal desktop browser shell.
+- `Personal News` exists as a sidebar slot but is not a finished panel
+- Linux video recording still has desktop audio limitations due to Electron
+  process isolation
+- Windows support is not actively validated
+- Packaging and auto-update flows are still less mature than the core browser
+  and API surface
 
 ## Repository Guide
 
-- [PROJECT.md](PROJECT.md): product vision, OpenClaw positioning, and architecture overview
-- [docs/README.md](docs/README.md): documentation folder
+- [PROJECT.md](PROJECT.md): product vision and architecture overview
+- [docs/README.md](docs/README.md): documentation map
 - [CHANGELOG.md](CHANGELOG.md): release history
 - [CONTRIBUTING.md](CONTRIBUTING.md): contribution workflow
 - [SECURITY.md](SECURITY.md): vulnerability reporting
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): collaboration expectations
 
-Internal workflow files such as [AGENTS.md](AGENTS.md) and [TODO.md](TODO.md) are kept for local development operations and are not the primary public documentation surface. The `docs/` tree also contains historical contributor packs with files such as `CLAUDE.md` and `LEES-MIJ-EERST.md`; those are retained for maintainers, not as end-user documentation.
+Files such as [AGENTS.md](AGENTS.md), [TODO.md](TODO.md), and several archived
+documents are maintainer workflow material. They remain in the repository for
+engineering context, but they are not the primary public entry points.
 
 ## License
 

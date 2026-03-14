@@ -215,19 +215,24 @@ export class DrawOverlayManager {
       // Use macOS screencapture for correct color profile handling.
       // Electron's capturePage().toPNG() doesn't embed the display color profile,
       // causing color shifts on P3 displays when the file is opened.
-      if (process.platform === 'darwin') {
+      if (process.platform === 'darwin' && typeof this.win.getMediaSourceId === 'function') {
         const mediaId = this.win.getMediaSourceId(); // "window:<CGWindowID>:0"
         const cgWindowId = mediaId.split(':')[1];
         const tmpPath = path.join(os.tmpdir(), `tandem-appcap-${Date.now()}.png`);
         try {
           execFileSync('screencapture', ['-l' + cgWindowId, '-x', '-o', tmpPath]);
           const buffer = fs.readFileSync(tmpPath);
-          fs.unlinkSync(tmpPath);
+          if (fs.existsSync(tmpPath)) {
+            fs.unlinkSync(tmpPath);
+          }
           const { picturesPath, appPath, filename, base64 } = this.persistScreenshotBuffer(buffer, currentUrl);
           this.win.webContents.send('screenshot-taken', { path: picturesPath, appPath, filename, base64 });
           return { ok: true, path: picturesPath };
         } catch (scErr) {
           log.warn('screencapture failed, falling back to capturePage:', scErr);
+          if (fs.existsSync(tmpPath)) {
+            fs.unlinkSync(tmpPath);
+          }
           // Fall through to Electron capture below
         }
       }

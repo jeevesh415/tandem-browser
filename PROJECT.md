@@ -4,16 +4,27 @@
 
 ## What is Tandem?
 
-Tandem is an Electron-based browser built for human-AI collaboration. The name comes from the tandem bicycle: two riders, one machine, each contributing what the other can't do alone.
+Tandem is an Electron-based browser built for human-AI collaboration with
+OpenClaw as the primary runtime. The name comes from the tandem bicycle: two
+riders, one machine, each contributing what the other can't do alone.
 
-The browser runs two things in parallel. The human uses it like any other browser — navigating, logging in, handling captchas, making decisions. The AI has access to a full HTTP API on `127.0.0.1:8765` with roughly 250 route handlers for navigation, interaction, data extraction, automation, sessions, sync, extensions, and developer tooling. OpenClaw is the primary AI runtime Tandem is built around today. Websites see a normal Chrome browser on macOS. They don't see the AI.
+The browser runs two things in parallel. The human uses it like any other browser
+while OpenClaw operates through a full local HTTP API on `127.0.0.1:8765` with
+roughly 250 route handlers for navigation, interaction, data extraction,
+automation, sessions, sync, extensions, and developer tooling. OpenClaw is not
+an add-on integration here; it is the primary AI runtime Tandem is built
+around. Websites see a normal Chrome browser on macOS. They don't see the AI.
+
+Tandem is maintained by the same maintainer behind OpenClaw and is intended as
+a first-party companion browser for OpenClaw workflows.
 
 The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs a 6-layer security shield before anything reaches the page so OpenClaw can operate with stricter containment than a conventional browser automation stack.
 
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
-**Current version:** `0.45.1`  
+**Current version:** `0.57.4`  
+**Repository status:** Public developer preview  
 **Started:** February 11, 2026
 
 ---
