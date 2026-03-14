@@ -141,7 +141,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
   /** Evaluate JavaScript via CDP Runtime */
   router.post('/devtools/evaluate', async (req: Request, res: Response) => {
     try {
-      let { expression, returnByValue = true, awaitPromise = true } = req.body;
+      let { expression } = req.body;
+      const { returnByValue = true, awaitPromise = true } = req.body;
       if (!expression) { res.status(400).json({ error: 'expression required' }); return; }
       if (expression.length > MAX_CODE_LENGTH) {
         res.status(413).json({ error: 'Expression too large (max 1MB)' });
