@@ -35,6 +35,10 @@ Tandem is currently a public `developer preview`.
 The repository is intended to be public and usable by contributors, but not
 everything is polished to end-user distribution quality yet.
 
+The goal of making the repository public is not just to show the project. It is
+also to let other contributors, maintainers, and OpenClaw-adjacent builders
+help improve the browser over time.
+
 ## OpenClaw-First Positioning
 
 Tandem is built around collaboration with OpenClaw.
@@ -167,6 +171,9 @@ The local API binds to `127.0.0.1:8765`.
 Files such as [AGENTS.md](AGENTS.md), [TODO.md](TODO.md), and several archived
 documents are maintainer workflow material. They remain in the repository for
 engineering context, but they are not the primary public entry points.
+
+Contributions are welcome. If you want to help improve Tandem as an
+OpenClaw-first browser, start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

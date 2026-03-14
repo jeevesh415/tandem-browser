@@ -30,6 +30,10 @@ macOS is the primary platform today, Linux is secondary, and there are still
 known rough edges in some workflows. But the core repo, API surface, test
 baseline, and product direction are now ready for public review.
 
+The point of publishing this is also to let other contributors help improve the
+browser. If you care about OpenClaw workflows, local-first browsing, security,
+or agent-facing browser infrastructure, contributions are welcome.
+
 If you maintain OpenClaw-adjacent tooling, browser automation systems, Electron
 infrastructure, or local-first agent products, this is the layer where those
 concerns meet a real browser shell.

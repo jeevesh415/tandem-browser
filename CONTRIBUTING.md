@@ -2,6 +2,11 @@
 
 Thanks for contributing to Tandem Browser.
 
+This repository is public because outside contributors are expected to help
+improve the browser over time. If you are interested in OpenClaw workflows,
+local-first browser tooling, security, Electron infrastructure, or agent
+interfaces, contributions are welcome.
+
 ## Before You Start
 
 - Read [README.md](README.md) for the product overview
