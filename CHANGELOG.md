@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.61.0] - 2026-03-16
+
+- feat: add /devtools/shell endpoint to open shell chrome devtools for debugging
+
 ## [v0.60.6] - 2026-03-16
 
 - fix: start SpeechRecognition before stopping warmup stream to prevent not-allowed error
