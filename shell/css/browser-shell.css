@@ -88,6 +88,11 @@
       --tab-bg: #111a30;
       --tab-active: #16213e;
       --tab-hover: #1a2744;
+      --sidebar-bg: #1a1a2e;
+      --panel-bg: #16213e;
+      --border-color: rgba(255, 255, 255, 0.07);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+      --hover-bg-subtle: rgba(255, 255, 255, 0.07);
     }
 
     /* LGL Dark Mode Tokens */
@@ -123,6 +128,11 @@
       --tab-bg: #e2e8f0;
       --tab-active: #ffffff;
       --tab-hover: #f1f5f9;
+      --sidebar-bg: #f1f5f9;
+      --panel-bg: #ffffff;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --hover-bg: rgba(0, 0, 0, 0.06);
+      --hover-bg-subtle: rgba(0, 0, 0, 0.04);
     }
 
     /* System preference detection */
@@ -139,6 +149,11 @@
         --tab-bg: #e2e8f0;
         --tab-active: #ffffff;
         --tab-hover: #f1f5f9;
+        --sidebar-bg: #f1f5f9;
+        --panel-bg: #ffffff;
+        --border-color: rgba(0, 0, 0, 0.08);
+        --hover-bg: rgba(0, 0, 0, 0.06);
+        --hover-bg-subtle: rgba(0, 0, 0, 0.04);
       }
     }
 
@@ -241,6 +256,27 @@
       background: rgba(14, 14, 24, 0.42) !important;
       -webkit-backdrop-filter: blur(30px) saturate(160%);
       backdrop-filter: blur(30px) saturate(160%);
+    }
+
+    /* Light theme overrides for macOS chrome */
+    html[data-theme="light"] body.platform-darwin .tab-bar {
+      background: rgba(226, 232, 240, 0.85) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(160%) brightness(1.05);
+      backdrop-filter: blur(40px) saturate(160%) brightness(1.05);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    }
+
+    html[data-theme="light"] body.platform-darwin .toolbar {
+      background: rgba(241, 245, 249, 0.90) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(160%) brightness(1.05);
+      backdrop-filter: blur(40px) saturate(160%) brightness(1.05);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    }
+
+    html[data-theme="light"] body.platform-darwin .bookmarks-bar {
+      background: rgba(248, 250, 252, 0.85) !important;
+      -webkit-backdrop-filter: blur(30px) saturate(140%);
+      backdrop-filter: blur(30px) saturate(140%);
     }
 
     .tab-bar::-webkit-scrollbar {
