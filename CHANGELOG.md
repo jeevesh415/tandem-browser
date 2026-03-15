@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.60.5] - 2026-03-16
+
+- fix: add gstatic and Google CDN domains to trusted scripts
+
 ## [v0.60.4] - 2026-03-16
 
 - fix: add Google APIs to trusted script domains for Web Speech API
