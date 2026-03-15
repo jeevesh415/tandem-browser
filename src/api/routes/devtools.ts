@@ -207,6 +207,22 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
   /** Toggle DevTools window for active tab (for debugging).
    *  NOTE: After closing DevTools, CDP connection is lost.
    *  The next API call to any /devtools/* endpoint will re-attach automatically. */
+  /** Open/close shell (chrome) DevTools — for debugging the browser shell itself */
+  router.post('/devtools/shell', (_req: Request, res: Response) => {
+    try {
+      const wc = ctx.win.webContents;
+      if (wc.isDevToolsOpened()) {
+        wc.closeDevTools();
+        res.json({ ok: true, open: false });
+      } else {
+        wc.openDevTools({ mode: 'detach' });
+        res.json({ ok: true, open: true });
+      }
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   router.post('/devtools/toggle', async (_req: Request, res: Response) => {
     try {
       const wc = await ctx.tabManager.getActiveWebContents();
