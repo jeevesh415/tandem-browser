@@ -4,6 +4,7 @@
       display: flex;
       overflow: hidden;
       position: relative;
+      background: var(--bg);
     }
 
     /* ═══════════════════════════════════════
@@ -41,7 +42,7 @@
       display: flex;
       flex-direction: column;
       background: var(--sidebar-bg, #1a1a2e);
-      border-right: 1px solid rgba(255,255,255,0.07);
+      border-right: 1px solid var(--border-color);
       overflow: hidden;
     }
 
@@ -73,7 +74,7 @@
       height: 38px;
     }
     .sidebar-item:hover {
-      background: rgba(255,255,255,0.1);
+      background: var(--hover-bg);
       color: var(--text, #fff);
     }
 
@@ -112,7 +113,7 @@
       flex-shrink: 0;
     }
     .sidebar-item.messenger-item.active {
-      background: rgba(255,255,255,0.1);
+      background: var(--hover-bg);
     }
 
     .sidebar-item-label {
@@ -124,7 +125,7 @@
     /* Messenger separator lijn */
     .sidebar-separator {
       height: 1px;
-      background: rgba(255,255,255,0.08);
+      background: var(--border-color);
       margin: 10px 6px;
     }
 
@@ -146,7 +147,7 @@
     /* Footer knoppen */
     .sidebar-footer {
       padding: 8px 4px;
-      border-top: 1px solid rgba(255,255,255,0.07);
+      border-top: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -160,7 +161,7 @@
       border-radius: 6px;
       font-size: 14px;
     }
-    .sidebar-footer-btn:hover { background: rgba(255,255,255,0.07); color: var(--text, #fff); }
+    .sidebar-footer-btn:hover { background: var(--hover-bg-subtle); color: var(--text, #fff); }
 
     /* Panel — overlay mode (default) */
     .sidebar-panel {
@@ -173,7 +174,7 @@
       background: rgba(16, 20, 40, 0.55);
       -webkit-backdrop-filter: blur(32px) saturate(1.8) brightness(0.9);
       backdrop-filter: blur(32px) saturate(1.8) brightness(0.9);
-      border-right: 1px solid rgba(255,255,255,0.10);
+      border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -200,12 +201,12 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 12px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.12);
+      border-bottom: 1px solid var(--border-color);
       background: transparent; /* shows frosted glass from panel */
     }
     /* In pinned mode: give header a solid background */
     .sidebar-panel.pinned .sidebar-panel-header {
-      background: rgba(255,255,255,0.04);
+      background: var(--hover-bg-subtle);
     }
     .sidebar-panel-title {
       font-size: 13px;
@@ -258,11 +259,11 @@
     .sidebar-panel-content::-webkit-scrollbar { width: 4px; }
     .sidebar-panel-content::-webkit-scrollbar-track { background: transparent; }
     .sidebar-panel-content::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.12);
+      background: var(--hover-bg);
       border-radius: 4px;
     }
     .sidebar-panel-content::-webkit-scrollbar-thumb:hover {
-      background: rgba(255,255,255,0.22);
+      background: var(--hover-bg);
     }
     /* Resize handle */
     .sidebar-panel-resize {
@@ -319,7 +320,7 @@
       border-radius: 8px;
       transition: background 0.15s;
     }
-    .setup-item:hover { background: rgba(255,255,255,0.05); }
+    .setup-item:hover { background: var(--hover-bg-subtle); }
 
     .setup-item-icon-sm {
       width: 24px;
@@ -341,7 +342,7 @@
 
     .setup-separator {
       height: 1px;
-      background: rgba(255,255,255,0.07);
+      background: var(--border-color);
       margin: 8px 0;
     }
 
@@ -356,7 +357,7 @@
     .toggle-slider {
       position: absolute;
       inset: 0;
-      background: rgba(255,255,255,0.15);
+      background: var(--hover-bg);
       border-radius: 20px;
       cursor: pointer;
       transition: background 0.2s;
@@ -396,10 +397,10 @@
     }
     .ws-strip-active .workspace-svg-icon { color: #fff; }
     .ws-strip-inactive {
-      background: rgba(255,255,255,0.08);
+      background: var(--hover-bg-subtle);
     }
-    .ws-strip-inactive .workspace-svg-icon { color: rgba(255,255,255,0.6); }
-    .ws-strip-inactive:hover .workspace-svg-icon { color: #fff; }
+    .ws-strip-inactive .workspace-svg-icon { color: var(--text-dim); }
+    .ws-strip-inactive:hover .workspace-svg-icon { color: var(--text); }
     .workspace-svg-icon {
       width: 20px;
       height: 20px;
@@ -431,8 +432,8 @@
       gap: 4px;
     }
     .ws-panel-add {
-      background: rgba(255,255,255,0.06);
-      border: 1px dashed rgba(255,255,255,0.15);
+      background: var(--hover-bg-subtle);
+      border: 1px dashed var(--border-color);
       color: var(--text-dim, #888);
       padding: 10px;
       border-radius: 8px;
@@ -442,7 +443,7 @@
       margin-bottom: 8px;
     }
     .ws-panel-add:hover {
-      background: rgba(255,255,255,0.1);
+      background: var(--hover-bg);
       color: var(--text, #fff);
     }
     .ws-panel-item {
@@ -455,7 +456,7 @@
       transition: background 0.15s;
     }
     .ws-panel-item:hover {
-      background: rgba(255,255,255,0.08);
+      background: var(--hover-bg-subtle);
     }
     .ws-panel-item.active {
       background: rgba(79,70,229,0.15);
@@ -468,7 +469,7 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      color: rgba(255,255,255,0.7);
+      color: var(--text-dim);
     }
     .ws-panel-icon-svg svg {
       width: 18px;
@@ -499,8 +500,8 @@
       opacity: 1;
     }
     .ws-panel-edit:hover {
-      color: #fff;
-      background: rgba(255,255,255,0.1);
+      color: var(--text);
+      background: var(--hover-bg);
     }
 
     /* === WORKSPACE FORM (inline create/edit sheet) === */
@@ -510,7 +511,7 @@
     .ws-form-title {
       font-size: 14px;
       font-weight: 600;
-      color: #eee;
+      color: var(--text);
       margin-bottom: 14px;
     }
     .ws-form-section-label {
@@ -533,18 +534,18 @@
       width: 100%;
       aspect-ratio: 1;
       border-radius: 8px;
-      background: rgba(255,255,255,0.06);
+      background: var(--hover-bg-subtle);
       border: 2px solid transparent;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.12s;
-      color: rgba(255,255,255,0.6);
+      color: var(--text-dim);
     }
     .ws-icon-grid-btn:hover {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
+      background: var(--hover-bg);
+      color: var(--text);
     }
     .ws-icon-grid-btn.selected {
       background: #4f46e5;
@@ -565,10 +566,10 @@
     .ws-form-input {
       width: 100%;
       padding: 8px 10px;
-      background: #2a2a2a;
-      border: 1px solid #444;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
       border-radius: 6px;
-      color: #eee;
+      color: var(--text);
       font-size: 13px;
       outline: none;
       box-sizing: border-box;
@@ -591,7 +592,7 @@
       padding: 6px 12px;
       border-radius: 6px;
     }
-    .ws-form-btn-cancel:hover { color: #ccc; }
+    .ws-form-btn-cancel:hover { color: var(--text); }
     .ws-form-btn-primary {
       background: #4f46e5;
       border: none;
@@ -652,6 +653,7 @@
       flex: 1;
       position: relative;
       min-width: 200px;
+      background: var(--bg);
     }
 
     .browser-content webview {
