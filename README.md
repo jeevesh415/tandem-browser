@@ -8,8 +8,6 @@
 Tandem Browser is a local-first Electron browser built specifically for
 human-AI collaboration with OpenClaw.
 
-This repository is a public `developer preview`.
-
 ![Tandem Browser — homescreen with OpenClaw sidebar](docs/screenshots/tandem-homescreen-hero.jpg)
 
 **The real strength is the security model.**
@@ -33,12 +31,9 @@ machine.
 Tandem is built by an OpenClaw maintainer with OpenClaw as the primary AI
 runtime.
 
-Tandem is built around a two-layer model:
+**The left sidebar brings your communication and tools into the browser.** Built-in panels for Telegram, WhatsApp, Discord, Slack, Gmail, Google Calendar, Instagram, and X — all persistent, all in their own isolated session alongside your main browsing. Next to the messengers: Workspaces, Pinboards, Bookmarks, History, Downloads, and Personal News. The sidebar is resizable, pinnable, and rendered with frosted glass so it stays out of the way when you don't need it.
 
-- visible layer: Chromium webviews, tabs, sidebar tools, downloads, and the
-  human-facing shell
-- invisible layer: Electron services, the local HTTP API, security systems,
-  OpenClaw integration, and agent tooling
+**The right-side Wingman panel** is where OpenClaw lives. Chat, activity feed, screenshots, and agent context — all in one place, connected to the local API so the agent can see what you're looking at and act on it.
 
 ## Why Tandem For OpenClaw?
 
@@ -64,30 +59,17 @@ fits the task.
 
 ## Status
 
-Tandem is currently a public `developer preview`.
+This repository is a public `developer preview` — real project, early public state, open for contributors, not yet a polished mass-user release.
 
 ![Tandem Browser — browsing with OpenClaw](docs/screenshots/tandem-browser-interaction.png)
 
 - primary platform: macOS
 - secondary platform: Linux
 - Windows is not actively validated yet
-- current version: `0.57.13`
+- current version: `0.57.21`
 - current release history: [CHANGELOG.md](CHANGELOG.md)
 
-The repository is intended to be public and usable by contributors, but not
-everything is polished to end-user distribution quality yet.
-
-The goal of making the repository public is not just to show the project. It is
-also to let other contributors, maintainers, and OpenClaw-adjacent builders
-help improve the browser over time.
-
-If you are an OpenClaw maintainer or power user, the intended reading of this
-repo is:
-
-- real project
-- early public state
-- open for contributors
-- not yet positioned as a polished mass-user browser release
+The goal of making the repository public is to let other contributors, maintainers, and OpenClaw-adjacent builders help improve the browser over time — not just to show it.
 
 ## OpenClaw-First Positioning
 
