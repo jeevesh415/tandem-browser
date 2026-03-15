@@ -938,19 +938,36 @@
               }
             };
 
-            try {
-              micRecognition.start();
-              micVoiceActive = true;
-              micBtn.classList.add('active');
-              micBtn.textContent = '🔴';
-              micBtn.title = 'Listening... (click to stop)';
-              inputEl.focus();
-            } catch (e) {
-              console.error('[mic-btn] Voice input failed to start:', e);
-              micVoiceActive = false;
-              micRecognition = null;
-              micBtn.classList.remove('active');
-              micBtn.textContent = '🎤';
+            // Request mic permission on macOS before starting
+            const startMic = () => {
+              try {
+                micRecognition.start();
+                micVoiceActive = true;
+                micBtn.classList.add('active');
+                micBtn.textContent = '🔴';
+                micBtn.title = 'Listening... (click to stop)';
+                inputEl.focus();
+              } catch (e) {
+                console.error('[mic-btn] Voice input failed to start:', e);
+                micVoiceActive = false;
+                micRecognition = null;
+                micBtn.classList.remove('active');
+                micBtn.textContent = '🎤';
+              }
+            };
+
+            if (window.tandem?.requestMicPermission) {
+              window.tandem.requestMicPermission().then(result => {
+                if (result && result.granted) {
+                  startMic();
+                } else {
+                  micRecognition = null;
+                  micBtn.title = 'Mic permission denied — allow in System Settings → Privacy → Microphone';
+                  alert('Microphone access denied.\n\nGo to System Settings → Privacy & Security → Microphone and enable Tandem.');
+                }
+              }).catch(() => startMic()); // fallback: try anyway
+            } else {
+              startMic();
             }
           }
         });

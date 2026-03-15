@@ -255,6 +255,18 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return result;
   });
 
+  // ═══ Microphone Permission Request ═══
+  ipcMain.handle('request-mic-permission', async () => {
+    if (process.platform !== 'darwin') return { granted: true };
+    const { systemPreferences } = require('electron');
+    const status = systemPreferences.getMediaAccessStatus('microphone');
+    if (status === 'granted') return { granted: true };
+    if (status === 'denied') return { granted: false, status: 'denied' };
+    // 'not-determined' — ask
+    const granted = await systemPreferences.askForMediaAccess('microphone');
+    return { granted };
+  });
+
   // ═══ Desktop Source for Renderer Video Capture ═══
   ipcMain.handle('get-desktop-source', async () => {
     try {
