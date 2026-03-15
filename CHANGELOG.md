@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.60.0] - 2026-03-16
+
+- feat: add mic button to chat input for voice-to-text
+
 ## [v0.59.22] - 2026-03-16
 
 - fix: remove unused appPath variable (lint)
