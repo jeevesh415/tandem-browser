@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.6] - 2026-03-15
+
+- fix: always sync webhook.secret with OpenClaw on startup, not only when empty
+
 ## [v0.59.5] - 2026-03-15
 
 - fix: add github.githubassets.com to trusted script domains
