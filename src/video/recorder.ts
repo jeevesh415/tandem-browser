@@ -120,7 +120,7 @@ export class VideoRecorderManager {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const mp4Filename = `tandem-recording-${timestamp}.mp4`;
     const moviesPath = path.join(this.moviesDir, mp4Filename);
-    const appPath = path.join(this.recordingsDir, mp4Filename);
+    // appPath was used for a redundant copy to recordingsDir — removed, movies dir is sufficient
     const stoppedAt = Date.now();
     const duration = Math.round((stoppedAt - startedAt) / 1000);
 
