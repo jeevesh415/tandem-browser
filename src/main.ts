@@ -307,8 +307,13 @@ async function createWindow(): Promise<BrowserWindow> {
         // OAuth/auth popups need window.opener — allow for ALL webviews (incl. sidebar)
         // e.g. Google login from Gmail/Calendar sidebar panel
         const isAuth = isAuthPopupUrl(url);
-        // Sidebar webviews: allow auth popups, deny everything else
-        if (isSidebarWebview && !isAuth) return { action: 'deny' };
+        // Sidebar webviews: allow auth popups, open other links in a new tab
+        if (isSidebarWebview && !isAuth) {
+          if (url && url !== 'about:blank' && mainWindow) {
+            mainWindow.webContents.send('open-url-in-new-tab', url);
+          }
+          return { action: 'deny' };
+        }
         if (isAuth) {
           // Use sidebar partition for sidebar webviews so auth cookies are shared
           const authPartition = isSidebarWebview
