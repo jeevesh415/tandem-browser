@@ -35,6 +35,9 @@ import { createRateLimitMiddleware } from './rate-limit';
 
 const log = createLogger('TandemAPI');
 const PUBLIC_ROUTE_PATHS = new Set<string>(['/status', '/google-photos/oauth/callback']);
+// Preview routes are public — they serve HTML pages that must be openable in a browser tab
+// without requiring a Bearer token in the request headers.
+const PUBLIC_ROUTE_PREFIXES = ['/preview/', '/previews'];
 const TRUSTED_EXTENSION_HTTP_PATHS = new Set<string>([
   ...TRUSTED_EXTENSION_ROUTE_PATHS,
   ...TRUSTED_EXTENSION_PROXY_PATHS,
@@ -235,6 +238,11 @@ export class TandemAPI {
     const caller = this.classifyCaller(req);
     if (caller.authMode === 'public' || caller.kind === 'local-automation') {
       return { allowed: true, caller, reason: 'authorized', status: 200, extensionAccess: null };
+    }
+
+    // Preview pages are public — openable in a browser tab without Bearer token
+    if (PUBLIC_ROUTE_PREFIXES.some(prefix => req.path.startsWith(prefix))) {
+      return { allowed: true, caller, reason: 'public-preview', status: 200, extensionAccess: null };
     }
 
     if (caller.kind === 'extension-origin' && caller.extensionId) {
