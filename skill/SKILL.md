@@ -38,6 +38,63 @@ curl -sS "$API/status"
 | Use `GET /devtools/network?type=XHR` to inspect live SPA/API traffic | Do not guess hidden APIs if the network log already shows them |
 | Warn Robin with `POST /wingman-alert` for captchas, login walls, or hard blockers | Do not keep retrying a blocked flow silently |
 
+## Page Awareness — What Is The User Looking At?
+
+Before answering questions or taking action, check what the user is currently
+looking at. One call gives you everything:
+
+```bash
+curl -sS "$API/active-tab/context" \
+  -H "$AUTH_HEADER"
+```
+
+Response shape:
+
+```json
+{
+  "ready": true,
+  "activeTab": {
+    "id": "tab-14",
+    "url": "https://example.com/article",
+    "title": "Article title",
+    "loading": false,
+    "viewport": {
+      "scrollTop": 500,
+      "scrollHeight": 8000,
+      "clientHeight": 900
+    },
+    "pageTextExcerpt": "First 1500 characters of visible page text..."
+  },
+  "tabs": [
+    { "id": "tab-3",  "url": "https://discord.com/...", "title": "Discord", "active": false },
+    { "id": "tab-14", "url": "https://example.com/...", "title": "Article title", "active": true }
+  ]
+}
+```
+
+Use `pageTextExcerpt` to answer questions about the current page without a
+separate `/page-content` call. For deeper analysis, use `/snapshot?compact=true`
+or `/page-content` with `X-Tab-Id: <id>` targeting.
+
+### Staying Aware Without Polling
+
+Subscribe to `GET /events/stream` (SSE) to get push notifications when the user
+switches tabs, navigates, or loads a new page — no polling required:
+
+```bash
+curl -sS -N "$API/events/stream" \
+  -H "$AUTH_HEADER" \
+  -H "Accept: text/event-stream"
+```
+
+Relevant event types:
+- `tab-focused` — user switched to a different tab
+- `navigation` — tab navigated to a new URL
+- `page-loaded` — page finished loading
+
+Each event includes `tabId`, `url`, and `title`. On `tab-focused`, call
+`/active-tab/context` to refresh your picture of what the user is seeing.
+
 ## Primary Workflow
 
 For new browsing work, follow this pattern:
