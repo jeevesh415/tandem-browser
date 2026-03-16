@@ -46,8 +46,8 @@ export async function transcribeAudio(
     return { ok: false, error: 'No speech transcription backend available. Install whisper: pip install openai-whisper' };
   }
 
-  // Write audio buffer to temp file
-  const tmpFile = path.join(os.tmpdir(), `tandem-audio-${Date.now()}.wav`);
+  // Write audio buffer to temp file — use .webm since MediaRecorder outputs webm
+  const tmpFile = path.join(os.tmpdir(), `tandem-audio-${Date.now()}.webm`);
   try {
     fs.writeFileSync(tmpFile, audioBuffer);
   } catch (e) {
@@ -65,22 +65,62 @@ export async function transcribeAudio(
   }
 }
 
+function convertToM4a(inputFile: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const outputFile = inputFile.replace(/\.[^.]+$/, '.m4a');
+    // Try ffmpeg-static first, then system ffmpeg
+    let ffmpegBin = 'ffmpeg';
+    try { ffmpegBin = require('ffmpeg-static'); } catch { /* use system */ }
+
+    execFile(ffmpegBin, [
+      '-y', '-i', inputFile,
+      '-c:a', 'aac', '-b:a', '64k',
+      outputFile,
+    ], { timeout: 15_000 }, (err, _stdout, stderr) => {
+      if (err) {
+        log.warn('ffmpeg conversion failed:', stderr);
+        reject(new Error(stderr || err.message));
+      } else {
+        resolve(outputFile);
+      }
+    });
+  });
+}
+
 function transcribeWithApple(audioFile: string, language: string): Promise<{ ok: boolean; text?: string; error?: string }> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const binary = getAppleSpeechBinary();
     // Map nl-BE to nl-NL for Apple (nl-BE not always supported)
     const appleLanguage = language === 'nl-BE' ? 'nl-NL' : language;
 
-    execFile(binary, [audioFile, appleLanguage], { timeout: 30_000 }, (err, stdout, stderr) => {
+    // Convert webm → m4a (Apple Speech doesn't accept webm)
+    let transcribeFile = audioFile;
+    let convertedFile: string | null = null;
+    if (audioFile.endsWith('.webm')) {
+      try {
+        convertedFile = await convertToM4a(audioFile);
+        transcribeFile = convertedFile;
+        log.info(`Converted webm → m4a: ${convertedFile}`);
+      } catch (e) {
+        log.warn('Conversion failed, trying with original file:', e);
+      }
+    }
+
+    execFile(binary, [transcribeFile, appleLanguage], { timeout: 30_000 }, (err, stdout, stderr) => {
+      // Cleanup converted file
+      if (convertedFile) try { fs.unlinkSync(convertedFile); } catch { /* ignore */ }
+
       if (err) {
         log.warn('Apple Speech error:', stderr || err.message);
-        resolve({ ok: false, error: stderr || err.message });
+        log.warn('Apple Speech exit code:', err.code);
+        resolve({ ok: false, error: `${stderr || err.message} (exit: ${err.code})` });
       } else {
         const text = stdout.trim();
         if (text) {
           log.info(`Apple Speech: "${text.substring(0, 60)}"`);
           resolve({ ok: true, text });
         } else {
+          log.warn('Apple Speech: empty result. stderr:', stderr);
           resolve({ ok: false, error: 'No transcription result' });
         }
       }
