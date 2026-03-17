@@ -2,6 +2,22 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.16] - 2026-03-17
+
+- fix: satisfy CodeQL rate limit detection (api)
+
+What was built/changed:
+- Modified files: src/api/routes/data.ts
+- Swapped the OpenClaw token/connect route limiters to a CodeQL-recognized express-rate-limit middleware while keeping the existing request caps and messages
+
+Why this approach:
+- The endpoint was already protected by the custom limiter, but CodeQL does not treat that middleware as a proven rate limiter for this filesystem-backed handler
+- Using a standard limiter on the sensitive OpenClaw config routes removes the false-positive gate without changing the user-visible behavior
+
+Tested:
+- npx tsc --pretty false: zero errors
+- npx vitest run src/api/tests/routes/data.test.ts: 52 passed
+
 ## [v0.62.15] - 2026-03-17
 
 - fix: restore stock OpenClaw Wingman chat (wingman)
