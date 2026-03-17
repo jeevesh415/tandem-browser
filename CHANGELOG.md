@@ -2,10 +2,13 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [Unreleased]
+
+- fix: sign a real OpenClaw device identity for Wingman gateway chat, handle current gateway response frames, persist gateway replies into Tandem chat history, and show honest OpenClaw connection state in the panel
+
 ## [v0.62.14] - 2026-03-17
 
 - fix: use assertPathWithinRoot return value so CodeQL traces the safe path
-
 ## [v0.62.13] - 2026-03-17
 
 - fix: restrict sync root paths to user home directory (security)
