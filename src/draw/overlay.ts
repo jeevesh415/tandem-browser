@@ -307,7 +307,7 @@ export class DrawOverlayManager {
     // Request Photos permission if needed
     try {
       const { systemPreferences } = require('electron');
-      const status = systemPreferences.getMediaAccessStatus('photos' as any);
+      const status = (systemPreferences.getMediaAccessStatus as (mediaType: string) => string)('photos');
       if (status === 'denied') {
         log.warn('📸 Apple Photos permission denied');
         return;

@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron';
-import { app, Menu } from 'electron';
+import { Menu } from 'electron';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';
@@ -7,9 +7,6 @@ import type { VoiceManager } from '../voice/recognition';
 import type { PiPManager } from '../pip/manager';
 import type { ConfigManager } from '../config/manager';
 import type { VideoRecorderManager } from '../video/recorder';
-import { createLogger } from '../utils/logger';
-
-const log = createLogger('AppMenu');
 
 export interface MenuDeps {
   mainWindow: BrowserWindow | null;
