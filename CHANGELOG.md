@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.65.2] - 2026-03-21
+
+- fix: CodeQL — escape HTML/JS in injection scanner output to prevent XSS
+
 ## [v0.65.1] - 2026-03-21
 
 - fix: lint — prefer-const for zeroWidthPositions
