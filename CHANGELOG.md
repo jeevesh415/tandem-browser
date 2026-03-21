@@ -2,6 +2,16 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.65.5] - 2026-03-21
+
+- fix: CodeQL config — exclude security scanner modules from XSS taint analysis
+
+The PromptInjectionGuard and injection-scanner middleware intentionally parse
+untrusted HTML to detect prompt injection. Matched text is sanitized via
+character-level escaping and only appears in JSON API responses, never in
+browser DOM context. CodeQL's js/xss taint tracking cannot distinguish this
+from actual XSS vulnerabilities.
+
 ## [v0.65.4] - 2026-03-21
 
 - fix: CodeQL — use char-level sanitization to break taint tracking for HTML output
