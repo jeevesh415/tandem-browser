@@ -382,9 +382,20 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/wingman-alert', (req: Request, res: Response) => {
-    const { title = 'Need help', body = '' } = req.body;
-    wingmanAlert(title, body);
-    res.json({ ok: true, sent: true });
+    const { title = 'Need help', body = '', workspaceId } = req.body;
+    if (workspaceId !== undefined && typeof workspaceId !== 'string') {
+      res.status(400).json({ error: 'workspaceId must be a workspace ID string' });
+      return;
+    }
+    try {
+      if (workspaceId) {
+        ctx.workspaceManager.switch(workspaceId);
+      }
+      wingmanAlert(title, body);
+      res.json({ ok: true, sent: true });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
   });
 
   // ═══════════════════════════════════════════════

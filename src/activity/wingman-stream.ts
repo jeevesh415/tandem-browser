@@ -80,21 +80,21 @@ export class WingmanStream {
   private formatEventText(event: WingmanEvent): string {
     switch (event.type) {
       case 'tab-switched':
-        return `[Tandem] Robin switched to tab: ${event.data.title} (${event.data.url})`;
+        return `[Tandem] The user switched to tab: ${event.data.title} (${event.data.url})`;
       case 'navigated':
-        return `[Tandem] Robin navigated to: ${event.data.url} (${event.data.title})`;
+        return `[Tandem] The user navigated to: ${event.data.url} (${event.data.title})`;
       case 'page-loaded':
         return `[Tandem] Page loaded: ${event.data.title} (${event.data.url}) in ${event.data.loadTimeMs}ms`;
       case 'tab-opened':
-        return `[Tandem] Robin opened new tab: ${event.data.url}`;
+        return `[Tandem] The user opened new tab: ${event.data.url}`;
       case 'tab-closed':
-        return `[Tandem] Robin closed tab: ${event.data.title} (${event.data.url})`;
+        return `[Tandem] The user closed tab: ${event.data.title} (${event.data.url})`;
       case 'text-selected':
-        return `[Tandem] Robin selected text on ${event.data.url}: "${event.data.text}"`;
+        return `[Tandem] The user selected text on ${event.data.url}: "${event.data.text}"`;
       case 'scroll-position':
-        return `[Tandem] Robin scrolled to ${event.data.scrollPercent}% on ${event.data.url}`;
+        return `[Tandem] The user scrolled to ${event.data.scrollPercent}% on ${event.data.url}`;
       case 'form-interaction':
-        return `[Tandem] Robin interacting with ${event.data.fieldType} field "${event.data.fieldName}" on ${event.data.url}`;
+        return `[Tandem] The user is interacting with ${event.data.fieldType} field "${event.data.fieldName}" on ${event.data.url}`;
       default:
         return `[Tandem] Activity: ${event.type}`;
     }

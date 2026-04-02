@@ -28,7 +28,7 @@ export interface DomainFormData {
 const SENSITIVE_TYPES = ['password'];
 
 /**
- * FormMemoryManager — Remembers every form Robin fills in.
+ * FormMemoryManager — Remembers every form the user fills in.
  * 
  * Stores form data per domain in ~/.tandem/forms/{domain}.json
  * Sensitive fields (type=password) are AES-256-GCM encrypted.

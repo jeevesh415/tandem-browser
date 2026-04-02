@@ -7,7 +7,7 @@ export class SessionManager {
   private activeSession = 'default';
 
   constructor() {
-    // Register default session (Robin's persist:tandem)
+    // Register default session (the user's persist:tandem)
     this.sessions.set('default', {
       name: 'default',
       partition: DEFAULT_PARTITION,

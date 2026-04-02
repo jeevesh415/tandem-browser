@@ -45,7 +45,7 @@ describe('Tab Routes', () => {
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'robin', inheritSessionFrom: null },
+        { url: 'about:blank', source: 'robin', inheritSessionFrom: null, workspaceId: null },
       );
     });
 
@@ -81,7 +81,7 @@ describe('Tab Routes', () => {
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'wingman', inheritSessionFrom: null },
+        { url: 'about:blank', source: 'wingman', inheritSessionFrom: null, workspaceId: null },
       );
     });
 
@@ -116,7 +116,12 @@ describe('Tab Routes', () => {
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'https://discord.com/channels/@me', source: 'robin', inheritSessionFrom: 'tab-9' },
+        {
+          url: 'https://discord.com/channels/@me',
+          source: 'robin',
+          inheritSessionFrom: 'tab-9',
+          workspaceId: null,
+        },
       );
     });
 
@@ -127,6 +132,56 @@ describe('Tab Routes', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('inheritSessionFrom must be a tab ID string');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
+    });
+
+    it('assigns the new tab to the requested workspace', async () => {
+      vi.mocked(ctx.workspaceManager.get).mockReturnValueOnce({
+        id: 'ws-ai',
+        name: 'AI',
+        icon: 'cpu-chip',
+        color: '#4285f4',
+        order: 1,
+        isDefault: false,
+        tabIds: [],
+      } as any);
+
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ url: 'https://example.com', workspaceId: 'ws-ai' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.workspaceManager.moveTab).toHaveBeenCalledWith(100, 'ws-ai');
+      expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
+        'tab-open',
+        {
+          url: 'https://example.com',
+          source: 'robin',
+          inheritSessionFrom: null,
+          workspaceId: 'ws-ai',
+        },
+      );
+    });
+
+    it('returns 400 when workspaceId is not a string', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ workspaceId: 123 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('workspaceId must be a workspace ID string');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when workspaceId does not exist', async () => {
+      vi.mocked(ctx.workspaceManager.get).mockReturnValueOnce(null);
+
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ workspaceId: 'ws-missing' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Workspace ws-missing not found');
       expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
     });
 
