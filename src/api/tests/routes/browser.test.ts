@@ -789,6 +789,27 @@ describe('Browser Routes', () => {
       expect(res.body).toEqual({ ok: true, sent: true });
       expect(wingmanAlert).toHaveBeenCalledWith('Need help', '');
     });
+
+    it('activates the requested workspace before sending the alert', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ title: 'Captcha', body: 'Please take over', workspaceId: 'ws-ai' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.workspaceManager.switch).toHaveBeenCalledWith('ws-ai');
+      expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
+    });
+
+    it('returns 400 when workspaceId is not a string', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ workspaceId: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('workspaceId must be a workspace ID string');
+      expect(ctx.workspaceManager.switch).not.toHaveBeenCalled();
+      expect(wingmanAlert).not.toHaveBeenCalled();
+    });
   });
 
   // ═══════════════════════════════════════════════

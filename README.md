@@ -98,6 +98,10 @@ Examples:
 
 - research workflows across multiple tabs, where OpenClaw opens, inspects, and
   summarizes pages while the human keeps browsing
+- autonomous agent workspace, where the agent creates its own dedicated
+  workspace, opens and manages tabs there independently from the user's
+  browsing, and calls `POST /wingman-alert` with `workspaceId` to instantly
+  surface the right workspace to the user when human help is needed
 - SPA inspection, where OpenClaw uses snapshots, DOM search, and network or
   devtools surfaces instead of guessing from raw HTML alone
 - session-aware tasks, where OpenClaw can operate inside the human's real
@@ -224,7 +228,12 @@ setup is:
 - Tandem Browser checked out and started locally
 - a valid Tandem API token in `~/.tandem/api-token`
 - OpenClaw installed on the same machine
-- the Tandem skill available to the OpenClaw agent
+
+The easiest way to get OpenClaw working with Tandem is to point it at this
+repository. Clone it, run `npm install && npm start`, then tell OpenClaw:
+"read `skill/SKILL.md` in the Tandem repo — that is your instruction manual for
+working with this browser." OpenClaw will handle the rest from the skill
+documentation.
 
 For full Wingman chat integration inside Tandem, also ensure:
 

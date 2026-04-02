@@ -5,9 +5,24 @@ import { handleRouteError } from '../../utils/errors';
 
 export function registerTabRoutes(router: Router, ctx: RouteContext): void {
   router.post('/tabs/open', async (req: Request, res: Response) => {
-    const { url = 'about:blank', groupId, source = 'robin', focus = true, inheritSessionFrom } = req.body;
+    const {
+      url = 'about:blank',
+      groupId,
+      source = 'robin',
+      focus = true,
+      inheritSessionFrom,
+      workspaceId,
+    } = req.body;
     if (inheritSessionFrom !== undefined && typeof inheritSessionFrom !== 'string') {
       res.status(400).json({ error: 'inheritSessionFrom must be a tab ID string' });
+      return;
+    }
+    if (workspaceId !== undefined && typeof workspaceId !== 'string') {
+      res.status(400).json({ error: 'workspaceId must be a workspace ID string' });
+      return;
+    }
+    if (workspaceId && !ctx.workspaceManager.get(workspaceId)) {
+      res.status(400).json({ error: `Workspace ${workspaceId} not found` });
       return;
     }
     try {
@@ -20,7 +35,15 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
         focus,
         inheritSessionFrom ? { inheritSessionFrom } : undefined,
       );
-      ctx.panelManager.logActivity('tab-open', { url, source: tabSource, inheritSessionFrom: inheritSessionFrom || null });
+      if (workspaceId) {
+        ctx.workspaceManager.moveTab(tab.webContentsId, workspaceId);
+      }
+      ctx.panelManager.logActivity('tab-open', {
+        url,
+        source: tabSource,
+        inheritSessionFrom: inheritSessionFrom || null,
+        workspaceId: workspaceId || null,
+      });
       res.json({ ok: true, tab });
     } catch (e) {
       handleRouteError(res, e);

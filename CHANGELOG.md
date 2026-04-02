@@ -4,8 +4,17 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## Unreleased
 
+## [v0.67.0] - 2026-04-02
+
 ### Added
+- AI workspaces for agents: OpenClaw or any API-driven agent can now operate in its own dedicated Tandem workspace, keep its tabs separate from Robin's browsing, and persist that workspace across sessions
+- `POST /workspaces/:id/activate` switches the active workspace via API so Tandem can bring the agent's workspace into view instantly
+- `POST /workspaces/:id/tabs` moves an existing tab into a workspace by webContents ID
 - `POST /tabs/open` now accepts `inheritSessionFrom` and copies IndexedDB data from the source tab into the new tab before reloading the destination, preserving Discord-style IndexedDB-backed logins.
+
+### Changed
+- `POST /tabs/open` now accepts `workspaceId`, so new tabs can be assigned directly into the agent's workspace at creation time
+- `POST /wingman-alert` now accepts optional `workspaceId`, so captcha or takeover alerts can automatically switch Tandem into the right workspace before notifying Robin
 
 ## [v0.66.0] - 2026-04-02
 

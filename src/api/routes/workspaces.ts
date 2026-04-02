@@ -3,6 +3,19 @@ import type { RouteContext } from '../context';
 
 interface IdParams { id: string }
 
+function parseWorkspaceTabId(rawTabId: unknown): number | null {
+  if (typeof rawTabId === 'number' && Number.isFinite(rawTabId)) {
+    return rawTabId;
+  }
+  if (typeof rawTabId === 'string' && rawTabId.trim()) {
+    const parsed = Number(rawTabId);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
 export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // WORKSPACES — Visual workspace management
@@ -38,14 +51,17 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
     }
   });
 
-  router.post('/workspaces/:id/switch', (req: Request<IdParams>, res: Response) => {
+  const activateWorkspace = (req: Request<IdParams>, res: Response) => {
     try {
       const workspace = ctx.workspaceManager.switch(req.params.id);
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
     }
-  });
+  };
+
+  router.post('/workspaces/:id/activate', activateWorkspace);
+  router.post('/workspaces/:id/switch', activateWorkspace);
 
   router.put('/workspaces/:id', (req: Request<IdParams>, res: Response) => {
     try {
@@ -57,14 +73,19 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
     }
   });
 
-  router.post('/workspaces/:id/move-tab', (req: Request<IdParams>, res: Response) => {
+  const moveTabToWorkspace = (req: Request<IdParams>, res: Response) => {
     try {
       const { tabId } = req.body;
       if (tabId === undefined) { res.status(400).json({ error: 'tabId is required' }); return; }
-      ctx.workspaceManager.moveTab(Number(tabId), req.params.id);
+      const parsedTabId = parseWorkspaceTabId(tabId);
+      if (parsedTabId === null) { res.status(400).json({ error: 'tabId must be a numeric webContents ID' }); return; }
+      ctx.workspaceManager.moveTab(parsedTabId, req.params.id);
       res.json({ ok: true });
     } catch (e: unknown) {
       res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
     }
-  });
+  };
+
+  router.post('/workspaces/:id/tabs', moveTabToWorkspace);
+  router.post('/workspaces/:id/move-tab', moveTabToWorkspace);
 }
