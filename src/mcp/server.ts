@@ -2864,6 +2864,297 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// Scripts/Styles injection tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_scripts_list',
+  'List all persistent injected scripts with their enabled state and preview',
+  async () => {
+    const data = await apiCall('GET', '/scripts');
+    await logActivity('scripts_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_script_add',
+  'Add a persistent JavaScript script that will be injected into pages',
+  {
+    name: z.string().describe('Name for the script'),
+    code: z.string().describe('JavaScript code to inject'),
+  },
+  async ({ name, code }) => {
+    const data = await apiCall('POST', '/scripts/add', { name, code });
+    await logActivity('script_add', name);
+    return { content: [{ type: 'text', text: `Added script "${data.name}" (active: ${data.active})` }] };
+  }
+);
+
+server.tool(
+  'tandem_script_remove',
+  'Remove a persistent injected script by name',
+  {
+    name: z.string().describe('Name of the script to remove'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ name }) => {
+    const data = await apiCall('DELETE', '/scripts/remove', { name });
+    await logActivity('script_remove', name);
+    return { content: [{ type: 'text', text: `Removed script: ${data.removed}` }] };
+  }
+);
+
+server.tool(
+  'tandem_script_enable',
+  'Enable a persistent injected script by name',
+  {
+    name: z.string().describe('Name of the script to enable'),
+  },
+  async ({ name }) => {
+    await apiCall('POST', '/scripts/enable', { name });
+    await logActivity('script_enable', name);
+    return { content: [{ type: 'text', text: `Enabled script: ${name}` }] };
+  }
+);
+
+server.tool(
+  'tandem_script_disable',
+  'Disable a persistent injected script by name',
+  {
+    name: z.string().describe('Name of the script to disable'),
+  },
+  async ({ name }) => {
+    await apiCall('POST', '/scripts/disable', { name });
+    await logActivity('script_disable', name);
+    return { content: [{ type: 'text', text: `Disabled script: ${name}` }] };
+  }
+);
+
+server.tool(
+  'tandem_styles_list',
+  'List all persistent injected CSS styles with their enabled state and preview',
+  async () => {
+    const data = await apiCall('GET', '/styles');
+    await logActivity('styles_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_style_add',
+  'Add a persistent CSS style that will be injected into pages',
+  {
+    name: z.string().describe('Name for the style'),
+    css: z.string().describe('CSS code to inject'),
+  },
+  async ({ name, css }) => {
+    await apiCall('POST', '/styles/add', { name, css });
+    await logActivity('style_add', name);
+    return { content: [{ type: 'text', text: `Added style: ${name}` }] };
+  }
+);
+
+server.tool(
+  'tandem_style_remove',
+  'Remove a persistent injected CSS style by name',
+  {
+    name: z.string().describe('Name of the style to remove'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ name }) => {
+    const data = await apiCall('DELETE', '/styles/remove', { name });
+    await logActivity('style_remove', name);
+    return { content: [{ type: 'text', text: `Removed style: ${data.removed}` }] };
+  }
+);
+
+server.tool(
+  'tandem_style_enable',
+  'Enable a persistent injected CSS style by name',
+  {
+    name: z.string().describe('Name of the style to enable'),
+  },
+  async ({ name }) => {
+    await apiCall('POST', '/styles/enable', { name });
+    await logActivity('style_enable', name);
+    return { content: [{ type: 'text', text: `Enabled style: ${name}` }] };
+  }
+);
+
+server.tool(
+  'tandem_style_disable',
+  'Disable a persistent injected CSS style by name',
+  {
+    name: z.string().describe('Name of the style to disable'),
+  },
+  async ({ name }) => {
+    await apiCall('POST', '/styles/disable', { name });
+    await logActivity('style_disable', name);
+    return { content: [{ type: 'text', text: `Disabled style: ${name}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Context bridge tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_context_recent',
+  'Get recently visited pages from the context bridge',
+  {
+    limit: z.number().optional().describe('Maximum number of pages to return (default: 50)'),
+  },
+  async ({ limit }) => {
+    const params = limit ? `?limit=${limit}` : '';
+    const data = await apiCall('GET', `/context/recent${params}`);
+    await logActivity('context_recent');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_context_search',
+  'Search the context bridge for pages matching a query',
+  {
+    query: z.string().describe('Search query string'),
+  },
+  async ({ query }) => {
+    const data = await apiCall('GET', `/context/search?q=${encodeURIComponent(query)}`);
+    await logActivity('context_search', query);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_context_page',
+  'Get context bridge data for a specific page by URL',
+  {
+    url: z.string().describe('URL of the page to retrieve'),
+  },
+  async ({ url }) => {
+    const data = await apiCall('GET', `/context/page?url=${encodeURIComponent(url)}`);
+    await logActivity('context_page', url);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_context_summary',
+  'Get a summary of the context bridge state',
+  async () => {
+    const data = await apiCall('GET', '/context/summary');
+    await logActivity('context_summary');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_context_note',
+  'Add a note to a page in the context bridge',
+  {
+    url: z.string().describe('URL of the page to annotate'),
+    note: z.string().describe('Note text to attach to the page'),
+  },
+  async ({ url, note }) => {
+    const data = await apiCall('POST', '/context/note', { url, note });
+    await logActivity('context_note', url);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Session state tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_session_state_save',
+  'Save the current session state (cookies, storage) to a named snapshot',
+  {
+    name: z.string().describe('Name for the saved state'),
+  },
+  async ({ name }) => {
+    const data = await apiCall('POST', '/sessions/state/save', { name });
+    await logActivity('session_state_save', name);
+    return { content: [{ type: 'text', text: `Saved session state "${name}" to ${data.path}` }] };
+  }
+);
+
+server.tool(
+  'tandem_session_state_load',
+  'Load a previously saved session state (cookies, storage)',
+  {
+    name: z.string().describe('Name of the saved state to load'),
+  },
+  async ({ name }) => {
+    const data = await apiCall('POST', '/sessions/state/load', { name });
+    await logActivity('session_state_load', name);
+    return { content: [{ type: 'text', text: `Loaded session state "${name}" (cookies restored: ${data.cookiesRestored})` }] };
+  }
+);
+
+server.tool(
+  'tandem_session_state_list',
+  'List all saved session states',
+  async () => {
+    const data = await apiCall('GET', '/sessions/state/list');
+    await logActivity('session_state_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Workspace update tool
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_workspace_update',
+  'Update a workspace name, icon, or color',
+  {
+    id: z.string().describe('Workspace ID to update'),
+    name: z.string().optional().describe('New name for the workspace'),
+    icon: z.string().optional().describe('New icon for the workspace'),
+    color: z.string().optional().describe('New color for the workspace'),
+  },
+  async ({ id, name, icon, color }) => {
+    const body: Record<string, unknown> = {};
+    if (name) body.name = name;
+    if (icon) body.icon = icon;
+    if (color) body.color = color;
+    const data = await apiCall('PUT', `/workspaces/${id}`, body);
+    await logActivity('workspace_update', id);
+    return { content: [{ type: 'text', text: `Updated workspace: ${JSON.stringify(data.workspace)}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Snapshot text tool
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_snapshot_text',
+  'Get the text content of an element by its @ref ID from a previous snapshot. Supports targeting a background tab by ID.',
+  {
+    ref: z.string().describe('The @ref ID of the element (e.g. "@e1")'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ ref, tabId }) => {
+    const params = new URLSearchParams({ ref });
+    const data = await apiCall('GET', `/snapshot/text?${params.toString()}`, undefined, tabHeaders(tabId));
+    await logActivity('snapshot_text', ref);
+    return { content: [{ type: 'text', text: data.text ?? '' }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // Start the server
 // ═══════════════════════════════════════════════
 
