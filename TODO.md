@@ -15,7 +15,7 @@ Last updated: April 9, 2026
 ## Current Snapshot
 
 - Current app version: `0.68.1`
-- MCP server: 82 tools
+- MCP server: 231 tools (full API parity)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -97,7 +97,7 @@ Last updated: April 9, 2026
 - [x] Google CookieMismatch fix: restored real Electron UA for Google auth, disabled cookie partitioning, fixed Sec-CH-UA mismatch
 - [x] Stealth UA auto-sync: dynamic version from process.versions.chrome instead of hardcoded Chrome/131
 - [x] Workspace emoji icons: emoji strings now render directly in sidebar
-- [x] MCP Server — Full API Coverage: expanded from 24 to 82 tools. MCP is now a first-class connection method alongside direct HTTP.
+- [x] MCP Server — Full API Parity: expanded from 24 to 231 tools across 29 modular files, covering every HTTP API endpoint. Refactored from monolithic server.ts into tools/ directory matching API route structure.
 - [x] Preload sandbox fix: added esbuild bundling step so the split preload modules work with Electron's `sandbox: true`
 - [x] Security dependency updates: resolved all 28 Dependabot alerts (electron, hono, lodash, brace-expansion, path-to-regexp)
 - [x] Workspace API handoff for OpenClaw: `/tabs/open` now honors `workspaceId`, `/workspaces/:id/activate` and `/workspaces/:id/tabs` exist, and `/wingman-alert` can bring the requested workspace into view before notifying the user

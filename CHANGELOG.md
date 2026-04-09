@@ -11,7 +11,17 @@ All notable changes to Tandem Browser will be documented in this file.
 - MCP history and site memory tools: `tandem_history_list`, `tandem_history_clear`, `tandem_activity_log`, `tandem_site_memory_list`, `tandem_site_memory_get`, `tandem_site_memory_search`
 - MCP keyboard input tools: `tandem_press_key`, `tandem_press_key_combo` with `POST /press-key` and `POST /press-key-combo` HTTP endpoints
 - MCP live preview tools: `tandem_preview_create`, `tandem_preview_update`, `tandem_preview_list`, `tandem_preview_delete`
-- MCP server now exposes **82 tools** total (up from 63 in v0.68.0)
+- MCP server now exposes **231 tools** with full HTTP API parity (up from 63 in v0.68.0)
+- MCP tools refactored into 29 modular files under `src/mcp/tools/` matching the HTTP API route structure
+- MCP Chrome import tools: profiles, bookmarks, history, cookies, sync start/stop/status
+- MCP extension extras: Chrome import, gallery, updates lifecycle, disk usage, conflicts, native messaging
+- MCP sidebar tools: config, toggle/activate items, reorder, state
+- MCP media tools: voice start/stop/status, audio start/stop/status/recordings, draw toggle, panel toggle
+- MCP screenshot extras: annotated capture, screenshot list
+- MCP events/behavior tools: recent events, live status/toggle, behavior stats/clear
+- MCP system tools: folder picker, injection override, Google Photos integration
+- MCP agent extras: autonomy get/update, approval check, agent activity log, per-tab lock status
+- MCP password, form, workflow, task, pinboard, watch, headless, auth, context, script/style, session, device, data, preview tools — all at full parity
 
 ### Fixed
 
