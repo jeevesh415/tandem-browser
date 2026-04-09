@@ -1021,6 +1021,172 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// Task monitoring — List, inspect, approve, reject tasks
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_task_list',
+  'List all agent tasks. Returns task IDs, descriptions, and statuses.',
+  async () => {
+    const tasks = await apiCall('GET', '/tasks');
+    await logActivity('task_list', `${Array.isArray(tasks) ? tasks.length : 0} tasks`);
+    return { content: [{ type: 'text', text: JSON.stringify(tasks, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_task_get',
+  'Get detailed information about a specific task including its steps and status.',
+  {
+    id: z.string().describe('The task ID to retrieve'),
+  },
+  async ({ id }) => {
+    const task = await apiCall('GET', `/tasks/${encodeURIComponent(id)}`);
+    return { content: [{ type: 'text', text: JSON.stringify(task, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_task_approve',
+  'Approve a task step that is waiting for user approval.',
+  {
+    id: z.string().describe('The task ID'),
+    stepId: z.string().describe('The step ID to approve'),
+  },
+  async ({ id, stepId }) => {
+    await apiCall('POST', `/tasks/${encodeURIComponent(id)}/approve`, { stepId });
+    await logActivity('task_approve', `task ${id}, step ${stepId}`);
+    return { content: [{ type: 'text', text: `Step ${stepId} of task ${id} approved.` }] };
+  }
+);
+
+server.tool(
+  'tandem_task_reject',
+  'Reject a task step that is waiting for user approval.',
+  {
+    id: z.string().describe('The task ID'),
+    stepId: z.string().describe('The step ID to reject'),
+  },
+  async ({ id, stepId }) => {
+    await apiCall('POST', `/tasks/${encodeURIComponent(id)}/reject`, { stepId });
+    await logActivity('task_reject', `task ${id}, step ${stepId}`);
+    return { content: [{ type: 'text', text: `Step ${stepId} of task ${id} rejected.` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Workflow automation — Create, run, and manage workflows
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_workflow_list',
+  'List all saved workflows.',
+  async () => {
+    const data = await apiCall('GET', '/workflows');
+    const workflows = data.workflows || [];
+    await logActivity('workflow_list', `${workflows.length} workflows`);
+    return { content: [{ type: 'text', text: JSON.stringify(workflows, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_create',
+  'Create a new automation workflow with named steps.',
+  {
+    name: z.string().describe('Workflow name'),
+    steps: z.array(z.object({
+      type: z.string().describe('Step type (e.g. navigate, click, type, extract, wait, script)'),
+      params: z.record(z.string(), z.any()).optional().describe('Step parameters'),
+      description: z.string().optional().describe('Human-readable step description'),
+    })).describe('Workflow steps to execute in order'),
+    description: z.string().optional().describe('Optional workflow description'),
+    variables: z.record(z.string(), z.any()).optional().describe('Optional default variable values'),
+  },
+  async ({ name, steps, description, variables }) => {
+    const body: Record<string, unknown> = { name, steps };
+    if (description) body.description = description;
+    if (variables) body.variables = variables;
+    const result = await apiCall('POST', '/workflows', body);
+    await logActivity('workflow_create', `"${name}" (${steps.length} steps)`);
+    return { content: [{ type: 'text', text: `Workflow created: ${result.id}\nName: ${name}\nSteps: ${steps.length}` }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_delete',
+  'Delete a saved workflow by ID.',
+  {
+    id: z.string().describe('The workflow ID to delete'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ id }) => {
+    await apiCall('DELETE', `/workflows/${encodeURIComponent(id)}`);
+    await logActivity('workflow_delete', id);
+    return { content: [{ type: 'text', text: `Workflow ${id} deleted.` }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_run',
+  'Run a saved workflow by ID. Returns an execution ID for tracking.',
+  {
+    id: z.string().describe('The workflow ID to run'),
+    variables: z.record(z.string(), z.any()).optional().describe('Optional runtime variables to pass to the workflow'),
+  },
+  async ({ id, variables }) => {
+    const body: Record<string, unknown> = { workflowId: id };
+    if (variables) body.variables = variables;
+    const result = await apiCall('POST', '/workflow/run', body);
+    await logActivity('workflow_run', `workflow ${id}, execution ${result.executionId}`);
+    return { content: [{ type: 'text', text: `Workflow started.\nExecution ID: ${result.executionId}` }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_status',
+  'Check the status of a running or completed workflow execution.',
+  {
+    executionId: z.string().describe('The execution ID returned from workflow run'),
+  },
+  async ({ executionId }) => {
+    const status = await apiCall('GET', `/workflow/status/${encodeURIComponent(executionId)}`);
+    return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_stop',
+  'Stop a running workflow execution.',
+  {
+    executionId: z.string().describe('The execution ID to stop'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ executionId }) => {
+    await apiCall('POST', '/workflow/stop', { executionId });
+    await logActivity('workflow_stop', executionId);
+    return { content: [{ type: 'text', text: `Workflow execution ${executionId} stopped.` }] };
+  }
+);
+
+server.tool(
+  'tandem_workflow_running',
+  'List all currently running workflow executions.',
+  async () => {
+    const data = await apiCall('GET', '/workflow/running');
+    const executions = data.executions || [];
+    return { content: [{ type: 'text', text: JSON.stringify(executions, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // DevTools — CDP Bridge tools
 // ═══════════════════════════════════════════════
 
@@ -1856,6 +2022,178 @@ server.tool(
     await apiCall('DELETE', `/preview/${encodeURIComponent(id)}`);
     await logActivity('preview_delete', id);
     return { content: [{ type: 'text', text: `Preview '${id}' deleted` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_status — Check password vault status
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_status',
+  'Check the password manager vault status (locked/unlocked, new vault)',
+  async () => {
+    const data = await apiCall('GET', '/passwords/status');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_unlock — Unlock the password vault
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_unlock',
+  'Unlock the password vault with the master password',
+  {
+    masterPassword: z.string().describe('The master password to unlock the vault'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ masterPassword }) => {
+    const data = await apiCall('POST', '/passwords/unlock', { password: masterPassword });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_lock — Lock the password vault
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_lock',
+  'Lock the password vault',
+  async () => {
+    const data = await apiCall('POST', '/passwords/lock');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_generate — Generate a secure password
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_generate',
+  'Generate a random secure password string. Returns a JSON object with a "password" field containing the generated password.',
+  {
+    length: z.number().optional().describe('Password length (default: 24)'),
+  },
+  async ({ length }) => {
+    const query = length ? `?length=${length}` : '';
+    const data = await apiCall('GET', `/passwords/generate${query}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_suggest — Suggest saved passwords for a URL
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_suggest',
+  'Suggest saved password identities for a given URL/domain',
+  {
+    url: z.string().describe('The URL or domain to look up saved passwords for'),
+  },
+  async ({ url }) => {
+    const data = await apiCall('GET', `/passwords/suggest?domain=${encodeURIComponent(url)}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_save — Save a password entry
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_save',
+  'Save a new password entry to the vault',
+  {
+    url: z.string().describe('The URL or domain to associate with this password'),
+    username: z.string().describe('The username or email'),
+    password: z.string().describe('The password to save'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ url, username, password }) => {
+    const data = await apiCall('POST', '/passwords/save', { domain: url, username, payload: password });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_forms_saved — List saved form data
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_forms_saved',
+  'List saved form autofill data. Optionally filter by domain to get form data for a specific site.',
+  {
+    domain: z.string().optional().describe('Optional domain to filter saved form data'),
+  },
+  async ({ domain }) => {
+    const path = domain ? `/forms/memory/${encodeURIComponent(domain)}` : '/forms/memory';
+    const data = await apiCall('GET', path);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_form_fill — Get autofill data for a domain
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_form_fill',
+  'Get saved form fill data for a domain, ready to inject into form fields',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('POST', '/forms/fill', tabId ? { domain: tabId } : {}, tabHeaders(tabId));
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_forms_clear — Clear saved form data for a domain
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_forms_clear',
+  'Delete all saved form autofill data for a specific domain',
+  {
+    domain: z.string().describe('The domain to clear saved form data for'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ domain }) => {
+    const data = await apiCall('DELETE', `/forms/memory/${encodeURIComponent(domain)}`);
+    await logActivity('forms_clear', domain);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_extract_url — Extract content from a URL
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extract_url',
+  'Extract and parse content from a URL using headless rendering. Returns structured content.',
+  {
+    url: z.string().describe('The URL to extract content from'),
+  },
+  async ({ url }) => {
+    const data = await apiCall('POST', '/content/extract/url', { url });
+    await logActivity('extract_url', url);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
