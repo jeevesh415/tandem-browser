@@ -2,6 +2,13 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.68.1] - 2026-04-09
+
+- fix: add auth header to URL autocomplete API calls
+
+The history search API requires Authorization: Bearer token.
+The autocomplete was silently getting 401 responses, showing no suggestions.
+
 ## Unreleased
 
 ## [v0.68.0] - 2026-04-09
