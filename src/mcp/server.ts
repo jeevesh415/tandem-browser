@@ -10,7 +10,7 @@ const log = createLogger('McpServer');
 
 const server = new McpServer({
   name: 'tandem-browser',
-  version: '0.1.0',
+  version: '0.2.0',  // 52 tools
 });
 
 /** Build X-Tab-Id headers when a tabId is provided */
@@ -227,16 +227,22 @@ server.tool(
 
 server.tool(
   'tandem_scroll',
-  'Scroll the page up or down. Supports targeting a background tab by ID.',
+  'Scroll the page up or down, to top/bottom, or to a specific element. Supports targeting a background tab by ID.',
   {
     direction: z.enum(['up', 'down']).describe('Scroll direction'),
     amount: z.number().optional().default(500).describe('Scroll amount in pixels (default: 500)'),
+    target: z.enum(['top', 'bottom']).optional().describe('Scroll to absolute position: top or bottom of page'),
+    selector: z.string().optional().describe('CSS selector of element to scroll into view'),
     tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ direction, amount, tabId }) => {
-    await apiCall('POST', '/scroll', { direction, amount }, tabHeaders(tabId));
-    await logActivity('scroll', `${direction} ${amount}px`);
-    return { content: [{ type: 'text', text: `Scrolled ${direction} ${amount}px` }] };
+  async ({ direction, amount, target, selector, tabId }) => {
+    const body: Record<string, unknown> = { direction, amount };
+    if (target) body.target = target;
+    if (selector) body.selector = selector;
+    await apiCall('POST', '/scroll', body, tabHeaders(tabId));
+    const detail = target ? target : selector ? `to ${selector}` : `${direction} ${amount}px`;
+    await logActivity('scroll', detail);
+    return { content: [{ type: 'text', text: `Scrolled ${detail}` }] };
   }
 );
 
@@ -841,50 +847,53 @@ server.tool(
 
 server.tool(
   'tandem_devtools_console',
-  'Get console log entries from the browser DevTools. Use to inspect logs, warnings, errors, and debug output from the page. Supports filtering by level (log, warn, error, info, debug) and searching message text.',
+  'Get console log entries from the browser DevTools. Use to inspect logs, warnings, errors, and debug output from the page. Supports filtering by level (log, warn, error, info, debug) and searching message text. Supports targeting a background tab by ID.',
   {
     level: z.string().optional().describe('Filter by log level: log, warn, error, info, debug'),
     search: z.string().optional().describe('Search string to filter messages'),
     limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ level, search, limit }) => {
+  async ({ level, search, limit, tabId }) => {
     const params = new URLSearchParams();
     if (level) params.set('level', level);
     if (search) params.set('search', search);
     if (limit !== undefined) params.set('limit', String(limit));
     const qs = params.toString();
     const endpoint = qs ? `/devtools/console?${qs}` : '/devtools/console';
-    const data = await apiCall('GET', endpoint);
+    const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_console_errors',
-  'Get only console errors from the browser DevTools. A quick way to check if the page has any JavaScript errors.',
+  'Get only console errors from the browser DevTools. A quick way to check if the page has any JavaScript errors. Supports targeting a background tab by ID.',
   {
     limit: z.number().optional().describe('Maximum errors to return (default: 50)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ limit }) => {
+  async ({ limit, tabId }) => {
     const params = new URLSearchParams();
     if (limit !== undefined) params.set('limit', String(limit));
     const qs = params.toString();
     const endpoint = qs ? `/devtools/console/errors?${qs}` : '/devtools/console/errors';
-    const data = await apiCall('GET', endpoint);
+    const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_network',
-  'Get network request entries captured via CDP (Chrome DevTools Protocol). Includes full headers and POST bodies. Use to inspect API calls, failed requests, and resource loading.',
+  'Get network request entries captured via CDP (Chrome DevTools Protocol). Includes full headers and POST bodies. Use to inspect API calls, failed requests, and resource loading. Supports targeting a background tab by ID.',
   {
     domain: z.string().optional().describe('Filter by domain (e.g. "api.example.com")'),
     type: z.string().optional().describe('Filter by resource type (e.g. "XHR", "Fetch", "Script")'),
     failed: z.boolean().optional().describe('Filter to only failed requests (true) or successful (false)'),
     limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ domain, type, failed, limit }) => {
+  async ({ domain, type, failed, limit, tabId }) => {
     const params = new URLSearchParams();
     if (domain) params.set('domain', domain);
     if (type) params.set('type', type);
@@ -892,54 +901,62 @@ server.tool(
     if (limit !== undefined) params.set('limit', String(limit));
     const qs = params.toString();
     const endpoint = qs ? `/devtools/network?${qs}` : '/devtools/network';
-    const data = await apiCall('GET', endpoint);
+    const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_evaluate',
-  'Evaluate a JavaScript expression via CDP Runtime in the active tab. Returns the result. Use for inspecting page state, reading variables, or running diagnostic code. WARNING: This can modify page state.',
+  'Evaluate a JavaScript expression via CDP Runtime in the active tab. Returns the result. Use for inspecting page state, reading variables, or running diagnostic code. Supports targeting a background tab by ID. WARNING: This can modify page state.',
   {
     expression: z.string().describe('JavaScript expression to evaluate'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
   {
     destructiveHint: true,
     readOnlyHint: false,
     openWorldHint: true,
   },
-  async ({ expression }) => {
-    const data = await apiCall('POST', '/devtools/evaluate', { expression });
+  async ({ expression, tabId }) => {
+    const data = await apiCall('POST', '/devtools/evaluate', { expression }, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_dom_query',
-  'Query the DOM by CSS selector via CDP. Returns matching nodes with their attributes and text content. Use to inspect page structure without executing JavaScript.',
+  'Query the DOM by CSS selector via CDP. Returns matching nodes with their attributes and text content. Use to inspect page structure without executing JavaScript. Supports targeting a background tab by ID.',
   {
     selector: z.string().describe('CSS selector to query'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ selector }) => {
-    const data = await apiCall('POST', '/devtools/dom/query', { selector });
+  async ({ selector, tabId }) => {
+    const data = await apiCall('POST', '/devtools/dom/query', { selector }, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_performance',
-  'Get performance metrics from the browser via CDP. Includes timing data like DOM content loaded, first paint, layout counts, and memory usage.',
-  async () => {
-    const data = await apiCall('GET', '/devtools/performance');
+  'Get performance metrics from the browser via CDP. Includes timing data like DOM content loaded, first paint, layout counts, and memory usage. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/devtools/performance', undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
 server.tool(
   'tandem_devtools_storage',
-  'Get browser storage data (cookies, localStorage, sessionStorage) for the current page via CDP.',
-  async () => {
-    const data = await apiCall('GET', '/devtools/storage');
+  'Get browser storage data (cookies, localStorage, sessionStorage) for the current page via CDP. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/devtools/storage', undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
@@ -950,20 +967,21 @@ server.tool(
 
 server.tool(
   'tandem_network_log',
-  'Get the network request log captured via Electron webRequest API. Lighter-weight than DevTools network — shows URL, method, status, and timing for recent requests.',
+  'Get the network request log captured via Electron webRequest API. Lighter-weight than DevTools network — shows URL, method, status, and timing for recent requests. Supports targeting a background tab by ID.',
   {
     domain: z.string().optional().describe('Filter by domain'),
     type: z.string().optional().describe('Filter by resource type'),
     limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ domain, type, limit }) => {
+  async ({ domain, type, limit, tabId }) => {
     const params = new URLSearchParams();
     if (domain) params.set('domain', domain);
     if (type) params.set('type', type);
     if (limit !== undefined) params.set('limit', String(limit));
     const qs = params.toString();
     const endpoint = qs ? `/network/log?${qs}` : '/network/log';
-    const data = await apiCall('GET', endpoint);
+    const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
@@ -1216,6 +1234,109 @@ server.tool(
     await apiCall('POST', '/wingman-alert', { title, body: message });
     await logActivity('wingman_alert', `[${level || 'info'}] ${message.substring(0, 80)}`);
     return { content: [{ type: 'text', text: `Alert sent: [${level || 'info'}] ${message}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Tab Locks — Multi-agent coordination
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_tab_lock',
+  'Acquire a lock on a browser tab for exclusive agent access. Use for multi-agent coordination to prevent conflicting actions on the same tab.',
+  {
+    tabId: z.string().describe('The tab ID to lock'),
+    agent: z.string().optional().describe('Agent identifier claiming the lock'),
+    timeout: z.number().optional().describe('Lock timeout in milliseconds'),
+  },
+  async ({ tabId, agent, timeout }) => {
+    const body: Record<string, unknown> = { tabId };
+    if (agent) body.agent = agent;
+    if (timeout !== undefined) body.timeout = timeout;
+    const data = await apiCall('POST', '/tab-locks/acquire', body);
+    await logActivity('tab_lock', `locked tab ${tabId}${agent ? ` for ${agent}` : ''}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_tab_unlock',
+  'Release a lock on a browser tab, allowing other agents to access it.',
+  {
+    tabId: z.string().describe('The tab ID to unlock'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('POST', '/tab-locks/release', { tabId });
+    await logActivity('tab_unlock', `released tab ${tabId}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_tab_locks_list',
+  'List all active tab locks. Shows which tabs are locked and by which agents.',
+  async () => {
+    const data = await apiCall('GET', '/tab-locks');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Content & Utility tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extract_content',
+  'Extract structured content from the current page using Tandem\'s content extraction engine. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('POST', '/content/extract', undefined, tabHeaders(tabId));
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_get_page_html',
+  'Get the raw HTML source of the current page. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/page-html', undefined, tabHeaders(tabId));
+    return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_get_cookies',
+  'Get browser cookies, optionally filtered by URL.',
+  {
+    url: z.string().optional().describe('URL to filter cookies for'),
+  },
+  async ({ url }) => {
+    const params = new URLSearchParams();
+    if (url) params.set('url', url);
+    const qs = params.toString();
+    const endpoint = qs ? `/cookies?${qs}` : '/cookies';
+    const data = await apiCall('GET', endpoint);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_clear_cookies',
+  'Clear browser cookies, optionally filtered by domain.',
+  {
+    domain: z.string().optional().describe('Domain to clear cookies for (clears all if omitted)'),
+  },
+  async ({ domain }) => {
+    const body: Record<string, unknown> = {};
+    if (domain) body.domain = domain;
+    const data = await apiCall('POST', '/cookies/clear', body);
+    await logActivity('clear_cookies', domain ? `domain: ${domain}` : 'all cookies');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 
