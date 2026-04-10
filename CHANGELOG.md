@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.70.0] - 2026-04-10
+
+- feat: add awareness tools — digest and focus for shared human-AI context
+
+Two new endpoints + MCP tools:
+- GET /awareness/digest — recent browser activity (navigation, interactions,
+  errors, tabs, downloads, watches) for the last N minutes
+- GET /awareness/focus — lightweight current-state check (active tab,
+  activity type, idle time, error flags)
+
+These enable the AI to understand what the human is doing and contribute
+meaningfully — the core of the tandem principle.
+
 ## [v0.69.3] - 2026-04-10
 
 - fix: add .nojekyll to enable static GitHub Pages
