@@ -5,6 +5,11 @@ import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 import type { TaskStatus } from '../../agents/task-manager';
 
+/**
+ * Register agent task management, tab-lock, workflow, and watch routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // TASKS — Agent task management (Phase 5)

@@ -126,6 +126,11 @@ function injectLiveReload(html: string, id: string, version: number): string {
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
+/**
+ * Register headless preview CRUD and content routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerPreviewRoutes(router: Router, ctx: RouteContext): void {
 
   // List all previews

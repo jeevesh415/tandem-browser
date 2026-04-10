@@ -2,6 +2,11 @@ import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
+/**
+ * Register AI awareness routes (activity digest, focus context).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerAwarenessRoutes(router: Router, ctx: RouteContext): void {
 
   // ═══ GET /awareness/digest — Smart activity digest ═══

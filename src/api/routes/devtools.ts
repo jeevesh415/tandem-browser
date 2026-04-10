@@ -6,6 +6,11 @@ import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 /** Maximum allowed expression length for evaluation endpoints (1 MB) */
 const MAX_CODE_LENGTH = 1_048_576;
 
+/**
+ * Register DevTools CDP bridge routes (console, DOM, evaluate, storage, performance).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // DEVTOOLS — CDP Bridge for Wingman

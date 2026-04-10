@@ -83,11 +83,13 @@ export class PasswordManager {
         }
     }
 
+    /** Lock the vault and wipe the in-memory key. */
     public lock() {
         this.vaultKey = null;
         this.isUnlocked = false;
     }
 
+    /** Whether the vault is currently unlocked. */
     public get isVaultUnlocked() {
         return this.isUnlocked;
     }
@@ -162,6 +164,7 @@ export class PasswordManager {
 }
 let _instance: PasswordManager | null = null;
 
+/** Get or create the singleton PasswordManager instance. */
 export function getPasswordManager(): PasswordManager {
   if (!_instance) {
     _instance = new PasswordManager();

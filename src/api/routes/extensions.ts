@@ -55,6 +55,11 @@ function getExtensionFramesForWebContents(tabId: number): ExtensionFrameInfo[] {
     }));
 }
 
+/**
+ * Register browser extension management routes (list, install, uninstall, Chrome import).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerExtensionRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // EXTENSIONS — Phase 5.7 + Phase 2 API Routes

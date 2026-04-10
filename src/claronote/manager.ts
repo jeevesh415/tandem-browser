@@ -45,6 +45,7 @@ export class ClaroNoteManager {
 
   // ═══ Authentication ═══
 
+  /** Authenticate with ClaroNote and persist the token to disk. */
   async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await this.apiRequest('POST', '/auth/login', {
@@ -72,12 +73,14 @@ export class ClaroNoteManager {
     }
   }
 
+  /** Remove the stored ClaroNote auth token. */
   async logout(): Promise<void> {
     if (fs.existsSync(this.authFile)) {
       fs.unlinkSync(this.authFile);
     }
   }
 
+  /** Load and validate the persisted auth token, returning null if expired. */
   getAuth(): ClaroNoteAuth | null {
     try {
       if (!fs.existsSync(this.authFile)) return null;
@@ -96,6 +99,7 @@ export class ClaroNoteManager {
     }
   }
 
+  /** Fetch the authenticated user's profile from ClaroNote. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- upstream auth payload is not versioned yet
   async getMe(): Promise<any> {
     const auth = this.getAuth();
@@ -104,12 +108,14 @@ export class ClaroNoteManager {
     return await this.apiRequest('GET', '/auth/me', null, auth.token);
   }
 
+  /** Check whether a valid (non-expired) auth token exists. */
   isAuthenticated(): boolean {
     return this.getAuth() !== null;
   }
 
   // ═══ Recording ═══
 
+  /** Start tracking a recording session (actual MediaRecorder lives in renderer). */
   async startRecording(): Promise<{ success: boolean; error?: string }> {
     try {
       if (this.isRecording) {
@@ -130,6 +136,7 @@ export class ClaroNoteManager {
     }
   }
 
+  /** Stop the current recording session. */
   async stopRecording(): Promise<{ success: boolean; noteId?: string; error?: string }> {
     try {
       if (!this.isRecording) {
@@ -158,6 +165,7 @@ export class ClaroNoteManager {
     }
   }
 
+  /** Get the current recording state, including elapsed duration. */
   getRecordingStatus(): { 
     isRecording: boolean; 
     duration?: number; 
@@ -172,6 +180,7 @@ export class ClaroNoteManager {
 
   // ═══ Notes Management ═══
 
+  /** Fetch recent notes from ClaroNote, sorted newest first. */
   async getNotes(limit: number = 10): Promise<ClaroNote[]> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
@@ -180,6 +189,7 @@ export class ClaroNoteManager {
     return response.data || response;
   }
 
+  /** Fetch a single note by ID from ClaroNote. */
   async getNote(noteId: string): Promise<ClaroNote> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
@@ -189,6 +199,10 @@ export class ClaroNoteManager {
 
   // ═══ Public Methods for Audio Upload ═══
 
+  /**
+   * Upload an audio recording buffer to ClaroNote for transcription.
+   * @returns the created note ID
+   */
   async uploadRecording(audioBuffer: Buffer, duration: number): Promise<string> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');

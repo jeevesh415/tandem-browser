@@ -3,6 +3,11 @@ import type { RouteContext } from '../context';
 import { createRateLimitMiddleware } from '../rate-limit';
 import { normalizeExistingDirectoryPath } from '../../utils/security';
 
+/**
+ * Register cross-device sync routes (config, remote devices, tabs).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // SYNC — Cross-device sync via shared folder
