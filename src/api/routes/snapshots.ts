@@ -5,6 +5,11 @@ import type { LocatorQuery } from '../../locators/finder';
 import { handleRouteError } from '../../utils/errors';
 import { injectionScannerMiddleware } from '../middleware/injection-scanner';
 
+/**
+ * Register accessibility-tree snapshot and locator-based interaction routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // SNAPSHOTS — Accessibility-tree based interaction

@@ -35,6 +35,11 @@ function renderGooglePhotosAuthPage(opts: { ok: boolean; title: string; message:
 </html>`;
 }
 
+/**
+ * Register Wingman panel, chat, activity log, audio recording, and draw overlay routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // PANEL — Wingman side panel

@@ -47,6 +47,7 @@ export class SyncManager {
     return SyncManager.sanitizeDeviceName(os.hostname());
   }
 
+  /** Initialize sync with the given config, creating the directory structure on disk. */
   init(config: SyncConfig): void {
     this.config = config;
     if (!this.isConfigured()) {
@@ -68,6 +69,7 @@ export class SyncManager {
     log.info(`Sync initialized: ${config.syncRoot} (device: ${config.deviceName})`);
   }
 
+  /** Check whether sync is enabled, configured, and the sync root exists. */
   isConfigured(): boolean {
     return !!(this.config && this.config.enabled && this.config.syncRoot && fs.existsSync(this.config.syncRoot));
   }
@@ -170,6 +172,7 @@ export class SyncManager {
     }
   }
 
+  /** Clean up resources (currently a no-op). */
   destroy(): void {
     // nothing to clean up
   }

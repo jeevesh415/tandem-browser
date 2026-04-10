@@ -17,6 +17,11 @@ export function resetMiscRouteStateForTests(): void {
   liveMode = false;
 }
 
+/**
+ * Register miscellaneous routes (status, config, live mode, voice, password vault, etc.).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
   // ═══════════════════════════════════════════════

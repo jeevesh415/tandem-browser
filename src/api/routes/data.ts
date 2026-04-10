@@ -27,6 +27,11 @@ const openClawConnectRateLimit = expressRateLimit({
   message: { error: 'Too many OpenClaw connect requests. Retry shortly.' },
 });
 
+/**
+ * Register data management routes (bookmarks, history, forms, site memory, cookies, import/export).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // BOOKMARKS — Phase 4.2

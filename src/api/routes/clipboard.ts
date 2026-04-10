@@ -2,6 +2,11 @@ import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
+/**
+ * Register clipboard read, write, and saved-clips management routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerClipboardRoutes(router: Router, ctx: RouteContext): void {
 
   // ═══ GET /clipboard — Read clipboard content ═══
