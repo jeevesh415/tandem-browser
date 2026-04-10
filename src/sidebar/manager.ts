@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
 import type { SidebarConfig, SidebarItem, SidebarState } from './types';
+
+const log = createLogger('SidebarManager');
+
+// ─── Default config ─────────────────────────────────────────────────
 
 // Sidebar items in 3 sections (similar to Opera):
 // Section 1: Workspaces (top)
@@ -34,14 +39,35 @@ const DEFAULT_CONFIG: SidebarConfig = {
   ]
 };
 
+// ─── Storage path ───────────────────────────────────────────────────
+
+const STORAGE_PATH = path.join(tandemDir(), 'sidebar-config.json');
+
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * SidebarManager — sidebar layout, item visibility, and panel state.
+ *
+ * Persistence: ~/.tandem/sidebar-config.json
+ * API routes:  src/api/routes/sidebar.ts
+ * MCP tools:   src/mcp/tools/sidebar.ts
+ */
 export class SidebarManager {
-  private storageFile: string;
+
+  // === 1. Private state ===
+
   private config: SidebarConfig;
 
+  // === 2. Constructor ===
+
   constructor() {
-    this.storageFile = path.join(tandemDir(), 'sidebar-config.json');
     this.config = this.load();
   }
+
+  // === 3. Dependency setters ===
+  // (none — SidebarManager has no external dependencies)
+
+  // === 4. Public methods ===
 
   getConfig(): SidebarConfig { return this.config; }
 
@@ -78,25 +104,36 @@ export class SidebarManager {
     this.save();
   }
 
+  // === 5. Sync integration ===
+  // (none — sidebar config is local-only)
+
+  // === 6. Cleanup ===
+
+  destroy(): void { /* nothing to clean up */ }
+
+  // === 7. Private I/O ===
+
   private load(): SidebarConfig {
     try {
-      if (fs.existsSync(this.storageFile)) {
-        const raw = JSON.parse(fs.readFileSync(this.storageFile, "utf8"));
+      if (fs.existsSync(STORAGE_PATH)) {
+        const raw = JSON.parse(fs.readFileSync(STORAGE_PATH, "utf8"));
         const savedIds = new Set((raw.items || []).map((i: SidebarItem) => i.id));
         const missingItems = DEFAULT_CONFIG.items.filter(i => !savedIds.has(i.id));
         const mergedItems = [...(raw.items || []), ...missingItems];
         return { ...DEFAULT_CONFIG, ...raw, items: mergedItems };
       }
-    } catch { /* use defaults */ }
+    } catch (e) {
+      log.warn('Failed to load sidebar config:', e instanceof Error ? e.message : String(e));
+    }
     return { ...DEFAULT_CONFIG, items: [...DEFAULT_CONFIG.items] };
   }
 
   private save(): void {
     try {
       ensureDir(tandemDir());
-      fs.writeFileSync(this.storageFile, JSON.stringify(this.config, null, 2));
-    } catch { /* ignore */ }
+      fs.writeFileSync(STORAGE_PATH, JSON.stringify(this.config, null, 2));
+    } catch (e) {
+      log.warn('Failed to save sidebar config:', e instanceof Error ? e.message : String(e));
+    }
   }
-
-  destroy(): void { /* nothing to clean up */ }
 }
