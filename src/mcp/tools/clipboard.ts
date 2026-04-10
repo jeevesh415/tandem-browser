@@ -75,10 +75,9 @@ export function registerClipboardTools(server: McpServer): void {
       filename: z.string().describe('Descriptive filename, e.g. "vercel-503-error.png" or "meeting-notes.txt"'),
       format: z.enum(['png', 'jpg', 'txt']).optional().describe('File format — auto-detected from filename extension if omitted'),
       quality: z.number().min(1).max(100).optional().describe('JPEG quality (1-100, default 90). Only applies to jpg format'),
-      directory: z.string().optional().describe('Save directory (default: ~/Pictures/Tandem/clipboard/)'),
     },
-    async ({ filename, format, quality, directory }) => {
-      const data = await apiCall('POST', '/clipboard/save', { filename, format, quality, directory });
+    async ({ filename, format, quality }) => {
+      const data = await apiCall('POST', '/clipboard/save', { filename, format, quality });
       const summary = `Saved to ${data.path} (${formatBytes(data.size)})`;
       await logActivity('clipboard_save', summary);
       return { content: [{ type: 'text', text: summary }] };

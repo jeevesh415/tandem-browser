@@ -2,19 +2,14 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { clipboard, nativeImage } from 'electron';
-import { resolvePathInAllowedRoots } from '../utils/security';
+// No user-controlled paths — save directory is a compile-time constant
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ClipboardManager');
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-const ALLOWED_SAVE_ROOTS = [
-  path.join(os.homedir(), 'Desktop'),
-  path.join(os.homedir(), 'Downloads'),
-  path.join(os.homedir(), '.tandem'),
-  path.join(os.homedir(), 'Pictures', 'Tandem'),
-];
+// Save directory is fixed — no user-controlled paths to prevent path injection
 
 const DEFAULT_SAVE_DIR = path.join(os.homedir(), 'Pictures', 'Tandem', 'clipboard');
 
@@ -39,7 +34,6 @@ export interface ClipboardSaveOptions {
   filename: string;
   format?: 'png' | 'jpg' | 'txt';
   quality?: number;
-  directory?: string;
 }
 
 export interface ClipboardSaveResult {
@@ -114,18 +108,13 @@ export class ClipboardManager {
       throw new Error('Invalid filename: must be a simple filename without path separators');
     }
 
-    // Sanitize directory — resolve to an allowed root, default to safe location
-    const rawDir = typeof options.directory === 'string' ? options.directory : DEFAULT_SAVE_DIR;
-    const safePath = resolvePathInAllowedRoots(
-      path.join(path.resolve(rawDir), filename),
-      ALLOWED_SAVE_ROOTS,
-    );
-
-    // Only create directories under allowed roots (safePath already validated)
-    const safeDir = path.dirname(safePath);
-    if (!fs.existsSync(safeDir)) {
-      fs.mkdirSync(safeDir, { recursive: true });
+    // Always save to the fixed safe directory — no user-controlled directory input.
+    // This eliminates path injection entirely: the directory is a compile-time constant.
+    const saveDir = DEFAULT_SAVE_DIR;
+    if (!fs.existsSync(saveDir)) {
+      fs.mkdirSync(saveDir, { recursive: true });
     }
+    const safePath = path.join(saveDir, filename);
 
     // Detect format from filename extension if not specified
     const ext = path.extname(filename).toLowerCase().replace('.', '');

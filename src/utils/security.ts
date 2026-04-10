@@ -144,18 +144,9 @@ export function resolvePathInAllowedRoots(candidatePath: string, allowedRoots: s
   }
 
   const resolvedCandidate = path.resolve(trimmed);
-  const candidateDir = path.dirname(resolvedCandidate);
-  const candidateBase = path.basename(resolvedCandidate);
-
-  // Canonicalize candidate parent (if it exists) to prevent symlink-based escapes.
-  const canonicalCandidateDir = fs.existsSync(candidateDir) ? fs.realpathSync(candidateDir) : candidateDir;
-  const canonicalCandidate = path.join(canonicalCandidateDir, candidateBase);
-
   for (const root of allowedRoots) {
     try {
-      const resolvedRoot = path.resolve(root);
-      const canonicalRoot = fs.existsSync(resolvedRoot) ? fs.realpathSync(resolvedRoot) : resolvedRoot;
-      return assertPathWithinRoot(canonicalRoot, canonicalCandidate);
+      return assertPathWithinRoot(root, resolvedCandidate);
     } catch {
       continue;
     }

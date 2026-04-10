@@ -63,11 +63,7 @@ export function registerClipboardRoutes(router: Router, ctx: RouteContext): void
       const quality = typeof rawQuality === 'number' && rawQuality >= 1 && rawQuality <= 100
         ? rawQuality
         : undefined;
-      // Validate directory — must be string, sanitization happens in ClipboardManager via resolvePathInAllowedRoots
-      const rawDir = req.body.directory;
-      const directory = typeof rawDir === 'string' && rawDir.length > 0 ? rawDir : undefined;
-
-      const result = ctx.clipboardManager.saveAs({ filename, format, quality, directory });
+      const result = ctx.clipboardManager.saveAs({ filename, format, quality });
       res.json({ ok: true, path: result.path, size: result.size });
     } catch (e) {
       handleRouteError(res, e);
