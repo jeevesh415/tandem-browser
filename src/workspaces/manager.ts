@@ -8,6 +8,8 @@ import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('WorkspaceManager');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface Workspace {
   id: string;
   name: string;
@@ -28,20 +30,38 @@ type LegacyWorkspace = Workspace & {
   emoji?: string;
 };
 
+// ─── Storage path ───────────────────────────────────────────────────
+
 const STORAGE_PATH = tandemDir('workspaces.json');
 
 const DEFAULT_COLORS = ['#4285f4', '#4ecca3', '#e94560', '#f0a500', '#9b59b6', '#1abc9c', '#e67e22', '#2ecc71'];
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * WorkspaceManager — workspace CRUD, tab assignment, and active workspace switching.
+ *
+ * Persistence: ~/.tandem/workspaces.json
+ * API routes:  src/api/routes/workspaces.ts
+ * MCP tools:   src/mcp/tools/workspaces.ts
+ */
 export class WorkspaceManager {
+
+  // === 1. Private state ===
+
   private workspaces: Map<string, Workspace> = new Map();
   private activeId: string = '';
   private lastModified: string | undefined;
   private mainWindow: BrowserWindow | null = null;
   private syncManager: SyncManager | null = null;
 
+  // === 2. Constructor ===
+
   constructor() {
     this.loadFromDisk();
   }
+
+  // === 3. Dependency setters ===
 
   setMainWindow(win: BrowserWindow): void {
     this.mainWindow = win;
@@ -52,108 +72,33 @@ export class WorkspaceManager {
     this.mergeFromSync();
   }
 
-  private mergeFromSync(): void {
-    if (!this.syncManager?.isConfigured()) return;
-    try {
-      const shared = this.syncManager.readShared<WorkspacesFile>('workspaces.json');
-      if (!shared) return;
-      const localTime = this.lastModified ? new Date(this.lastModified).getTime() : 0;
-      const sharedTime = shared.lastModified ? new Date(shared.lastModified).getTime() : 0;
-      if (sharedTime > localTime) {
-        this.workspaces.clear();
-        for (const ws of shared.workspaces) {
-          this.workspaces.set(ws.id, ws);
-        }
-        this.activeId = shared.activeId;
-        this.lastModified = shared.lastModified;
-        if (!this.workspaces.has(this.activeId)) {
-          this.activeId = this.getDefaultWorkspace()?.id || '';
-        }
-        this.saveToDisk();
-        log.info('Workspaces loaded from sync (newer version found)');
-      }
-    } catch (e) {
-      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : e);
-    }
-  }
-
-  private loadFromDisk(): void {
-    try {
-      if (fs.existsSync(STORAGE_PATH)) {
-        const raw = fs.readFileSync(STORAGE_PATH, 'utf-8');
-        const data: WorkspacesFile = JSON.parse(raw);
-        this.lastModified = data.lastModified;
-        for (const ws of data.workspaces as LegacyWorkspace[]) {
-          // Migrate old emoji field to icon slug
-          if (!ws.icon && ws.emoji) {
-            ws.icon = 'home';
-            delete ws.emoji;
-          }
-          this.workspaces.set(ws.id, ws);
-        }
-        this.activeId = data.activeId;
-        // Validate activeId still exists
-        if (!this.workspaces.has(this.activeId)) {
-          this.activeId = this.getDefaultWorkspace()?.id || '';
-        }
-      }
-    } catch (e) {
-      log.warn('Failed to load workspaces from disk:', e instanceof Error ? e.message : e);
-    }
-
-    // Ensure default workspace exists
-    if (!this.getDefaultWorkspace()) {
-      const defaultWs: Workspace = {
-        id: this.generateId(),
-        name: 'Default',
-        icon: 'home',
-        color: '#4285f4',
-        order: 0,
-        isDefault: true,
-        tabIds: [],
-      };
-      this.workspaces.set(defaultWs.id, defaultWs);
-      this.activeId = defaultWs.id;
-      this.saveToDisk();
-    }
-
-    if (!this.activeId) {
-      this.activeId = this.getDefaultWorkspace()!.id;
-    }
-  }
-
-  private saveToDisk(): void {
-    try {
-      const dir = tandemDir();
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      this.lastModified = new Date().toISOString();
-      const data: WorkspacesFile = {
-        activeId: this.activeId,
-        workspaces: this.list(),
-        lastModified: this.lastModified,
-      };
-      fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
-      if (this.syncManager?.isConfigured()) {
-        this.syncManager.writeShared('workspaces.json', data);
-      }
-    } catch (e) {
-      log.warn('Failed to save workspaces to disk:', e instanceof Error ? e.message : e);
-    }
-  }
-
-  private generateId(): string {
-    return crypto.randomBytes(8).toString('hex');
-  }
-
-  private getDefaultWorkspace(): Workspace | undefined {
-    for (const ws of this.workspaces.values()) {
-      if (ws.isDefault) return ws;
-    }
-    return undefined;
-  }
+  // === 4. Public methods ===
 
   list(): Workspace[] {
     return Array.from(this.workspaces.values()).sort((a, b) => a.order - b.order);
+  }
+
+  get(id: string): Workspace | undefined {
+    return this.workspaces.get(id);
+  }
+
+  getActive(): Workspace {
+    const ws = this.workspaces.get(this.activeId);
+    if (!ws) return this.getDefaultWorkspace()!;
+    return ws;
+  }
+
+  getActiveId(): string {
+    return this.activeId;
+  }
+
+  getWorkspaceIdForTab(tabId: number): string | null {
+    for (const workspace of this.workspaces.values()) {
+      if (workspace.tabIds.includes(tabId)) {
+        return workspace.id;
+      }
+    }
+    return null;
   }
 
   create(opts: { name: string; icon?: string; color?: string }): Workspace {
@@ -172,6 +117,16 @@ export class WorkspaceManager {
     this.workspaces.set(ws.id, ws);
     this.saveToDisk();
     log.info(`Created workspace "${ws.name}" (${ws.id})`);
+    return ws;
+  }
+
+  update(id: string, opts: Partial<Pick<Workspace, 'name' | 'icon' | 'color'>>): Workspace {
+    const ws = this.workspaces.get(id);
+    if (!ws) throw new Error(`Workspace ${id} not found`);
+    if (opts.name !== undefined) ws.name = opts.name;
+    if (opts.icon !== undefined) ws.icon = opts.icon;
+    if (opts.color !== undefined) ws.color = opts.color;
+    this.saveToDisk();
     return ws;
   }
 
@@ -207,39 +162,6 @@ export class WorkspaceManager {
     this.saveToDisk();
     this.notifySwitch(ws);
     log.info(`Switched to workspace "${ws.name}"`);
-    return ws;
-  }
-
-  getActive(): Workspace {
-    const ws = this.workspaces.get(this.activeId);
-    if (!ws) return this.getDefaultWorkspace()!;
-    return ws;
-  }
-
-  getActiveId(): string {
-    return this.activeId;
-  }
-
-  get(id: string): Workspace | undefined {
-    return this.workspaces.get(id);
-  }
-
-  getWorkspaceIdForTab(tabId: number): string | null {
-    for (const workspace of this.workspaces.values()) {
-      if (workspace.tabIds.includes(tabId)) {
-        return workspace.id;
-      }
-    }
-    return null;
-  }
-
-  update(id: string, opts: Partial<Pick<Workspace, 'name' | 'icon' | 'color'>>): Workspace {
-    const ws = this.workspaces.get(id);
-    if (!ws) throw new Error(`Workspace ${id} not found`);
-    if (opts.name !== undefined) ws.name = opts.name;
-    if (opts.icon !== undefined) ws.icon = opts.icon;
-    if (opts.color !== undefined) ws.color = opts.color;
-    this.saveToDisk();
     return ws;
   }
 
@@ -290,13 +212,119 @@ export class WorkspaceManager {
     this.saveToDisk();
   }
 
+  // === 5. Sync integration ===
+
+  private mergeFromSync(): void {
+    if (!this.syncManager?.isConfigured()) return;
+    try {
+      const shared = this.syncManager.readShared<WorkspacesFile>('workspaces.json');
+      if (!shared) return;
+      const localTime = this.lastModified ? new Date(this.lastModified).getTime() : 0;
+      const sharedTime = shared.lastModified ? new Date(shared.lastModified).getTime() : 0;
+      if (sharedTime > localTime) {
+        this.workspaces.clear();
+        for (const ws of shared.workspaces) {
+          this.workspaces.set(ws.id, ws);
+        }
+        this.activeId = shared.activeId;
+        this.lastModified = shared.lastModified;
+        if (!this.workspaces.has(this.activeId)) {
+          this.activeId = this.getDefaultWorkspace()?.id || '';
+        }
+        this.saveToDisk();
+        log.info('Workspaces loaded from sync (newer version found)');
+      }
+    } catch (e) {
+      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // === 6. Cleanup ===
+
+  destroy(): void {
+    this.saveToDisk();
+  }
+
+  // === 7. Private I/O ===
+
+  private loadFromDisk(): void {
+    try {
+      if (fs.existsSync(STORAGE_PATH)) {
+        const raw = fs.readFileSync(STORAGE_PATH, 'utf-8');
+        const data: WorkspacesFile = JSON.parse(raw);
+        this.lastModified = data.lastModified;
+        for (const ws of data.workspaces as LegacyWorkspace[]) {
+          // Migrate old emoji field to icon slug
+          if (!ws.icon && ws.emoji) {
+            ws.icon = 'home';
+            delete ws.emoji;
+          }
+          this.workspaces.set(ws.id, ws);
+        }
+        this.activeId = data.activeId;
+        // Validate activeId still exists
+        if (!this.workspaces.has(this.activeId)) {
+          this.activeId = this.getDefaultWorkspace()?.id || '';
+        }
+      }
+    } catch (e) {
+      log.warn('Failed to load workspaces from disk:', e instanceof Error ? e.message : String(e));
+    }
+
+    // Ensure default workspace exists
+    if (!this.getDefaultWorkspace()) {
+      const defaultWs: Workspace = {
+        id: this.generateId(),
+        name: 'Default',
+        icon: 'home',
+        color: '#4285f4',
+        order: 0,
+        isDefault: true,
+        tabIds: [],
+      };
+      this.workspaces.set(defaultWs.id, defaultWs);
+      this.activeId = defaultWs.id;
+      this.saveToDisk();
+    }
+
+    if (!this.activeId) {
+      this.activeId = this.getDefaultWorkspace()!.id;
+    }
+  }
+
+  private saveToDisk(): void {
+    try {
+      const dir = tandemDir();
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      this.lastModified = new Date().toISOString();
+      const data: WorkspacesFile = {
+        activeId: this.activeId,
+        workspaces: this.list(),
+        lastModified: this.lastModified,
+      };
+      fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
+      if (this.syncManager?.isConfigured()) {
+        this.syncManager.writeShared('workspaces.json', data);
+      }
+    } catch (e) {
+      log.warn('Failed to save workspaces to disk:', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  private generateId(): string {
+    return crypto.randomBytes(8).toString('hex');
+  }
+
+  private getDefaultWorkspace(): Workspace | undefined {
+    for (const ws of this.workspaces.values()) {
+      if (ws.isDefault) return ws;
+    }
+    return undefined;
+  }
+
   private notifySwitch(ws: Workspace): void {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send(IpcChannels.WORKSPACE_SWITCHED, ws);
     }
-  }
-
-  destroy(): void {
-    this.saveToDisk();
   }
 }
