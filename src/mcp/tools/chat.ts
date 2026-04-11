@@ -22,7 +22,7 @@ export function registerChatTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().default(20).describe('Number of messages to return (default: 20)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const data = await apiCall('GET', `/chat?limit=${limit}`);
       const messages: Array<{ from: string; text: string; timestamp: number }> = data.messages || [];
 

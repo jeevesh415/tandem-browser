@@ -153,7 +153,7 @@ export function registerPinboardTools(server: McpServer): void {
       id: z.string().describe('Pinboard ID'),
       itemIds: z.array(z.string()).describe('Ordered array of item IDs representing the new order'),
     }),
-    async ({ id, itemIds }: any) => {
+    async ({ id, itemIds }) => {
       const data = await apiCall('POST', `/pinboards/${encodeURIComponent(id)}/items/reorder`, { itemIds });
       await logActivity('pinboard_reorder_items', id);
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

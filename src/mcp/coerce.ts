@@ -7,10 +7,8 @@ import { z } from 'zod';
  * This must happen at the schema level because the MCP SDK validates arguments
  * against the Zod schema BEFORE calling the tool handler.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function coerceShape(shape: Record<string, any>): Record<string, any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result: Record<string, any> = {};
+export function coerceShape<T extends Record<string, z.ZodTypeAny>>(shape: T): T {
+  const result: Record<string, z.ZodTypeAny> = {};
   for (const [key, field] of Object.entries(shape)) {
     const inner = unwrapType(field);
     if (inner instanceof z.ZodBoolean) {
@@ -23,7 +21,7 @@ export function coerceShape(shape: Record<string, any>): Record<string, any> {
       result[key] = field;
     }
   }
-  return result;
+  return result as T;
 }
 
 /** Unwrap ZodOptional / ZodDefault / ZodNullable wrappers to find the base type. */
@@ -34,8 +32,8 @@ function unwrapType(schema: z.ZodTypeAny): z.ZodTypeAny {
     s instanceof z.ZodDefault ||
     s instanceof z.ZodNullable
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    s = (s._def as any).innerType as z.ZodTypeAny;
+    // Zod internal: Optional/Default/Nullable all store wrapped type as innerType
+    s = (s._def as unknown as { innerType: z.ZodTypeAny }).innerType;
   }
   return s;
 }

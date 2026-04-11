@@ -109,7 +109,7 @@ export function registerMediaTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().describe('Maximum number of screenshots to return (default: 10)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const params = new URLSearchParams();
       if (limit) params.set('limit', String(limit));
       const qs = params.toString();
@@ -127,7 +127,7 @@ export function registerMediaTools(server: McpServer): void {
     coerceShape({
       enabled: z.boolean().optional().describe('Set draw mode on (true) or off (false). Omit to toggle.'),
     }),
-    async ({ enabled }: any) => {
+    async ({ enabled }) => {
       const body: Record<string, unknown> = {};
       if (enabled !== undefined) body.enabled = enabled;
       const data = await apiCall('POST', '/draw/toggle', body);
@@ -144,7 +144,7 @@ export function registerMediaTools(server: McpServer): void {
     coerceShape({
       open: z.boolean().optional().describe('Set panel open (true) or closed (false). Omit to toggle.'),
     }),
-    async ({ open }: any) => {
+    async ({ open }) => {
       const body: Record<string, unknown> = {};
       if (open !== undefined) body.open = open;
       const data = await apiCall('POST', '/panel/toggle', body);
@@ -161,7 +161,7 @@ export function registerMediaTools(server: McpServer): void {
     coerceShape({
       enabled: z.boolean().describe('Enable (true) or disable (false) the wingman stream'),
     }),
-    async ({ enabled }: any) => {
+    async ({ enabled }) => {
       const data = await apiCall('POST', '/wingman-stream/toggle', { enabled });
       await logActivity('wingman_stream_toggle', `enabled: ${data.enabled}`);
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

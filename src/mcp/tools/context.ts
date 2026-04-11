@@ -10,7 +10,7 @@ export function registerContextTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().describe('Maximum number of pages to return (default: 50)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const params = limit ? `?limit=${limit}` : '';
       const data = await apiCall('GET', `/context/recent${params}`);
       await logActivity('context_recent');

@@ -13,7 +13,7 @@ export function registerDevtoolsTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ level, search, limit, tabId }: any) => {
+    async ({ level, search, limit, tabId }) => {
       const params = new URLSearchParams();
       if (level) params.set('level', level);
       if (search) params.set('search', search);
@@ -32,7 +32,7 @@ export function registerDevtoolsTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum errors to return (default: 50)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ limit, tabId }: any) => {
+    async ({ limit, tabId }) => {
       const params = new URLSearchParams();
       if (limit !== undefined) params.set('limit', String(limit));
       const qs = params.toString();
@@ -61,7 +61,7 @@ export function registerDevtoolsTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ domain, type, failed, limit, tabId }: any) => {
+    async ({ domain, type, failed, limit, tabId }) => {
       const params = new URLSearchParams();
       if (domain) params.set('domain', domain);
       if (type) params.set('type', type);

@@ -35,7 +35,7 @@ export function registerDeviceTools(server: McpServer): void {
       mobile: z.boolean().optional().describe('Whether to emulate a mobile device'),
       userAgent: z.string().optional().describe('Custom user agent string'),
     }),
-    async ({ device, width, height, deviceScaleFactor, mobile, userAgent }: any) => {
+    async ({ device, width, height, deviceScaleFactor, mobile, userAgent }) => {
       const body: Record<string, unknown> = {};
       if (device) body.device = device;
       if (width !== undefined) body.width = width;

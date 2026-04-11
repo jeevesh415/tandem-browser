@@ -32,7 +32,7 @@ export function registerWindowTools(server: McpServer): void {
       maxPages: z.number().optional().default(5).describe('Maximum number of pages to visit (1-10)'),
       searchEngine: z.enum(['google', 'duckduckgo']).optional().default('duckduckgo').describe('Search engine to use'),
     }),
-    async ({ query, maxPages, searchEngine }: any) => {
+    async ({ query, maxPages, searchEngine }) => {
       const clampedMax = Math.min(Math.max(maxPages || 5, 1), 10);
       await logActivity('research_start', `"${query}" (max ${clampedMax} pages via ${searchEngine})`);
 

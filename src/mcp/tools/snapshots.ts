@@ -13,7 +13,7 @@ export function registerSnapshotTools(server: McpServer): void {
       interactive: z.boolean().optional().describe('Only include interactive elements'),
       selector: z.string().optional().describe('CSS selector to scope the snapshot to a subtree'),
     }),
-    async ({ tabId, compact, interactive, selector }: any) => {
+    async ({ tabId, compact, interactive, selector }) => {
       const params = new URLSearchParams();
       if (compact) params.set('compact', 'true');
       if (interactive) params.set('interactive', 'true');

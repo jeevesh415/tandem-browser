@@ -13,7 +13,7 @@ export function registerNetworkTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum entries to return (default: 100)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ domain, type, limit, tabId }: any) => {
+    async ({ domain, type, limit, tabId }) => {
       const params = new URLSearchParams();
       if (domain) params.set('domain', domain);
       if (type) params.set('type', type);
@@ -67,7 +67,7 @@ export function registerNetworkTools(server: McpServer): void {
       readOnlyHint: false,
       openWorldHint: false,
     },
-    async ({ url, method, status, body, headers }: any) => {
+    async ({ url, method, status, body, headers }) => {
       const payload: Record<string, unknown> = { pattern: url };
       if (method) payload.method = method;
       if (status !== undefined) payload.status = status;

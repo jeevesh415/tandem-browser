@@ -12,7 +12,7 @@ export function registerEventTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().describe('Maximum number of events to return (default: 50)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const params = new URLSearchParams();
       if (limit) params.set('limit', String(limit));
       const qs = params.toString();
@@ -39,7 +39,7 @@ export function registerEventTools(server: McpServer): void {
     coerceShape({
       enabled: z.boolean().optional().describe('Set live mode on (true) or off (false). Omit to toggle.'),
     }),
-    async ({ enabled }: any) => {
+    async ({ enabled }) => {
       const body: Record<string, unknown> = {};
       if (enabled !== undefined) body.enabled = enabled;
       const data = await apiCall('POST', '/live/toggle', body);

@@ -44,7 +44,7 @@ export function registerPasswordTools(server: McpServer): void {
     coerceShape({
       length: z.number().optional().describe('Password length (default: 24)'),
     }),
-    async ({ length }: any) => {
+    async ({ length }) => {
       const query = length ? `?length=${length}` : '';
       const data = await apiCall('GET', `/passwords/generate${query}`);
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

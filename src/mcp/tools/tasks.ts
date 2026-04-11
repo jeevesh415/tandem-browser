@@ -15,8 +15,8 @@ export function registerTaskTools(server: McpServer): void {
         params: z.record(z.string(), z.string()).optional().describe('Action parameters as key-value pairs'),
       })).describe('Steps to execute'),
     }),
-    async ({ description, steps }: any) => {
-      const formattedSteps = steps.map((s: any) => ({
+    async ({ description, steps }) => {
+      const formattedSteps = steps.map((s: { description: string; actionType: string; params?: Record<string, string> }) => ({
         description: s.description,
         action: { type: s.actionType, params: s.params || {} },
         riskLevel: 'low' as const,
@@ -113,7 +113,7 @@ export function registerTaskTools(server: McpServer): void {
       agent: z.string().optional().describe('Agent identifier claiming the lock'),
       timeout: z.number().optional().describe('Lock timeout in milliseconds'),
     }),
-    async ({ tabId, agent, timeout }: any) => {
+    async ({ tabId, agent, timeout }) => {
       const body: Record<string, unknown> = { tabId };
       if (agent) body.agent = agent;
       if (timeout !== undefined) body.timeout = timeout;
@@ -189,7 +189,7 @@ export function registerTaskTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().describe('Maximum entries to return (default: 50)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const params = new URLSearchParams();
       if (limit !== undefined) params.set('limit', String(limit));
       const qs = params.toString();
