@@ -2124,6 +2124,66 @@
         if (wv) wv.audioMuted = !isMuted;
       });
 
+      // — Set Emoji (submenu)
+      {
+        const emojiItem = document.createElement('div');
+        emojiItem.className = 'tandem-ctx-menu-item';
+        const tabEl = document.querySelector('.tab[data-tab-id="' + domTabId + '"]');
+        const tabEmojiSpan = tabEl ? tabEl.querySelector('.tab-emoji') : null;
+        const currentEmoji = (tabEmojiSpan && tabEmojiSpan.style.display !== 'none') ? tabEmojiSpan.textContent : '';
+        emojiItem.innerHTML = currentEmoji
+          ? '<span>Emoji: ' + currentEmoji + '</span><span class="ctx-arrow">▶</span>'
+          : '<span>Set Emoji...</span><span class="ctx-arrow">▶</span>';
+
+        const emojiSub = document.createElement('div');
+        emojiSub.className = 'tandem-ctx-submenu tandem-emoji-grid';
+
+        if (currentEmoji) {
+          const removeItem = document.createElement('div');
+          removeItem.className = 'tandem-ctx-submenu-item';
+          removeItem.textContent = 'Remove Emoji';
+          removeItem.addEventListener('click', async () => {
+            closeCtxMenu();
+            await fetch('http://localhost:8765/tabs/' + encodeURIComponent(domTabId) + '/emoji', {
+              method: 'DELETE',
+              headers: { Authorization: 'Bearer ' + TOKEN }
+            });
+          });
+          emojiSub.appendChild(removeItem);
+          const sep = document.createElement('div');
+          sep.className = 'tandem-ctx-separator';
+          emojiSub.appendChild(sep);
+        }
+
+        const emojis = [
+          '🔥','⭐','💡','🚀','✅','❌','⚠️','🎯','💬','📌',
+          '📚','🧪','🔧','🎨','📊','🔒','👀','💰','🎵','❤️',
+          '🏠','📧','🛒','📝','🗂️','🌍','☁️','📸','🎮','🤖',
+          '🧠','🔍','📅','🎁','🏷️','⏰','🔔','💻','📱','🎬',
+          '🍕','☕','🌟','💎','🦊','🐛','🏗️','📦','🔗','🏆',
+        ];
+        const grid = document.createElement('div');
+        grid.className = 'tandem-emoji-picker';
+        emojis.forEach(emoji => {
+          const btn = document.createElement('span');
+          btn.className = 'tandem-emoji-btn';
+          btn.textContent = emoji;
+          btn.addEventListener('click', async () => {
+            closeCtxMenu();
+            await fetch('http://localhost:8765/tabs/' + encodeURIComponent(domTabId) + '/emoji', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+              body: JSON.stringify({ emoji: emoji })
+            });
+          });
+          grid.appendChild(btn);
+        });
+        emojiSub.appendChild(grid);
+
+        emojiItem.appendChild(emojiSub);
+        menu.appendChild(emojiItem);
+      }
+
       addSep();
 
       // — Close Tab
