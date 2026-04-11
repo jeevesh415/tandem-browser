@@ -59,7 +59,7 @@ export function registerSidebarTools(server: McpServer): void {
     coerceShape({
       orderedIds: z.array(z.string()).describe('Array of sidebar item IDs in desired order'),
     }),
-    async ({ orderedIds }: any) => {
+    async ({ orderedIds }) => {
       const data = await apiCall('POST', '/sidebar/reorder', { orderedIds });
       await logActivity('sidebar_reorder');
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

@@ -11,7 +11,7 @@ export function registerHistoryTools(server: McpServer): void {
       limit: z.number().optional().describe('Max entries to return (default 100)'),
       offset: z.number().optional().describe('Offset for pagination (default 0)'),
     }),
-    async ({ limit, offset }: any) => {
+    async ({ limit, offset }) => {
       const params = new URLSearchParams();
       if (limit !== undefined) params.set('limit', String(limit));
       if (offset !== undefined) params.set('offset', String(offset));
@@ -71,7 +71,7 @@ export function registerHistoryTools(server: McpServer): void {
     coerceShape({
       limit: z.number().optional().describe('Max entries to return (default 100)'),
     }),
-    async ({ limit }: any) => {
+    async ({ limit }) => {
       const params = new URLSearchParams();
       if (limit !== undefined) params.set('limit', String(limit));
       const qs = params.toString();

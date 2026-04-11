@@ -16,7 +16,7 @@ export function registerAwarenessTools(server: McpServer): void {
         'How many minutes of activity to include (default: 5, max: 60)'
       ),
     }),
-    async ({ minutes }: any) => {
+    async ({ minutes }) => {
       const params = new URLSearchParams();
       if (minutes) params.set('minutes', String(minutes));
       const qs = params.toString();

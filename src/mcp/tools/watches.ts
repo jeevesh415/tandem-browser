@@ -21,7 +21,7 @@ export function registerWatchTools(server: McpServer): void {
       url: z.string().describe('URL to monitor'),
       intervalMinutes: z.number().optional().describe('Check interval in minutes (default: 30)'),
     }),
-    async ({ url, intervalMinutes }: any) => {
+    async ({ url, intervalMinutes }) => {
       const data = await apiCall('POST', '/watch/add', { url, intervalMinutes });
       await logActivity('watch_add', url);
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

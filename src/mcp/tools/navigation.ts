@@ -55,7 +55,7 @@ export function registerNavigationTools(server: McpServer): void {
       timeout: z.number().optional().default(10000).describe('Timeout in milliseconds (default: 10000)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ timeout, tabId }: any) => {
+    async ({ timeout, tabId }) => {
       const result = await apiCall('POST', '/wait', { timeout }, tabHeaders(tabId));
       await logActivity('wait_for_load');
 
@@ -89,7 +89,7 @@ export function registerNavigationTools(server: McpServer): void {
       clear: z.boolean().optional().default(false).describe('Clear the field before typing'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ selector, text, clear, tabId }: any) => {
+    async ({ selector, text, clear, tabId }) => {
       await apiCall('POST', '/type', { selector, text, clear }, tabHeaders(tabId));
       await logActivity('type', `${selector}: "${text.substring(0, 50)}"`);
       return { content: [{ type: 'text', text: `Typed "${text}" into ${selector}` }] };
@@ -106,7 +106,7 @@ export function registerNavigationTools(server: McpServer): void {
       selector: z.string().optional().describe('CSS selector of element to scroll into view'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ direction, amount, target, selector, tabId }: any) => {
+    async ({ direction, amount, target, selector, tabId }) => {
       const body: Record<string, unknown> = { direction, amount };
       if (target) body.target = target;
       if (selector) body.selector = selector;
@@ -125,7 +125,7 @@ export function registerNavigationTools(server: McpServer): void {
       modifiers: z.array(z.string()).optional().describe('Optional modifier keys: "control", "shift", "alt", "meta" (e.g. ["control", "shift"])'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ key, modifiers, tabId }: any) => {
+    async ({ key, modifiers, tabId }) => {
       const body: Record<string, unknown> = { key };
       if (modifiers && modifiers.length > 0) body.modifiers = modifiers;
       const result = await apiCall('POST', '/press-key', body, tabHeaders(tabId));
@@ -142,7 +142,7 @@ export function registerNavigationTools(server: McpServer): void {
       keys: z.array(z.string()).describe('Array of key names to press in sequence (e.g. ["Tab", "Tab", "Tab", "Enter"])'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
-    async ({ keys, tabId }: any) => {
+    async ({ keys, tabId }) => {
       const result = await apiCall('POST', '/press-key-combo', { keys }, tabHeaders(tabId));
       const detail = keys.join(' → ');
       await logActivity('press_key_combo', detail);

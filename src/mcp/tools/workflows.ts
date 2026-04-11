@@ -28,7 +28,7 @@ export function registerWorkflowTools(server: McpServer): void {
       description: z.string().optional().describe('Optional workflow description'),
       variables: z.record(z.string(), z.any()).optional().describe('Optional default variable values'),
     }),
-    async ({ name, steps, description, variables }: any) => {
+    async ({ name, steps, description, variables }) => {
       const body: Record<string, unknown> = { name, steps };
       if (description) body.description = description;
       if (variables) body.variables = variables;

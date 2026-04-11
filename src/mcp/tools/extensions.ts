@@ -30,7 +30,7 @@ export function registerExtensionTools(server: McpServer): void {
       all: z.boolean().optional().describe('Import all Chrome extensions'),
       profile: z.string().optional().describe('Chrome profile name (default: "Default")'),
     }),
-    async ({ extensionId, all, profile }: any) => {
+    async ({ extensionId, all, profile }) => {
       const body: Record<string, unknown> = {};
       if (extensionId) body.extensionId = extensionId;
       if (all) body.all = true;
