@@ -23,6 +23,8 @@ export interface Tab {
   source: TabSource;
   pinned: boolean;
   partition: string;
+  emoji: string | null;
+  emojiFlash: boolean;
 }
 
 export interface TabGroup {
@@ -190,6 +192,8 @@ export class TabManager {
       source,
       pinned: false,
       partition: resolvedPartition,
+      emoji: null,
+      emojiFlash: false,
     };
 
     this.tabs.set(id, tab);
@@ -317,6 +321,45 @@ export class TabManager {
     return tab ? tab.source : null;
   }
 
+  /** Set an emoji badge on a tab */
+  setEmoji(tabId: string, emoji: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = emoji;
+    tab.emojiFlash = false;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji, flash: false });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Remove emoji badge from a tab */
+  clearEmoji(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = null;
+    tab.emojiFlash = false;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji: null, flash: false });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Flash an emoji on a tab (AI signals user to look at this tab) */
+  flashEmoji(tabId: string, emoji: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = emoji;
+    tab.emojiFlash = true;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji, flash: true });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Get a tab's emoji */
+  getEmoji(tabId: string): string | null {
+    const tab = this.tabs.get(tabId);
+    return tab ? tab.emoji : null;
+  }
+
   /** Update tab metadata (called from renderer events) */
   updateTab(tabId: string, updates: Partial<Pick<Tab, 'title' | 'url' | 'favicon'>>): void {
     const tab = this.tabs.get(tabId);
@@ -407,6 +450,8 @@ export class TabManager {
       source: 'robin',
       pinned: false,
       partition: 'persist:tandem',
+      emoji: null,
+      emojiFlash: false,
     };
     this.tabs.set(id, tab);
     this.activeTabId = id;

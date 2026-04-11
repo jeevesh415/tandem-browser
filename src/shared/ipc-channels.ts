@@ -30,6 +30,7 @@ export const IpcChannels = {
   TAB_REGISTERED: 'tab-registered',
   TAB_SOURCE_CHANGED: 'tab-source-changed',
   TAB_PIN_CHANGED: 'tab-pin-changed',
+  TAB_EMOJI_CHANGED: 'tab-emoji-changed',
   SHOW_TAB_CONTEXT_MENU: 'show-tab-context-menu',
 
   // Panel / Chat
