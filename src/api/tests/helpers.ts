@@ -77,6 +77,10 @@ export function createMockContext(): RouteContext {
         source: 'robin',
         partition: 'persist:tandem',
       }),
+      setEmoji: vi.fn().mockReturnValue(true),
+      clearEmoji: vi.fn().mockReturnValue(true),
+      flashEmoji: vi.fn().mockReturnValue(true),
+      getEmoji: vi.fn().mockReturnValue(null),
       count: 1,
     } as any,
 
