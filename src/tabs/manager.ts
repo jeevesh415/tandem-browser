@@ -9,7 +9,7 @@ const log = createLogger('TabManager');
 
 // ─── Types ──────────────────────────────────────────────────────────
 
-export type TabSource = 'robin' | 'kees' | 'wingman';
+export type TabSource = 'robin' | 'wingman';
 
 export interface Tab {
   id: string;

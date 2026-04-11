@@ -31,7 +31,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      const tabSource = source === 'kees' || source === 'wingman' ? 'wingman' as const : 'robin' as const;
+      const tabSource = source === 'wingman' ? 'wingman' as const : 'robin' as const;
       const tab = await ctx.tabManager.openTab(
         url,
         groupId,

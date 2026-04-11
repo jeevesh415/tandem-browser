@@ -112,7 +112,7 @@ class ClaudeActivityBackend {
         if (m.id > this._lastSeenId) {
           this._lastSeenId = m.id;
           // Only emit Claude messages (not our own robin messages) during polling
-          if (m.from === 'claude' || m.from === 'kees') {
+          if (m.from === 'claude' || m.from === 'wingman') {
             this._emit('message', {
               id: m.id.toString(),
               role: 'assistant',

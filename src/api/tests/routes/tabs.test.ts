@@ -85,15 +85,15 @@ describe('Tab Routes', () => {
       );
     });
 
-    it('maps "kees" source to wingman', async () => {
+    it('maps unknown source to robin', async () => {
       await request(app)
         .post('/tabs/open')
-        .send({ source: 'kees' });
+        .send({ source: 'unknown' });
 
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'wingman',
+        'robin',
         'persist:tandem',
         true,
         undefined,
