@@ -8,12 +8,13 @@ export function registerTabTools(server: McpServer): void {
     'List all open browser tabs with their titles, URLs, and IDs',
     async () => {
       const data = await apiCall('GET', '/tabs/list');
-      const tabs: Array<{ id: string; title: string; url: string; active: boolean }> = data.tabs || [];
+      const tabs: Array<{ id: string; title: string; url: string; active: boolean; emoji?: string | null }> = data.tabs || [];
 
       let text = `Open tabs (${tabs.length}):\n\n`;
       for (const tab of tabs) {
         const marker = tab.active ? '→ ' : '  ';
-        text += `${marker}[${tab.id}] ${tab.title || '(untitled)'}\n   ${tab.url}\n`;
+        const emojiPrefix = tab.emoji ? `${tab.emoji} ` : '';
+        text += `${marker}[${tab.id}] ${emojiPrefix}${tab.title || '(untitled)'}\n   ${tab.url}\n`;
       }
 
       return { content: [{ type: 'text', text }] };

@@ -58,6 +58,20 @@ describe('MCP tab tools', () => {
       mockApiCall.mockRejectedValueOnce(new Error('connection refused'));
       await expect(handler({})).rejects.toThrow('connection refused');
     });
+
+    it('includes emoji in tab listing', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        tabs: [
+          { id: 't1', title: 'Project', url: 'https://github.com', active: true, emoji: '🔥' },
+          { id: 't2', title: 'Docs', url: 'https://docs.com', active: false, emoji: null },
+        ],
+      });
+
+      const result = await handler({});
+      const text = expectTextContent(result, 'Open tabs (2)');
+      expect(text).toContain('🔥 Project');
+      expect(text).not.toContain('null');
+    });
   });
 
   // ── tandem_open_tab ───────────────────────────────────────────────
