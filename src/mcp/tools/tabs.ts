@@ -8,12 +8,13 @@ export function registerTabTools(server: McpServer): void {
     'List all open browser tabs with their titles, URLs, and IDs',
     async () => {
       const data = await apiCall('GET', '/tabs/list');
-      const tabs: Array<{ id: string; title: string; url: string; active: boolean }> = data.tabs || [];
+      const tabs: Array<{ id: string; title: string; url: string; active: boolean; emoji?: string | null }> = data.tabs || [];
 
       let text = `Open tabs (${tabs.length}):\n\n`;
       for (const tab of tabs) {
         const marker = tab.active ? '→ ' : '  ';
-        text += `${marker}[${tab.id}] ${tab.title || '(untitled)'}\n   ${tab.url}\n`;
+        const emojiPrefix = tab.emoji ? `${tab.emoji} ` : '';
+        text += `${marker}[${tab.id}] ${emojiPrefix}${tab.title || '(untitled)'}\n   ${tab.url}\n`;
       }
 
       return { content: [{ type: 'text', text }] };
@@ -59,6 +60,47 @@ export function registerTabTools(server: McpServer): void {
       await apiCall('POST', '/tabs/focus', { tabId });
       await logActivity('focus_tab', tabId);
       return { content: [{ type: 'text', text: `Focused tab: ${tabId}` }] };
+    }
+  );
+
+  server.tool(
+    'tandem_tab_emoji_set',
+    'Set an emoji badge on a browser tab for visual identification',
+    {
+      tabId: z.string().describe('The tab ID to set the emoji on'),
+      emoji: z.string().describe('The emoji to display (e.g. "🔥", "📚", "🧪")'),
+    },
+    async ({ tabId, emoji }) => {
+      await apiCall('POST', `/tabs/${encodeURIComponent(tabId)}/emoji`, { emoji });
+      await logActivity('tab_emoji_set', `${tabId}: ${emoji}`);
+      return { content: [{ type: 'text', text: `Set emoji ${emoji} on tab ${tabId}` }] };
+    }
+  );
+
+  server.tool(
+    'tandem_tab_emoji_remove',
+    'Remove the emoji badge from a browser tab',
+    {
+      tabId: z.string().describe('The tab ID to remove the emoji from'),
+    },
+    async ({ tabId }) => {
+      await apiCall('DELETE', `/tabs/${encodeURIComponent(tabId)}/emoji`);
+      await logActivity('tab_emoji_remove', tabId);
+      return { content: [{ type: 'text', text: `Removed emoji from tab ${tabId}` }] };
+    }
+  );
+
+  server.tool(
+    'tandem_tab_emoji_flash',
+    'Flash a pulsing emoji on a tab to attract the user\'s attention (e.g. signal that a page is ready for review)',
+    {
+      tabId: z.string().describe('The tab ID to flash the emoji on'),
+      emoji: z.string().describe('The emoji to flash (e.g. "🔥", "✅", "⚠️")'),
+    },
+    async ({ tabId, emoji }) => {
+      await apiCall('POST', `/tabs/${encodeURIComponent(tabId)}/emoji`, { emoji, flash: true });
+      await logActivity('tab_emoji_flash', `${tabId}: ${emoji}`);
+      return { content: [{ type: 'text', text: `Flashing emoji ${emoji} on tab ${tabId}` }] };
     }
   );
 }

@@ -628,6 +628,36 @@ export class ContextMenuBuilder {
       },
     }));
 
+    // Emoji badge
+    const currentEmoji = this.deps.tabManager.getEmoji(tabId);
+    const popularEmojis = [
+      '🔥', '⭐', '💡', '🚀', '✅', '❌', '⚠️', '🎯', '💬', '📌',
+      '📚', '🧪', '🔧', '🎨', '📊', '🔒', '👀', '💰', '🎵', '❤️',
+      '🏠', '📧', '🛒', '📝', '🗂️', '🌍', '☁️', '📸', '🎮', '🤖',
+      '🧠', '🔍', '📅', '🎁', '🏷️', '⏰', '🔔', '💻', '📱', '🎬',
+      '🍕', '☕', '🌟', '💎', '🦊', '🐛', '🏗️', '📦', '🔗', '🏆',
+    ];
+
+    const emojiSubmenu = Menu.buildFromTemplate(
+      popularEmojis.map(emoji => ({
+        label: emoji,
+        click: () => this.deps.tabManager.setEmoji(tabId, emoji),
+      }))
+    );
+
+    if (currentEmoji) {
+      emojiSubmenu.insert(0, new MenuItem({ type: 'separator' }));
+      emojiSubmenu.insert(0, new MenuItem({
+        label: 'Remove Emoji',
+        click: () => this.deps.tabManager.clearEmoji(tabId),
+      }));
+    }
+
+    menu.append(new MenuItem({
+      label: currentEmoji ? `Emoji: ${currentEmoji}` : 'Set Emoji...',
+      submenu: emojiSubmenu,
+    }));
+
     this.addSeparator(menu);
 
     menu.append(new MenuItem({

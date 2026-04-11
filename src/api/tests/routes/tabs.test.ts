@@ -391,4 +391,72 @@ describe('Tab Routes', () => {
       expect(chromeWc.close).not.toHaveBeenCalled();
     });
   });
+
+  // ─── POST /tabs/:id/emoji ────────────────────────
+
+  describe('POST /tabs/:id/emoji', () => {
+    it('sets emoji on a tab', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({ emoji: '🔥' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.setEmoji).toHaveBeenCalledWith('tab-1', '🔥');
+    });
+
+    it('returns 400 when emoji is missing', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('emoji required');
+      expect(ctx.tabManager.setEmoji).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when tab not found', async () => {
+      vi.mocked(ctx.tabManager.setEmoji).mockReturnValueOnce(false);
+
+      const res = await request(app)
+        .post('/tabs/bad-id/emoji')
+        .send({ emoji: '🔥' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab not found');
+    });
+
+    it('flashes emoji when flash=true', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({ emoji: '🔥', flash: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.flashEmoji).toHaveBeenCalledWith('tab-1', '🔥');
+    });
+  });
+
+  // ─── DELETE /tabs/:id/emoji ──────────────────────
+
+  describe('DELETE /tabs/:id/emoji', () => {
+    it('removes emoji from a tab', async () => {
+      const res = await request(app)
+        .delete('/tabs/tab-1/emoji');
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.clearEmoji).toHaveBeenCalledWith('tab-1');
+    });
+
+    it('returns 404 when tab not found', async () => {
+      vi.mocked(ctx.tabManager.clearEmoji).mockReturnValueOnce(false);
+
+      const res = await request(app)
+        .delete('/tabs/bad-id/emoji');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab not found');
+    });
+  });
 });

@@ -58,6 +58,20 @@ describe('MCP tab tools', () => {
       mockApiCall.mockRejectedValueOnce(new Error('connection refused'));
       await expect(handler({})).rejects.toThrow('connection refused');
     });
+
+    it('includes emoji in tab listing', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        tabs: [
+          { id: 't1', title: 'Project', url: 'https://github.com', active: true, emoji: '🔥' },
+          { id: 't2', title: 'Docs', url: 'https://docs.com', active: false, emoji: null },
+        ],
+      });
+
+      const result = await handler({});
+      const text = expectTextContent(result, 'Open tabs (2)');
+      expect(text).toContain('🔥 Project');
+      expect(text).not.toContain('null');
+    });
   });
 
   // ── tandem_open_tab ───────────────────────────────────────────────
@@ -129,6 +143,51 @@ describe('MCP tab tools', () => {
     it('propagates API errors', async () => {
       mockApiCall.mockRejectedValueOnce(new Error('tab not found'));
       await expect(handler({ tabId: 'bad' })).rejects.toThrow('tab not found');
+    });
+  });
+
+  // ── tandem_tab_emoji_set ─────────────────────────────────────────
+  describe('tandem_tab_emoji_set', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_set');
+
+    it('sets emoji on a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1', emoji: '🔥' });
+      expectTextContent(result, 'Set emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/t1/emoji', { emoji: '🔥' });
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_set', 't1: 🔥');
+    });
+  });
+
+  // ── tandem_tab_emoji_remove ──────────────────────────────────────
+  describe('tandem_tab_emoji_remove', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_remove');
+
+    it('removes emoji from a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1' });
+      expectTextContent(result, 'Removed emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('DELETE', '/tabs/t1/emoji');
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_remove', 't1');
+    });
+  });
+
+  // ── tandem_tab_emoji_flash ───────────────────────────────────────
+  describe('tandem_tab_emoji_flash', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_flash');
+
+    it('flashes emoji on a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1', emoji: '🔥' });
+      expectTextContent(result, 'Flashing emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/t1/emoji', { emoji: '🔥', flash: true });
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_flash', 't1: 🔥');
     });
   });
 });

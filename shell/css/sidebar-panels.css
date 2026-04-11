@@ -476,6 +476,32 @@
   right: 100%;
 }
 
+/* Emoji picker grid inside context menu submenu */
+.tandem-emoji-grid {
+  min-width: 240px;
+  max-width: 260px;
+}
+.tandem-emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  padding: 6px 8px;
+}
+.tandem-emoji-btn {
+  font-size: 16px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.tandem-emoji-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 /* ═══════════════════════════════════════════════ */
 /* PINBOARDS — Sidebar Panel + Card Grid          */
 /* ═══════════════════════════════════════════════ */
