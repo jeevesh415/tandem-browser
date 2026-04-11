@@ -75,6 +75,20 @@ describe('PanelManager reply notifications', () => {
     expect(wingmanAlert).toHaveBeenCalledWith('Claude replied', 'I have another suggestion.');
   });
 
+  it('clears typing indicator when wingman sends a message', () => {
+    const win = createWindowStub();
+    const manager = new PanelManager(win as never);
+
+    manager.setWingmanTyping(true);
+    manager.addChatMessage('wingman', 'Done thinking.');
+
+    // Typing indicator should be cleared — verified by the IPC send
+    const typingCalls = (win.webContents.send as any).mock.calls
+      .filter((c: any[]) => c[0] === 'wingman-typing');
+    const lastTyping = typingCalls[typingCalls.length - 1];
+    expect(lastTyping[1]).toEqual({ typing: false });
+  });
+
   it('falls back to an image message when there is no text', () => {
     const win = createWindowStub();
     const manager = new PanelManager(win as never);
