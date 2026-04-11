@@ -153,7 +153,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   ipcMain.handle(IpcChannels.CHAT_PERSIST_MESSAGE, async (_event, data: {
-    from: 'robin' | 'wingman' | 'kees' | 'claude';
+    from: 'robin' | 'wingman' | 'claude';
     text?: string;
     image?: string;
     notifyWebhook?: boolean;

@@ -20,7 +20,7 @@ export interface ActivityEvent {
 
 export interface ChatMessage {
   id: number;
-  from: 'robin' | 'wingman' | 'kees' | 'claude';
+  from: 'robin' | 'wingman' | 'claude';
   text: string;
   timestamp: number;
   image?: string;  // relative filename in ~/.tandem/chat-images/
@@ -114,7 +114,7 @@ export class PanelManager {
 
   /** Add a chat message */
   addChatMessage(
-    from: 'robin' | 'wingman' | 'kees' | 'claude',
+    from: 'robin' | 'wingman' | 'claude',
     text: string,
     image?: string,
     opts: AddChatMessageOptions = {},
@@ -132,7 +132,7 @@ export class PanelManager {
       this.win.webContents.send(IpcChannels.CHAT_MESSAGE, msg);
     }
     // Clear typing indicator when wingman sends a message
-    if ((from === 'wingman' || from === 'kees') && this.wingmanTyping) {
+    if (from === 'wingman' && this.wingmanTyping) {
       this.setWingmanTyping(false);
     }
 

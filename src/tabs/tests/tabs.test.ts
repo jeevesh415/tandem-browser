@@ -168,10 +168,10 @@ describe('TabManager', () => {
     });
 
     it('sends tab-source-changed IPC', async () => {
-      await tm.openTab('https://test.com', undefined, 'kees');
+      await tm.openTab('https://test.com', undefined, 'wingman');
       expect(win.webContents.send).toHaveBeenCalledWith(
         'tab-source-changed',
-        expect.objectContaining({ source: 'kees' })
+        expect.objectContaining({ source: 'wingman' })
       );
     });
   });
@@ -290,12 +290,12 @@ describe('TabManager', () => {
   describe('setTabSource()', () => {
     it('changes the tab source', async () => {
       const tab = await tm.openTab('https://test.com');
-      tm.setTabSource(tab.id, 'kees');
-      expect(tm.getTabSource(tab.id)).toBe('kees');
+      tm.setTabSource(tab.id, 'wingman');
+      expect(tm.getTabSource(tab.id)).toBe('wingman');
     });
 
     it('returns false for unknown tab', () => {
-      expect(tm.setTabSource('nope', 'kees')).toBe(false);
+      expect(tm.setTabSource('nope', 'wingman')).toBe(false);
     });
   });
 

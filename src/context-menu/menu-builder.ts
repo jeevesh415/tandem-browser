@@ -621,9 +621,9 @@ export class ContextMenuBuilder {
     }));
     const currentSource = this.deps.tabManager.getTabSource(tabId);
     menu.append(new MenuItem({
-      label: currentSource === 'kees' ? 'Take back from Wingman' : 'Let Wingman handle this tab',
+      label: currentSource === 'wingman' ? 'Take back from Wingman' : 'Let Wingman handle this tab',
       click: () => {
-        const newSource = this.deps.tabManager.getTabSource(tabId) === 'kees' ? 'robin' : 'kees';
+        const newSource = this.deps.tabManager.getTabSource(tabId) === 'wingman' ? 'robin' : 'wingman';
         this.deps.tabManager.setTabSource(tabId, newSource);
       },
     }));

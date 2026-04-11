@@ -190,8 +190,8 @@
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
         const rawSource = event.data.source || 'robin';
-        const source = ['kees', 'robin'].includes(rawSource) ? rawSource : 'robin';
-        const sourceEmoji = source === 'kees' ? '🤖' : '👤';
+        const source = ['wingman', 'robin'].includes(rawSource) ? rawSource : 'robin';
+        const sourceEmoji = source === 'wingman' ? '🤖' : '👤';
         const item = document.createElement('div');
         item.className = 'activity-item';
         item.innerHTML = `<span class="a-icon">${icon}</span><span class="a-source ${source}">${sourceEmoji}</span><span class="a-text">${escapeHtml(text)}</span><span class="a-time">${time}</span>`;
@@ -207,7 +207,7 @@
           if (id === data.tabId) {
             const sourceEl = entry.tabEl.querySelector('.tab-source');
             if (sourceEl) {
-              if (data.source === 'kees') {
+              if (data.source === 'wingman') {
                 sourceEl.textContent = '🤖';
                 sourceEl.title = 'AI controlled — click to take over';
                 sourceEl.style.display = '';
@@ -218,7 +218,7 @@
               }
             }
             // Visual indicator: purple bottom border for AI tabs
-            if (data.source === 'kees') {
+            if (data.source === 'wingman') {
               entry.tabEl.style.borderBottom = '2px solid #7c3aed';
             } else {
               entry.tabEl.style.borderBottom = '';
@@ -1019,7 +1019,7 @@
           // msg: {id, from, text, timestamp, image}
           // Skip robin messages — already shown optimistically in the UI
           if (msg.from === 'robin') return;
-          const source = msg.from; // 'kees' or 'claude'
+          const source = msg.from; // 'wingman' or 'claude'
           appendMessage('assistant', msg.text, msg.timestamp, source, msg.image);
           if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
         });
