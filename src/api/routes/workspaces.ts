@@ -1,5 +1,6 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 interface IdParams { id: string }
 
@@ -32,7 +33,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       const activeId = ctx.workspaceManager.getActiveId();
       res.json({ ok: true, workspaces, activeId });
     } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -43,7 +44,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       const workspace = ctx.workspaceManager.create({ name, icon, color });
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -52,7 +53,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       ctx.workspaceManager.remove(req.params.id);
       res.json({ ok: true });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -61,7 +62,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       const workspace = ctx.workspaceManager.switch(req.params.id);
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   };
 
@@ -74,7 +75,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       const workspace = ctx.workspaceManager.update(req.params.id, { name, icon, color });
       res.json({ ok: true, workspace });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -87,7 +88,7 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
       ctx.workspaceManager.moveTab(parsedTabId, req.params.id);
       res.json({ ok: true });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   };
 
