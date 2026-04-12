@@ -27,6 +27,8 @@ import { registerWorkspaceRoutes } from './routes/workspaces';
 import { registerSyncRoutes } from './routes/sync';
 import { registerPinboardRoutes } from './routes/pinboards';
 import { registerPreviewRoutes } from './routes/previews';
+import { registerAwarenessRoutes } from './routes/awareness';
+import { registerClipboardRoutes } from './routes/clipboard';
 import { registerSecurityRoutes } from '../security/routes';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
 import type { ExtensionRouteAccessDecision } from '../extensions/manager';
@@ -117,7 +119,7 @@ export class TandemAPI {
         // Block everything else
         callback(new Error('CORS not allowed'));
       },
-      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tandem-Extension-Id'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id'],
     }));
     this.app.use(express.json({ limit: '50mb' }));
     this.app.use(createRateLimitMiddleware({
@@ -427,6 +429,8 @@ export class TandemAPI {
     registerSyncRoutes(router, ctx);
     registerPinboardRoutes(router, ctx);
     registerPreviewRoutes(router, ctx);
+    registerAwarenessRoutes(router, ctx);
+    registerClipboardRoutes(router, ctx);
 
     // Native messaging proxy: route extension connectNative/sendNativeMessage
     // through Tandem's API since Electron 40 doesn't support them natively.

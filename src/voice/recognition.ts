@@ -1,34 +1,38 @@
 import type { BrowserWindow } from 'electron';
 import type { PanelManager } from '../panel/manager';
+import { IpcChannels } from '../shared/ipc-channels';
 
 /**
  * VoiceManager — Manages voice input via Web Speech API in the SHELL.
- * 
+ *
  * CRITICAL: Voice recognition runs in the Electron shell renderer,
  * NOT in any webview. Websites cannot detect it.
- * 
+ *
  * Flow: Cmd+M → shell starts SpeechRecognition → transcripts sent via IPC
  * → displayed in Wingman panel chat → sent as message on silence/Enter.
  */
 export class VoiceManager {
+
+  // === 1. Private state ===
+
   private win: BrowserWindow;
   private panelManager: PanelManager;
   private listening = false;
+
+  // === 2. Constructor ===
 
   constructor(win: BrowserWindow, panelManager: PanelManager) {
     this.win = win;
     this.panelManager = panelManager;
   }
 
-  private canSendToRenderer(): boolean {
-    return !this.win.isDestroyed() && !this.win.webContents.isDestroyed();
-  }
+  // === 4. Public methods ===
 
   /** Toggle voice on/off — tells renderer to start/stop SpeechRecognition */
   toggleVoice(): boolean {
     this.listening = !this.listening;
     if (this.canSendToRenderer()) {
-      this.win.webContents.send('voice-toggle', { listening: this.listening });
+      this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: this.listening });
     }
     if (this.listening) {
       // Ensure panel is open and on chat tab
@@ -42,7 +46,7 @@ export class VoiceManager {
     if (!this.listening) {
       this.listening = true;
       if (this.canSendToRenderer()) {
-        this.win.webContents.send('voice-toggle', { listening: true });
+        this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: true });
       }
       this.panelManager.togglePanel(true);
     }
@@ -53,7 +57,7 @@ export class VoiceManager {
     if (this.listening) {
       this.listening = false;
       if (this.canSendToRenderer()) {
-        this.win.webContents.send('voice-toggle', { listening: false });
+        this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: false });
       }
     }
   }
@@ -61,12 +65,12 @@ export class VoiceManager {
   /** Handle transcript from renderer */
   handleTranscript(text: string, isFinal: boolean): void {
     if (isFinal && text.trim()) {
-      // Send as Robin's chat message
-      this.panelManager.addChatMessage('robin', `🎙️ ${text.trim()}`);
+      // Send as user's chat message
+      this.panelManager.addChatMessage('user', `🎙️ ${text.trim()}`);
     }
     // Send live transcript to renderer for display
     if (this.canSendToRenderer()) {
-      this.win.webContents.send('voice-transcript-display', { text, isFinal });
+      this.win.webContents.send(IpcChannels.VOICE_TRANSCRIPT_DISPLAY, { text, isFinal });
     }
   }
 
@@ -83,5 +87,11 @@ export class VoiceManager {
   /** Is currently listening */
   isListening(): boolean {
     return this.listening;
+  }
+
+  // === 7. Private helpers ===
+
+  private canSendToRenderer(): boolean {
+    return !this.win.isDestroyed() && !this.win.webContents.isDestroyed();
   }
 }

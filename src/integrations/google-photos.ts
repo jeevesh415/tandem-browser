@@ -13,6 +13,8 @@ const GOOGLE_PHOTOS_UPLOAD_URL = 'https://photoslibrary.googleapis.com/v1/upload
 const GOOGLE_PHOTOS_BATCH_CREATE_URL = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate';
 const GOOGLE_PHOTOS_SCOPE = 'https://www.googleapis.com/auth/photoslibrary.appendonly';
 
+// ─── Types ───
+
 interface GooglePhotosAuth {
   accessToken: string;
   refreshToken?: string;
@@ -68,12 +70,19 @@ function parseJsonFile<T>(filePath: string): T | null {
   }
 }
 
+// ─── Manager ───
+
+/**
+ * GooglePhotosManager — Handles Google Photos OAuth and screenshot uploads.
+ */
 export class GooglePhotosManager {
+  // === 1. Private state ===
   private configManager: ConfigManager;
   private configPath: string;
   private authPath: string;
   private pendingAuth: PendingAuth | null = null;
 
+  // === 2. Constructor ===
   constructor(configManager: ConfigManager) {
     this.configManager = configManager;
     const baseDir = tandemDir();
@@ -84,6 +93,9 @@ export class GooglePhotosManager {
     this.authPath = path.join(baseDir, 'google-photos-auth.json');
   }
 
+  // === 4. Public methods ===
+
+  /** Get the current connection and configuration status. */
   getStatus(): GooglePhotosStatus {
     const config = this.configManager.getConfig();
     const auth = this.loadAuth();
@@ -96,10 +108,12 @@ export class GooglePhotosManager {
     };
   }
 
+  /** Get the configured Google OAuth client ID. */
   getClientId(): string {
     return parseJsonFile<GooglePhotosConfig>(this.configPath)?.clientId?.trim() ?? '';
   }
 
+  /** Set or clear the Google OAuth client ID. */
   setClientId(clientId: string): GooglePhotosStatus {
     const trimmed = clientId.trim();
     if (!trimmed) {
@@ -117,6 +131,7 @@ export class GooglePhotosManager {
     };
   }
 
+  /** Start the OAuth PKCE flow and return the authorization URL for the browser. */
   beginAuth(): string {
     const clientId = this.getClientId();
     if (!clientId) {
@@ -143,6 +158,7 @@ export class GooglePhotosManager {
     return `${GOOGLE_AUTH_URL}?${params.toString()}`;
   }
 
+  /** Complete the OAuth flow by exchanging the authorization code for tokens. */
   async completeAuth(opts: { code?: string; state?: string; error?: string }): Promise<void> {
     if (opts.error) {
       throw new Error(`Google OAuth failed: ${opts.error}`);
@@ -185,6 +201,7 @@ export class GooglePhotosManager {
     });
   }
 
+  /** Disconnect from Google Photos by deleting stored auth tokens. */
   disconnect(): GooglePhotosStatus {
     this.pendingAuth = null;
     if (fs.existsSync(this.authPath)) {
@@ -193,6 +210,7 @@ export class GooglePhotosManager {
     return this.getStatus();
   }
 
+  /** Upload a screenshot file to Google Photos, returning null if not configured. */
   async uploadScreenshot(filePath: string): Promise<GooglePhotosUploadResult | null> {
     const config = this.configManager.getConfig();
     if (!config.screenshots.googlePhotos) {
@@ -265,6 +283,8 @@ export class GooglePhotosManager {
       productUrl: result.mediaItem.productUrl,
     };
   }
+
+  // === 7. Private helpers ===
 
   private getRedirectUri(): string {
     return `http://127.0.0.1:${API_PORT}/google-photos/oauth/callback`;

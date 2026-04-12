@@ -38,29 +38,31 @@ describe('Tab Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
+        undefined,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'robin' },
+        { url: 'about:blank', source: 'user', inheritSessionFrom: null, workspaceId: null },
       );
     });
 
     it('opens a tab with explicit url and groupId', async () => {
       const res = await request(app)
         .post('/tabs/open')
-        .send({ url: 'https://example.com', groupId: 'g1', source: 'robin', focus: false });
+        .send({ url: 'https://example.com', groupId: 'g1', source: 'user', focus: false });
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'https://example.com',
         'g1',
-        'robin',
+        'user',
         'persist:tandem',
         false,
+        undefined,
       );
     });
 
@@ -75,25 +77,112 @@ describe('Tab Routes', () => {
         'wingman',
         'persist:tandem',
         true,
+        undefined,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'wingman' },
+        { url: 'about:blank', source: 'wingman', inheritSessionFrom: null, workspaceId: null },
       );
     });
 
-    it('maps "kees" source to wingman', async () => {
+    it('maps unknown source to robin', async () => {
       await request(app)
         .post('/tabs/open')
-        .send({ source: 'kees' });
+        .send({ source: 'unknown' });
 
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'wingman',
+        'user',
         'persist:tandem',
         true,
+        undefined,
       );
+    });
+
+    it('passes inheritSessionFrom through to the tab manager', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ url: 'https://discord.com/channels/@me', inheritSessionFrom: 'tab-9' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
+        'https://discord.com/channels/@me',
+        undefined,
+        'user',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: 'tab-9' },
+      );
+      expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
+        'tab-open',
+        {
+          url: 'https://discord.com/channels/@me',
+          source: 'user',
+          inheritSessionFrom: 'tab-9',
+          workspaceId: null,
+        },
+      );
+    });
+
+    it('returns 400 when inheritSessionFrom is not a string', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ inheritSessionFrom: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('inheritSessionFrom must be a tab ID string');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
+    });
+
+    it('assigns the new tab to the requested workspace', async () => {
+      vi.mocked(ctx.workspaceManager.get).mockReturnValueOnce({
+        id: 'ws-ai',
+        name: 'AI',
+        icon: 'cpu-chip',
+        color: '#4285f4',
+        order: 1,
+        isDefault: false,
+        tabIds: [],
+      } as any);
+
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ url: 'https://example.com', workspaceId: 'ws-ai' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.workspaceManager.moveTab).toHaveBeenCalledWith(100, 'ws-ai');
+      expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
+        'tab-open',
+        {
+          url: 'https://example.com',
+          source: 'user',
+          inheritSessionFrom: null,
+          workspaceId: 'ws-ai',
+        },
+      );
+    });
+
+    it('returns 400 when workspaceId is not a string', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ workspaceId: 123 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('workspaceId must be a workspace ID string');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when workspaceId does not exist', async () => {
+      vi.mocked(ctx.workspaceManager.get).mockReturnValueOnce(null);
+
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ workspaceId: 'ws-missing' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Workspace ws-missing not found');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
     });
 
     it('returns 500 when tabManager.openTab throws', async () => {
@@ -300,6 +389,74 @@ describe('Tab Routes', () => {
       expect(res.body.destroyed).toBe(0);
       expect(devtoolsWc.close).not.toHaveBeenCalled();
       expect(chromeWc.close).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── POST /tabs/:id/emoji ────────────────────────
+
+  describe('POST /tabs/:id/emoji', () => {
+    it('sets emoji on a tab', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({ emoji: '🔥' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.setEmoji).toHaveBeenCalledWith('tab-1', '🔥');
+    });
+
+    it('returns 400 when emoji is missing', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('emoji required');
+      expect(ctx.tabManager.setEmoji).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when tab not found', async () => {
+      vi.mocked(ctx.tabManager.setEmoji).mockReturnValueOnce(false);
+
+      const res = await request(app)
+        .post('/tabs/bad-id/emoji')
+        .send({ emoji: '🔥' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab not found');
+    });
+
+    it('flashes emoji when flash=true', async () => {
+      const res = await request(app)
+        .post('/tabs/tab-1/emoji')
+        .send({ emoji: '🔥', flash: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.flashEmoji).toHaveBeenCalledWith('tab-1', '🔥');
+    });
+  });
+
+  // ─── DELETE /tabs/:id/emoji ──────────────────────
+
+  describe('DELETE /tabs/:id/emoji', () => {
+    it('removes emoji from a tab', async () => {
+      const res = await request(app)
+        .delete('/tabs/tab-1/emoji');
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.clearEmoji).toHaveBeenCalledWith('tab-1');
+    });
+
+    it('returns 404 when tab not found', async () => {
+      vi.mocked(ctx.tabManager.clearEmoji).mockReturnValueOnce(false);
+
+      const res = await request(app)
+        .delete('/tabs/bad-id/emoji');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab not found');
     });
   });
 });

@@ -1,4 +1,5 @@
 import type { Router, Request, Response } from 'express';
+import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import type { RouteContext} from '../context';
@@ -16,6 +17,11 @@ export function resetMiscRouteStateForTests(): void {
   liveMode = false;
 }
 
+/**
+ * Register miscellaneous routes (status, config, live mode, voice, password vault, etc.).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
   // ═══════════════════════════════════════════════
@@ -54,10 +60,47 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         loading: wc ? wc.isLoading() : false,
         activeTab: tab.id,
         tabs: ctx.tabManager.count,
+        version: (() => { try { return app.getVersion(); } catch { return undefined; } })(),
         viewport,
       });
     } catch (e) {
       res.json({ ready: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  // ═══ Injection Override ═══
+  router.post('/security/injection-override', (req: Request, res: Response) => {
+    try {
+      const { domain } = req.body;
+      if (!domain || typeof domain !== 'string') {
+        res.status(400).json({ error: 'domain required' });
+        return;
+      }
+      // Import the override map from the middleware
+      const { addInjectionOverride } = require('../middleware/injection-scanner');
+      addInjectionOverride(domain);
+      res.json({ ok: true, domain, expiresIn: '5 minutes' });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // ═══ Folder Picker Dialog ═══
+  router.post('/dialog/pick-folder', async (_req: Request, res: Response) => {
+    try {
+      const { dialog, BrowserWindow } = require('electron');
+      const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      const result = await dialog.showOpenDialog(win, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Choose screenshot folder',
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        res.json({ canceled: true });
+      } else {
+        res.json({ path: result.filePaths[0] });
+      }
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 

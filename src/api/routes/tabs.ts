@@ -3,13 +3,52 @@ import { webContents } from 'electron';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
+/**
+ * Register all tab-related API routes (open, close, list, focus, group, source, reconcile, cleanup).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerTabRoutes(router: Router, ctx: RouteContext): void {
   router.post('/tabs/open', async (req: Request, res: Response) => {
-    const { url = 'about:blank', groupId, source = 'robin', focus = true } = req.body;
+    const {
+      url = 'about:blank',
+      groupId,
+      source = 'user',
+      focus = true,
+      inheritSessionFrom,
+      workspaceId,
+    } = req.body;
+    if (inheritSessionFrom !== undefined && typeof inheritSessionFrom !== 'string') {
+      res.status(400).json({ error: 'inheritSessionFrom must be a tab ID string' });
+      return;
+    }
+    if (workspaceId !== undefined && typeof workspaceId !== 'string') {
+      res.status(400).json({ error: 'workspaceId must be a workspace ID string' });
+      return;
+    }
+    if (workspaceId && !ctx.workspaceManager.get(workspaceId)) {
+      res.status(400).json({ error: `Workspace ${workspaceId} not found` });
+      return;
+    }
     try {
-      const tabSource = source === 'kees' || source === 'wingman' ? 'wingman' as const : 'robin' as const;
-      const tab = await ctx.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
-      ctx.panelManager.logActivity('tab-open', { url, source: tabSource });
+      const tabSource = source === 'wingman' ? 'wingman' as const : 'user' as const;
+      const tab = await ctx.tabManager.openTab(
+        url,
+        groupId,
+        tabSource,
+        'persist:tandem',
+        focus,
+        inheritSessionFrom ? { inheritSessionFrom } : undefined,
+      );
+      if (workspaceId) {
+        ctx.workspaceManager.moveTab(tab.webContentsId, workspaceId);
+      }
+      ctx.panelManager.logActivity('tab-open', {
+        url,
+        source: tabSource,
+        inheritSessionFrom: inheritSessionFrom || null,
+        workspaceId: workspaceId || null,
+      });
       res.json({ ok: true, tab });
     } catch (e) {
       handleRouteError(res, e);
@@ -82,6 +121,43 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = await ctx.tabManager.reconcileWithRenderer();
       res.json({ ok: true, ...result });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // Set or flash emoji on a tab
+  router.post('/tabs/:id/emoji', (req: Request, res: Response) => {
+    try {
+      const id = req.params.id as string;
+      const { emoji, flash } = req.body;
+      if (!emoji) {
+        res.status(400).json({ error: 'emoji required' });
+        return;
+      }
+      const ok = flash
+        ? ctx.tabManager.flashEmoji(id, emoji)
+        : ctx.tabManager.setEmoji(id, emoji);
+      if (!ok) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // Remove emoji from a tab
+  router.delete('/tabs/:id/emoji', (req: Request, res: Response) => {
+    try {
+      const id = req.params.id as string;
+      const ok = ctx.tabManager.clearEmoji(id);
+      if (!ok) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+      res.json({ ok: true });
     } catch (e) {
       handleRouteError(res, e);
     }

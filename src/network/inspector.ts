@@ -7,6 +7,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('NetworkInspector');
 
+// ─── Types ───
+
 export interface NetworkRequest {
   id: number;
   url: string;
@@ -93,6 +95,8 @@ export interface HarExport {
   };
 }
 
+// ─── Manager ───
+
 /**
  * NetworkInspector — Logs and analyzes network traffic via RequestDispatcher.
  *
@@ -100,6 +104,7 @@ export interface HarExport {
  * Stores last 1000 requests in memory, flushes per-domain data to ~/.tandem/network/.
  */
 export class NetworkInspector {
+  // === 1. Private state ===
   private requests: NetworkRequest[] = [];
   private pendingRequests: Map<string, Partial<NetworkRequest>> = new Map();
   private counter = 0;
@@ -107,12 +112,15 @@ export class NetworkInspector {
   private networkDir: string;
   private domainStats: Map<string, DomainData> = new Map();
 
+  // === 2. Constructor ===
   constructor() {
     this.networkDir = tandemDir('network');
     if (!fs.existsSync(this.networkDir)) {
       fs.mkdirSync(this.networkDir, { recursive: true });
     }
   }
+
+  // === 3. Dependency setters ===
 
   /** Register as a dispatcher consumer (late registration supported) */
   registerWith(dispatcher: RequestDispatcher): void {
@@ -207,6 +215,117 @@ export class NetworkInspector {
     });
   }
 
+  // === 4. Public methods ===
+
+  /** Flush domain data to disk (call on navigation away) */
+  flushDomain(domain: string): void {
+    const data = this.domainStats.get(domain);
+    if (!data) return;
+
+    try {
+      const filePath = path.join(this.networkDir, `${domain.replace(/[^a-zA-Z0-9.-]/g, '_')}.json`);
+      let existing: DomainData = { domain, requests: 0, apis: [], lastSeen: 0 };
+
+      if (fs.existsSync(filePath)) {
+        try {
+          existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch (e) { log.warn('Network domain file parse failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
+      }
+
+      // Merge
+      existing.requests += data.requests;
+      existing.lastSeen = data.lastSeen;
+      for (const api of data.apis) {
+        if (!existing.apis.includes(api)) {
+          existing.apis.push(api);
+        }
+      }
+
+      fs.writeFileSync(filePath, JSON.stringify(existing, null, 2));
+    } catch (e) {
+      log.warn('Network domain flush failed for', domain + ':', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Get recent requests, optionally filtered */
+  getLog(limit: number = 100, domain?: string): NetworkRequest[] {
+    let filtered = this.requests;
+    if (domain) {
+      filtered = filtered.filter(r => r.domain === domain);
+    }
+    return filtered.slice(-limit);
+  }
+
+  /** Get discovered API endpoints grouped by domain */
+  getApis(): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    for (const [domain, data] of this.domainStats) {
+      if (data.apis.length > 0) {
+        result[domain] = data.apis;
+      }
+    }
+    return result;
+  }
+
+  /** Get domain list with request counts */
+  getDomains(): Array<{ domain: string; requests: number; lastSeen: number; apiCount: number }> {
+    return Array.from(this.domainStats.values()).map(d => ({
+      domain: d.domain,
+      requests: d.requests,
+      lastSeen: d.lastSeen,
+      apiCount: d.apis.length,
+    })).sort((a, b) => b.requests - a.requests);
+  }
+
+  /**
+   * Export logged requests as a HAR 1.2 archive.
+   * @param limit - max entries to include (default 100)
+   * @param domain - optional domain filter
+   */
+  toHar(limit: number = 100, domain?: string): HarExport {
+    const entries = this.getLog(limit, domain).map((request) => this.toHarEntry(request));
+    const startedDateTime = entries[0]?.startedDateTime ?? new Date().toISOString();
+    const title = domain ? `Network log for ${domain}` : 'Tandem network log';
+
+    return {
+      log: {
+        version: '1.2',
+        creator: {
+          name: 'Tandem Browser',
+          version: process.env.npm_package_version || '0.0.0',
+        },
+        pages: [{
+          startedDateTime,
+          id: 'page_1',
+          title,
+          pageTimings: {
+            onContentLoad: -1,
+            onLoad: -1,
+          },
+        }],
+        entries,
+      },
+    };
+  }
+
+  /** Clear all logged data */
+  clear(): void {
+    this.requests = [];
+    this.pendingRequests.clear();
+    this.domainStats.clear();
+  }
+
+  // === 6. Cleanup ===
+
+  /** Destroy — flush all domains */
+  destroy(): void {
+    for (const domain of this.domainStats.keys()) {
+      this.flushDomain(domain);
+    }
+  }
+
+  // === 7. Private helpers ===
+
   /** Add a completed request to the log */
   private addRequest(req: NetworkRequest): void {
     this.requests.push(req);
@@ -270,106 +389,6 @@ export class NetworkInspector {
       return new URL(url).hostname;
     } catch {
       return '';
-    }
-  }
-
-  /** Flush domain data to disk (call on navigation away) */
-  flushDomain(domain: string): void {
-    const data = this.domainStats.get(domain);
-    if (!data) return;
-
-    try {
-      const filePath = path.join(this.networkDir, `${domain.replace(/[^a-zA-Z0-9.-]/g, '_')}.json`);
-      let existing: DomainData = { domain, requests: 0, apis: [], lastSeen: 0 };
-
-      if (fs.existsSync(filePath)) {
-        try {
-          existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        } catch (e) { log.warn('Network domain file parse failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
-      }
-
-      // Merge
-      existing.requests += data.requests;
-      existing.lastSeen = data.lastSeen;
-      for (const api of data.apis) {
-        if (!existing.apis.includes(api)) {
-          existing.apis.push(api);
-        }
-      }
-
-      fs.writeFileSync(filePath, JSON.stringify(existing, null, 2));
-    } catch (e) {
-      log.warn('Network domain flush failed for', domain + ':', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  /** Get recent requests, optionally filtered */
-  getLog(limit: number = 100, domain?: string): NetworkRequest[] {
-    let filtered = this.requests;
-    if (domain) {
-      filtered = filtered.filter(r => r.domain === domain);
-    }
-    return filtered.slice(-limit);
-  }
-
-  /** Get discovered API endpoints grouped by domain */
-  getApis(): Record<string, string[]> {
-    const result: Record<string, string[]> = {};
-    for (const [domain, data] of this.domainStats) {
-      if (data.apis.length > 0) {
-        result[domain] = data.apis;
-      }
-    }
-    return result;
-  }
-
-  /** Get domain list with request counts */
-  getDomains(): Array<{ domain: string; requests: number; lastSeen: number; apiCount: number }> {
-    return Array.from(this.domainStats.values()).map(d => ({
-      domain: d.domain,
-      requests: d.requests,
-      lastSeen: d.lastSeen,
-      apiCount: d.apis.length,
-    })).sort((a, b) => b.requests - a.requests);
-  }
-
-  toHar(limit: number = 100, domain?: string): HarExport {
-    const entries = this.getLog(limit, domain).map((request) => this.toHarEntry(request));
-    const startedDateTime = entries[0]?.startedDateTime ?? new Date().toISOString();
-    const title = domain ? `Network log for ${domain}` : 'Tandem network log';
-
-    return {
-      log: {
-        version: '1.2',
-        creator: {
-          name: 'Tandem Browser',
-          version: process.env.npm_package_version || '0.0.0',
-        },
-        pages: [{
-          startedDateTime,
-          id: 'page_1',
-          title,
-          pageTimings: {
-            onContentLoad: -1,
-            onLoad: -1,
-          },
-        }],
-        entries,
-      },
-    };
-  }
-
-  /** Clear all logged data */
-  clear(): void {
-    this.requests = [];
-    this.pendingRequests.clear();
-    this.domainStats.clear();
-  }
-
-  /** Destroy — flush all domains */
-  destroy(): void {
-    for (const domain of this.domainStats.keys()) {
-      this.flushDomain(domain);
     }
   }
 

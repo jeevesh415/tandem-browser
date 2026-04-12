@@ -3,10 +3,13 @@ import { webContents } from 'electron';
 import type { SyncManager } from '../sync/manager';
 import type { SessionRestoreManager } from '../session/restore';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('TabManager');
 
-export type TabSource = 'robin' | 'kees' | 'wingman';
+// ─── Types ──────────────────────────────────────────────────────────
+
+export type TabSource = 'user' | 'wingman';
 
 export interface Tab {
   id: string;
@@ -20,6 +23,8 @@ export interface Tab {
   source: TabSource;
   pinned: boolean;
   partition: string;
+  emoji: string | null;
+  emojiFlash: boolean;
 }
 
 export interface TabGroup {
@@ -29,13 +34,27 @@ export interface TabGroup {
   tabIds: string[];
 }
 
+export interface OpenTabOptions {
+  inheritSessionFrom?: string;
+}
+
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
- * TabManager — Manages multiple webview tabs in Tandem Browser.
- * 
+ * TabManager — manages multiple webview tabs in Tandem Browser.
+ *
  * Each tab is a <webview> element in the shell, managed from the main process.
  * Only one tab is visible at a time; the rest are hidden.
+ * In-memory only — session state is delegated to SessionRestoreManager.
+ *
+ * Persistence: none (in-memory, session restore via src/session/restore.ts)
+ * API routes:  src/api/routes/tabs.ts
+ * MCP tools:   src/mcp/tools/tabs.ts
  */
 export class TabManager {
+
+  // === 1. Private state ===
+
   private win: BrowserWindow;
   private tabs: Map<string, Tab> = new Map();
   private groups: Map<string, TabGroup> = new Map();
@@ -48,61 +67,33 @@ export class TabManager {
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private workspaceIdResolver: ((webContentsId: number) => string | null) | null = null;
 
+  // === 2. Constructor (BrowserWindow variant) ===
+
   constructor(win: BrowserWindow) {
     this.win = win;
   }
 
+  // === 3. Dependency setters ===
+
+  /** Wire up the sync manager for cross-device tab publishing. */
   setSyncManager(sm: SyncManager): void {
     this.syncManager = sm;
   }
 
+  /** Wire up the session restore manager for crash-safe tab persistence. */
   setSessionRestore(sr: SessionRestoreManager): void {
     this.sessionRestore = sr;
   }
 
+  /**
+   * Set the callback used to look up which workspace a tab belongs to.
+   * @param resolver - maps a webContentsId to its workspace ID, or null to clear
+   */
   setWorkspaceIdResolver(resolver: ((webContentsId: number) => string | null) | null): void {
     this.workspaceIdResolver = resolver;
   }
 
-  /** Debounced save of session state (500ms delay) */
-  private onTabsChanged(): void {
-    if (!this.sessionRestore) return;
-    if (this.sessionTimer) clearTimeout(this.sessionTimer);
-    this.sessionTimer = setTimeout(() => {
-      this.sessionTimer = null;
-      if (!this.sessionRestore) return;
-      const tabs = this.listTabs().map(t => ({
-        id: t.id,
-        url: t.url,
-        title: t.title,
-        groupId: t.groupId,
-        pinned: t.pinned,
-        workspaceId: this.workspaceIdResolver?.(t.webContentsId) ?? null,
-      }));
-      this.sessionRestore.save(tabs, this.activeTabId);
-    }, 500);
-  }
-
-  /** Debounced publish of tabs to sync folder (2 second delay) */
-  private scheduleSyncPublish(): void {
-    if (!this.syncManager || !this.syncManager.isConfigured()) return;
-    if (this.syncTimer) clearTimeout(this.syncTimer);
-    this.syncTimer = setTimeout(() => {
-      this.syncTimer = null;
-      if (!this.syncManager?.isConfigured()) return;
-      this.syncManager.publishTabs(this.listTabs().map(t => ({
-        tabId: t.id,
-        url: t.url,
-        title: t.title,
-        favicon: t.favicon,
-      })));
-    }, 2000);
-  }
-
-  /** Generate unique tab ID */
-  private nextId(): string {
-    return `tab-${++this.counter}`;
-  }
+  // === 4. Public methods ===
 
   /** Get the active tab */
   getActiveTab(): Tab | null {
@@ -124,9 +115,48 @@ export class TabManager {
     return webContents.fromId(tab.webContentsId) || null;
   }
 
+  /** Get a tab by ID */
+  getTab(tabId: string): Tab | null {
+    return this.tabs.get(tabId) || null;
+  }
+
+  /** List all tabs — pinned tabs first */
+  listTabs(): Tab[] {
+    const all = Array.from(this.tabs.values());
+    return all.sort((a, b) => {
+      if (a.pinned === b.pinned) return 0;
+      return a.pinned ? -1 : 1;
+    });
+  }
+
+  /** Get tab count */
+  get count(): number {
+    return this.tabs.size;
+  }
+
+  /** Check if a webContentsId is tracked by any tab */
+  hasWebContents(wcId: number): boolean {
+    for (const tab of this.tabs.values()) {
+      if (tab.webContentsId === wcId) return true;
+    }
+    return false;
+  }
+
   /** Open a new tab */
-  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem', focus: boolean = true): Promise<Tab> {
+  async openTab(
+    url: string = 'about:blank',
+    groupId?: string,
+    source: TabSource = 'user',
+    partition: string = 'persist:tandem',
+    focus: boolean = true,
+    options?: OpenTabOptions,
+  ): Promise<Tab> {
     const id = this.nextId();
+    const inheritedTab = this.resolveInheritedTab(options);
+    const resolvedPartition = inheritedTab?.partition ?? partition;
+    const resolvedUrl = url === 'about:blank' && inheritedTab?.url
+      ? inheritedTab.url
+      : url;
 
     // Tell renderer to create a webview and return its webContentsId.
     // If createTab() fails (e.g. dom-ready timeout), the renderer may have already
@@ -138,7 +168,7 @@ export class TabManager {
     let webContentsId: number;
     try {
       webContentsId = await this.win.webContents.executeJavaScript(`
-        window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)}, ${JSON.stringify(partition)})
+        window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(resolvedUrl)}, ${JSON.stringify(resolvedPartition)})
       `);
     } catch (e) {
       // Best-effort renderer cleanup — ignore secondary errors.
@@ -154,14 +184,16 @@ export class TabManager {
       id,
       webContentsId,
       title: 'New Tab',
-      url,
+      url: resolvedUrl,
       favicon: '',
       groupId: groupId || null,
       active: false,
       createdAt: Date.now(),
       source,
       pinned: false,
-      partition,
+      partition: resolvedPartition,
+      emoji: null,
+      emojiFlash: false,
     };
 
     this.tabs.set(id, tab);
@@ -180,7 +212,11 @@ export class TabManager {
     }
 
     // Now notify renderer of source indicator (after focus is done)
-    this.win.webContents.send('tab-source-changed', { tabId: id, source });
+    this.win.webContents.send(IpcChannels.TAB_SOURCE_CHANGED, { tabId: id, source });
+
+    if (inheritedTab) {
+      await this.restoreIndexedDbFromSource(inheritedTab.id, id, resolvedUrl);
+    }
 
     this.scheduleSyncPublish();
     this.onTabsChanged();
@@ -261,12 +297,21 @@ export class TabManager {
     return true;
   }
 
+  /** Focus tab by index (0-based, for Cmd+1-9) */
+  async focusByIndex(index: number): Promise<boolean> {
+    const tabs = this.listTabs();
+    if (index >= 0 && index < tabs.length) {
+      return this.focusTab(tabs[index].id);
+    }
+    return false;
+  }
+
   /** Change the source/controller of a tab */
   setTabSource(tabId: string, source: TabSource): boolean {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.source = source;
-    this.win.webContents.send('tab-source-changed', { tabId, source });
+    this.win.webContents.send(IpcChannels.TAB_SOURCE_CHANGED, { tabId, source });
     return true;
   }
 
@@ -274,6 +319,45 @@ export class TabManager {
   getTabSource(tabId: string): TabSource | null {
     const tab = this.tabs.get(tabId);
     return tab ? tab.source : null;
+  }
+
+  /** Set an emoji badge on a tab */
+  setEmoji(tabId: string, emoji: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = emoji;
+    tab.emojiFlash = false;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji, flash: false });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Remove emoji badge from a tab */
+  clearEmoji(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = null;
+    tab.emojiFlash = false;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji: null, flash: false });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Flash an emoji on a tab (AI signals user to look at this tab) */
+  flashEmoji(tabId: string, emoji: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.emoji = emoji;
+    tab.emojiFlash = true;
+    this.win.webContents.send(IpcChannels.TAB_EMOJI_CHANGED, { tabId, emoji, flash: true });
+    this.onTabsChanged();
+    return true;
+  }
+
+  /** Get a tab's emoji */
+  getEmoji(tabId: string): string | null {
+    const tab = this.tabs.get(tabId);
+    return tab ? tab.emoji : null;
   }
 
   /** Update tab metadata (called from renderer events) */
@@ -287,21 +371,12 @@ export class TabManager {
     this.onTabsChanged();
   }
 
-  /** List all tabs — pinned tabs first */
-  listTabs(): Tab[] {
-    const all = Array.from(this.tabs.values());
-    return all.sort((a, b) => {
-      if (a.pinned === b.pinned) return 0;
-      return a.pinned ? -1 : 1;
-    });
-  }
-
   /** Pin a tab */
   pinTab(tabId: string): boolean {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.pinned = true;
-    this.win.webContents.send('tab-pin-changed', { tabId, pinned: true });
+    this.win.webContents.send(IpcChannels.TAB_PIN_CHANGED, { tabId, pinned: true });
     this.onTabsChanged();
     return true;
   }
@@ -311,7 +386,7 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.pinned = false;
-    this.win.webContents.send('tab-pin-changed', { tabId, pinned: false });
+    this.win.webContents.send(IpcChannels.TAB_PIN_CHANGED, { tabId, pinned: false });
     this.onTabsChanged();
     return true;
   }
@@ -346,28 +421,6 @@ export class TabManager {
     return Array.from(this.groups.values());
   }
 
-  /** Check if a webContentsId is tracked by any tab */
-  hasWebContents(wcId: number): boolean {
-    for (const tab of this.tabs.values()) {
-      if (tab.webContentsId === wcId) return true;
-    }
-    return false;
-  }
-
-  /** Get tab count */
-  get count(): number {
-    return this.tabs.size;
-  }
-
-  /** Focus tab by index (0-based, for Cmd+1-9) */
-  async focusByIndex(index: number): Promise<boolean> {
-    const tabs = this.listTabs();
-    if (index >= 0 && index < tabs.length) {
-      return this.focusTab(tabs[index].id);
-    }
-    return false;
-  }
-
   /** Check if there are recently closed tabs to reopen */
   hasClosedTabs(): boolean {
     return this.closedTabs.length > 0;
@@ -382,9 +435,27 @@ export class TabManager {
     return tab;
   }
 
-  /** Get a tab by ID */
-  getTab(tabId: string): Tab | null {
-    return this.tabs.get(tabId) || null;
+  /** Register an existing webview (for the initial tab) */
+  registerInitialTab(webContentsId: number, url: string): Tab {
+    const id = this.nextId();
+    const tab: Tab = {
+      id,
+      webContentsId,
+      title: 'New Tab',
+      url,
+      favicon: '',
+      groupId: null,
+      active: true,
+      createdAt: Date.now(),
+      source: 'user',
+      pinned: false,
+      partition: 'persist:tandem',
+      emoji: null,
+      emojiFlash: false,
+    };
+    this.tabs.set(id, tab);
+    this.activeTabId = id;
+    return tab;
   }
 
   /**
@@ -431,24 +502,195 @@ export class TabManager {
     return { removed };
   }
 
-  /** Register an existing webview (for the initial tab) */
-  registerInitialTab(webContentsId: number, url: string): Tab {
-    const id = this.nextId();
-    const tab: Tab = {
-      id,
-      webContentsId,
-      title: 'New Tab',
-      url,
-      favicon: '',
-      groupId: null,
-      active: true,
-      createdAt: Date.now(),
-      source: 'robin',
-      pinned: false,
-      partition: 'persist:tandem',
-    };
-    this.tabs.set(id, tab);
-    this.activeTabId = id;
-    return tab;
+  // === 5. Sync integration ===
+
+  /** Debounced publish of tabs to sync folder (2 second delay) */
+  private scheduleSyncPublish(): void {
+    if (!this.syncManager || !this.syncManager.isConfigured()) return;
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(() => {
+      this.syncTimer = null;
+      if (!this.syncManager?.isConfigured()) return;
+      this.syncManager.publishTabs(this.listTabs().map(t => ({
+        tabId: t.id,
+        url: t.url,
+        title: t.title,
+        favicon: t.favicon,
+      })));
+    }, 2000);
+  }
+
+  /** Debounced save of session state (500ms delay) */
+  private onTabsChanged(): void {
+    if (!this.sessionRestore) return;
+    if (this.sessionTimer) clearTimeout(this.sessionTimer);
+    this.sessionTimer = setTimeout(() => {
+      this.sessionTimer = null;
+      if (!this.sessionRestore) return;
+      const tabs = this.listTabs().map(t => ({
+        id: t.id,
+        url: t.url,
+        title: t.title,
+        groupId: t.groupId,
+        pinned: t.pinned,
+        workspaceId: this.workspaceIdResolver?.(t.webContentsId) ?? null,
+      }));
+      this.sessionRestore.save(tabs, this.activeTabId);
+    }, 500);
+  }
+
+  // === 6. Cleanup ===
+  // (none — timers are cleared naturally; no explicit destroy needed)
+
+  // === 7. Private I/O ===
+  // (no file persistence — session state delegated to SessionRestoreManager)
+
+  /** Generate unique tab ID */
+  private nextId(): string {
+    return `tab-${++this.counter}`;
+  }
+
+  private resolveInheritedTab(options?: OpenTabOptions): Tab | null {
+    if (!options?.inheritSessionFrom) {
+      return null;
+    }
+
+    const inheritedTab = this.tabs.get(options.inheritSessionFrom) || null;
+    if (!inheritedTab) {
+      log.warn(`inheritSessionFrom ignored: source tab '${options.inheritSessionFrom}' not found`);
+      return null;
+    }
+
+    return inheritedTab;
+  }
+
+  private buildIndexedDbDumpScript(): string {
+    return `(() => {
+      const openDatabase = (name, version) => new Promise((resolve, reject) => {
+        const request = typeof version === 'number' ? indexedDB.open(name, version) : indexedDB.open(name);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB database'));
+      });
+
+      const readStoreEntries = (store) => new Promise((resolve, reject) => {
+        const entries = [];
+        const request = store.openCursor();
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) {
+            entries.push([cursor.key, cursor.value]);
+            cursor.continue();
+            return;
+          }
+          resolve(entries);
+        };
+        request.onerror = () => reject(request.error || new Error('Failed to read IndexedDB cursor'));
+      });
+
+      return (async () => {
+        if (typeof indexedDB === 'undefined' || typeof indexedDB.databases !== 'function') {
+          return '{}';
+        }
+
+        const databases = await indexedDB.databases();
+        const dump = {};
+
+        for (const info of databases) {
+          if (!info || !info.name) continue;
+
+          const db = await openDatabase(info.name, typeof info.version === 'number' ? info.version : undefined);
+          try {
+            dump[info.name] = { version: db.version, stores: {} };
+            for (const storeName of Array.from(db.objectStoreNames)) {
+              const tx = db.transaction(storeName, 'readonly');
+              const store = tx.objectStore(storeName);
+              dump[info.name].stores[storeName] = await readStoreEntries(store);
+            }
+          } finally {
+            db.close();
+          }
+        }
+
+        return JSON.stringify(dump);
+      })();
+    })()`;
+  }
+
+  private buildIndexedDbRestoreScript(dumpJson: string): string {
+    return `((rawDump) => {
+      const openDatabase = (name, version, stores) => new Promise((resolve, reject) => {
+        const request = indexedDB.open(name, version);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          for (const storeName of Object.keys(stores)) {
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName);
+            }
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB database for restore'));
+      });
+
+      const waitForTransaction = (tx) => new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(undefined);
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+      });
+
+      return (async () => {
+        const dump = JSON.parse(rawDump || '{}');
+        for (const [dbName, dbInfo] of Object.entries(dump)) {
+          const version = typeof dbInfo.version === 'number' ? dbInfo.version : 1;
+          const stores = dbInfo && typeof dbInfo === 'object' && dbInfo.stores && typeof dbInfo.stores === 'object'
+            ? dbInfo.stores
+            : {};
+          const db = await openDatabase(dbName, version, stores);
+          try {
+            for (const [storeName, entries] of Object.entries(stores)) {
+              const tx = db.transaction(storeName, 'readwrite');
+              const store = tx.objectStore(storeName);
+              for (const entry of entries) {
+                if (!Array.isArray(entry) || entry.length !== 2) continue;
+                store.put(entry[1], entry[0]);
+              }
+              await waitForTransaction(tx);
+            }
+          } finally {
+            db.close();
+          }
+        }
+        return true;
+      })();
+    })(${JSON.stringify(dumpJson)})`;
+  }
+
+  private async restoreIndexedDbFromSource(sourceTabId: string, targetTabId: string, targetUrl: string): Promise<boolean> {
+    const sourceWc = this.getWebContents(sourceTabId);
+    const targetWc = this.getWebContents(targetTabId);
+    if (!sourceWc || sourceWc.isDestroyed() || !targetWc || targetWc.isDestroyed()) {
+      log.warn(`IndexedDB inherit skipped: source or target webContents missing (${sourceTabId} -> ${targetTabId})`);
+      return false;
+    }
+
+    try {
+      const dumpJson = await sourceWc.executeJavaScript(this.buildIndexedDbDumpScript()) as string;
+      if (!dumpJson || dumpJson === '{}') {
+        log.info(`IndexedDB inherit: no databases found in source tab ${sourceTabId}`);
+        return false;
+      }
+
+      await targetWc.executeJavaScript(this.buildIndexedDbRestoreScript(dumpJson));
+      if (targetUrl !== 'about:blank') {
+        await targetWc.loadURL(targetUrl);
+      }
+      return true;
+    } catch (error) {
+      log.warn(
+        `IndexedDB inherit failed for ${sourceTabId} -> ${targetTabId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
   }
 }

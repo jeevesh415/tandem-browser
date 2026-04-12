@@ -4,26 +4,28 @@
 
 ## What is Tandem?
 
-Tandem is an Electron-based browser built for human-AI collaboration with
-OpenClaw as the primary runtime. The name comes from the tandem bicycle: two
-riders, one machine, each contributing what the other can't do alone.
+Tandem is an Electron-based browser built for human-AI collaboration. Any AI
+agent that speaks MCP or HTTP can control it. The name comes from the tandem
+bicycle: two riders, one machine, each contributing what the other can't do
+alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while OpenClaw operates through a full local HTTP API on `127.0.0.1:8765` with
-roughly 250 route handlers for navigation, interaction, data extraction,
-automation, sessions, sync, extensions, and developer tooling. OpenClaw is not
-an add-on integration here; it is the primary AI runtime Tandem is built
-around. Websites see a normal Chrome browser on macOS. They don't see the AI.
+while AI agents operate through a built-in **MCP server** (239 tools) or a full
+local **HTTP API** on `127.0.0.1:8765` with 300+ endpoints for navigation,
+interaction, data extraction, automation, sessions, sync, extensions, and
+developer tooling. Websites see a normal Chrome browser on macOS. They don't see
+the AI.
 
-Tandem is maintained by the same maintainer behind OpenClaw and is intended as
-a first-party companion browser for OpenClaw workflows.
+Tandem was originally built for OpenClaw and continues to be maintained by an
+OpenClaw maintainer, but the MCP server makes it equally accessible to Claude
+Code, Cursor, Windsurf, or any other MCP-compatible agent.
 
-The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs a 6-layer security shield before anything reaches the page so OpenClaw can operate with stricter containment than a conventional browser automation stack.
+The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs an 8-layer security shield before anything reaches the page so agents can operate with stricter containment than a conventional browser automation stack.
 
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
-**Current version:** `0.57.6`  
+**Current version:** `0.70.0`  
 **Repository status:** Public developer preview  
 **Started:** February 11, 2026
 
@@ -65,7 +67,7 @@ Within the product UI, the right-side assistant surface is called the Wingman pa
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │  Electron Main Process                                     │ │
 │  │                                                            │ │
-│  │  SecurityManager     6-layer shield (see below)            │ │
+│  │  SecurityManager     8-layer shield (see below)            │ │
 │  │  StealthManager      Anti-fingerprint patches              │ │
 │  │  TabManager          Multi-tab, groups, shortcuts          │ │
 │  │  SidebarManager      Sidebar config + panel routing        │ │
@@ -92,7 +94,7 @@ Within the product UI, the right-side assistant surface is called the Wingman pa
 │                      ▼                                          │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │  Tandem HTTP API — localhost:8765 (Express)                │ │
-│  │  ~250 route handlers across 16 route modules               │ │
+│  │  300+ route handlers across 16 route modules               │ │
 │  │                                                            │ │
 │  │  Navigation, Content, Interaction, Tabs, Screenshots       │ │
 │  │  Sessions, Workspaces, Sidebar, Pinboards, Sync            │ │
@@ -101,14 +103,15 @@ Within the product UI, the right-side assistant surface is called the Wingman pa
 │  └────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
          │
-         │ HTTP / fetch / curl
+         │ MCP / HTTP / fetch / curl
          ▼
 ┌─────────────────────┐
-│  AI Agent (OpenClaw)│
+│  AI Agent           │
+│  (MCP or HTTP)      │
 │                     │
-│  Uses the API to    │
-│  browse, extract,   │
-│  automate, observe  │
+│  Uses MCP tools or  │
+│  HTTP API to browse,│
+│  extract, automate  │
 └─────────────────────┘
 ```
 
@@ -118,7 +121,7 @@ Within the product UI, the right-side assistant surface is called the Wingman pa
 
 ## Security System
 
-Six independent layers that run before anything reaches the page:
+Eight independent layers that run before anything reaches the page:
 
 | Layer | Name | What it does |
 |-------|------|-------------|
@@ -128,6 +131,8 @@ Six independent layers that run before anything reaches the page:
 | 4 | ScriptGuard | CDP-based script fingerprinting, detects keyloggers and crypto miners |
 | 5 | BehaviorMonitor | Welford's algorithm, per-domain baseline + anomaly detection, trust scores |
 | 6 | GatekeeperWebSocket | AI agent makes real-time decisions on ambiguous requests |
+| 7 | EvolutionEngine | Adaptive threat rules that learn from new attack patterns |
+| 8 | PromptInjection | Scans agent-facing content for prompt injection attempts, blocks or warns |
 
 None or this touches the webview. Websites don't know it's running.
 
@@ -187,15 +192,17 @@ New Tab
 ─────────────────
 Reload
 Duplicate Tab
-Copy Page Address
-─────────────────
-Move to Workspace  ▶  [workspace icon + name per workspace]
-─────────────────
+Add to / Remove from Quick Links
+Pin Tab / Unpin Tab
 Mute Tab / Unmute Tab
+Let Wingman handle this tab / Take back from Wingman
+Set Emoji...  ▶  [50 popular emojis grid, + Remove Emoji if set]
 ─────────────────
 Close Tab
 Close Other Tabs
 Close Tabs to the Right
+─────────────────
+Reopen Closed Tab
 ```
 
 ---
@@ -206,7 +213,7 @@ Most endpoints require the `Authorization: Bearer <token>` header. The token is 
 
 Current route modules:
 - `browser.ts` — navigation, screenshots, page actions
-- `tabs.ts` — tab management, groups, focus
+- `tabs.ts` — tab management, groups, focus, emoji badges
 - `snapshots.ts` — accessibility tree and `@ref` interaction surfaces
 - `devtools.ts` — CDP bridge (console, network, DOM, storage)
 - `extensions.ts` — extension management and helper routes
@@ -222,6 +229,10 @@ Current route modules:
 - `sync.ts` — sync surfaces
 - `pinboards.ts` — pinboard CRUD and panel data
 
+Selected read and browser routes now accept `X-Tab-Id` so agents can target
+background tabs without stealing focus. Current support includes `/snapshot`,
+`/page-content`, `/page-html`, `/execute-js`, `/wait`, `/links`, and `/forms`.
+
 Security routes are registered separately from `src/security/routes.ts`.
 
 ---
@@ -233,7 +244,7 @@ src/main.ts                    App lifecycle, window, IPC, menu
 src/api/server.ts              API setup + route registration
 src/api/routes/                16 route modules
 src/security/routes.ts         Security-specific API routes
-src/security/                  6-layer security system
+src/security/                  8-layer security system
 src/stealth/manager.ts         Anti-fingerprint patches
 src/tabs/manager.ts            Tab management
 src/sidebar/manager.ts         Sidebar config + state

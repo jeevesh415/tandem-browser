@@ -15,9 +15,10 @@ how it works, and why it exists.
 ## The Project
 
 - **Repo:** `hydro13/tandem-browser` (GitHub: hydro13)
-- **Stack:** Electron 40 + TypeScript + Express.js API (`localhost:8765`)
-- **Goal:** A browser where an AI (via HTTP API + WebSocket) and a human (via
-  the UI) browse together
+- **Stack:** Electron 40 + TypeScript + Express.js API (`localhost:8765`) +
+  MCP server (239 tools)
+- **Goal:** An agent-first browser where any AI (via MCP, HTTP API, or
+  WebSocket) and a human browse together
 - **Philosophy:** Local-first, privacy-first, no cloud dependencies in the
   browser itself
 - **Size:** Large TypeScript codebase with a substantial Electron shell,
@@ -33,12 +34,14 @@ tandem-browser/
 ├── src/                          # TypeScript application code
 │   ├── api/server.ts             # Express API bootstrap
 │   ├── main.ts                   # Electron main process
-│   ├── security/                 # 6-layer shield + intelligence upgrade
+│   ├── security/                 # 8-layer shield + intelligence upgrade
 │   ├── extensions/               # Browser extension system (12 files)
 │   ├── snapshot/                 # Accessibility tree with @refs
 │   ├── network/                  # Inspector + mocking
 │   ├── sessions/                 # Multi-session isolation
-│   ├── mcp/                      # MCP protocol server
+│   ├── mcp/                      # MCP server (239 tools, full API parity)
+│   │   ├── server.ts             # MCP server entry point
+│   │   └── tools/                # Tool definitions (one file per domain)
 │   ├── agents/                   # TaskManager, X-Scout, TabLockManager
 │   ├── devtools/                 # CDP bridge
 │   └── ...                       # 28 other modules
@@ -70,7 +73,7 @@ tandem-browser/
 │   ├── security-shield/          # Security Shield (5 layers)
 │   └── security-upgrade/         # Security Intelligence (9 phases)
 ├── scripts/                      # Test & launch scripts
-├── skill/                        # OpenClaw skill file
+├── skill/                        # Agent skill file (SKILL.md)
 ├── release/                      # Local build artifacts (DMG, ZIP)
 ├── README.md
 ├── PROJECT.md
@@ -91,7 +94,7 @@ tandem-browser/
 ### 2. Test Your Own Work
 
 - **Always compile:** `npx tsc` must be error-free before you finish
-- **Start the app:** `npm run dev` and verify startup without crashes
+- **Start the app:** `npm start` and verify startup without crashes
 - **Test API endpoints:** Use `curl` for every new or changed endpoint
 - **Test the UI:** Take a screenshot and verify it looks correct
 - **Run tests:** `npx vitest run`; all existing tests must keep passing
@@ -430,7 +433,7 @@ After each session, provide:
 ## Tested
 - ✅ npx tsc — no errors
 - ✅ npx vitest run — all tests pass
-- ✅ npm run dev — app starts without crashes
+- ✅ npm start — app starts without crashes
 - ✅ curl localhost:8765/new-endpoint — response OK
 - ⚠️ [any issues found]
 

@@ -1,5 +1,7 @@
 import type { ConfigManager } from '../config/manager';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface WingmanEvent {
   type: string;
   tabId: string;
@@ -7,23 +9,28 @@ interface WingmanEvent {
   data: Record<string, unknown>;
 }
 
+// ─── Manager ─────────────────────────────────────────────────────────────────
+
 /**
- * WingmanStream — Pushes real-time activity events to OpenClaw
- * so the AI wingman can see what the human is doing in Tandem.
- *
- * Same webhook pattern as PanelManager.fireWebhook().
- * Non-blocking, silent fail if OpenClaw is not running.
+ * WingmanStream — Pushes real-time activity events to OpenClaw.
  */
 export class WingmanStream {
+
+  // === 1. Private state ===
+
   private configManager: ConfigManager;
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private enabled: boolean = true;
   private eventCount: number = 0;
   private rateLimitResetTime: number = 0;
 
+  // === 2. Constructor ===
+
   constructor(configManager: ConfigManager) {
     this.configManager = configManager;
   }
+
+  // === 4. Public methods ===
 
   /** Send event to OpenClaw (non-blocking) */
   async emit(event: WingmanEvent): Promise<void> {
@@ -76,30 +83,6 @@ export class WingmanStream {
     }, delayMs));
   }
 
-  /** Format event as readable text for the AI wingman */
-  private formatEventText(event: WingmanEvent): string {
-    switch (event.type) {
-      case 'tab-switched':
-        return `[Tandem] Robin switched to tab: ${event.data.title} (${event.data.url})`;
-      case 'navigated':
-        return `[Tandem] Robin navigated to: ${event.data.url} (${event.data.title})`;
-      case 'page-loaded':
-        return `[Tandem] Page loaded: ${event.data.title} (${event.data.url}) in ${event.data.loadTimeMs}ms`;
-      case 'tab-opened':
-        return `[Tandem] Robin opened new tab: ${event.data.url}`;
-      case 'tab-closed':
-        return `[Tandem] Robin closed tab: ${event.data.title} (${event.data.url})`;
-      case 'text-selected':
-        return `[Tandem] Robin selected text on ${event.data.url}: "${event.data.text}"`;
-      case 'scroll-position':
-        return `[Tandem] Robin scrolled to ${event.data.scrollPercent}% on ${event.data.url}`;
-      case 'form-interaction':
-        return `[Tandem] Robin interacting with ${event.data.fieldType} field "${event.data.fieldName}" on ${event.data.url}`;
-      default:
-        return `[Tandem] Activity: ${event.type}`;
-    }
-  }
-
   /** Toggle stream on/off */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
@@ -110,11 +93,39 @@ export class WingmanStream {
     return this.enabled;
   }
 
+  // === 6. Cleanup ===
+
   /** Cleanup timers */
   destroy(): void {
     for (const timer of this.debounceTimers.values()) {
       clearTimeout(timer);
     }
     this.debounceTimers.clear();
+  }
+
+  // === 7. Private helpers ===
+
+  /** Format event as readable text for the AI wingman */
+  private formatEventText(event: WingmanEvent): string {
+    switch (event.type) {
+      case 'tab-switched':
+        return `[Tandem] The user switched to tab: ${event.data.title} (${event.data.url})`;
+      case 'navigated':
+        return `[Tandem] The user navigated to: ${event.data.url} (${event.data.title})`;
+      case 'page-loaded':
+        return `[Tandem] Page loaded: ${event.data.title} (${event.data.url}) in ${event.data.loadTimeMs}ms`;
+      case 'tab-opened':
+        return `[Tandem] The user opened new tab: ${event.data.url}`;
+      case 'tab-closed':
+        return `[Tandem] The user closed tab: ${event.data.title} (${event.data.url})`;
+      case 'text-selected':
+        return `[Tandem] The user selected text on ${event.data.url}: "${event.data.text}"`;
+      case 'scroll-position':
+        return `[Tandem] The user scrolled to ${event.data.scrollPercent}% on ${event.data.url}`;
+      case 'form-interaction':
+        return `[Tandem] The user is interacting with ${event.data.fieldType} field "${event.data.fieldName}" on ${event.data.url}`;
+      default:
+        return `[Tandem] Activity: ${event.type}`;
+    }
   }
 }

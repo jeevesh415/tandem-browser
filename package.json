@@ -1,7 +1,7 @@
 {
   "name": "tandem-browser",
-  "version": "0.62.17",
-  "description": "First-party OpenClaw companion browser for human-AI collaboration with built-in security controls",
+  "version": "0.70.0",
+  "description": "Local-first Electron browser for human-AI collaboration with 239-tool MCP server, 300+ endpoint HTTP API, and built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
   "license": "MIT",
@@ -25,20 +25,22 @@
     "local-first"
   ],
   "scripts": {
-    "dev": "tsc && npx electron .",
+    "dev": "tsc && npm run bundle:preload && npx electron .",
     "start": "xattr -cr node_modules/electron/dist/Electron.app 2>/dev/null; npm run compile && node scripts/run-electron.js",
-    "compile": "tsc",
+    "compile": "tsc && npm run bundle:preload",
     "watch": "tsc -w",
-    "build": "tsc && electron-builder",
+    "build": "tsc && npm run bundle:preload && electron-builder",
+    "bundle:preload": "esbuild dist/preload/index.js --bundle --platform=node --external:electron --outfile=dist/preload/index.js --allow-overwrite",
     "mcp": "node dist/mcp/server.js",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "verify": "npm run compile && npm run lint && npm test",
+    "verify": "npm run compile && npm run lint && npm test && npm run check-consistency",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:security": "vitest run src/security/tests/",
     "test:extensions": "vitest run src/extensions/tests/",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "check-consistency": "node scripts/check-consistency.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
@@ -65,8 +67,10 @@
     "@types/supertest": "^7.2.0",
     "@types/turndown": "^5.0.6",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.6.0",
     "electron-builder": "^26.0.0",
+    "esbuild": "^0.28.0",
     "eslint": "^10.0.3",
     "supertest": "^7.2.2",
     "typescript": "^5.6.0",

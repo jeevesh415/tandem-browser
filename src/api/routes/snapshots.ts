@@ -1,30 +1,40 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
+import { resolveRequestedTab } from '../context';
 import type { LocatorQuery } from '../../locators/finder';
 import { handleRouteError } from '../../utils/errors';
+import { injectionScannerMiddleware } from '../middleware/injection-scanner';
 
+/**
+ * Register accessibility-tree snapshot and locator-based interaction routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // SNAPSHOTS — Accessibility-tree based interaction
   // ═══════════════════════════════════════════════
 
-  router.get('/snapshot', async (req: Request, res: Response) => {
+  router.get('/snapshot', injectionScannerMiddleware, async (req: Request, res: Response) => {
     try {
       const interactive = req.query.interactive === 'true';
       const compact = req.query.compact === 'true';
       const selector = req.query.selector as string | undefined;
       const depthStr = req.query.depth as string | undefined;
       const depth = depthStr ? parseInt(depthStr, 10) : undefined;
-
-      // X-Tab-Id support: resolve tab id to webContentsId
-      let wcId: number | undefined;
-      const tabId = req.headers['x-tab-id'] as string | undefined;
-      if (tabId) {
-        const tab = ctx.tabManager.listTabs().find(t => t.id === tabId);
-        wcId = tab?.webContentsId;
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        res.status(404).json({ error: `Tab ${requestedTab.requestedTabId} not found` });
+        return;
       }
 
-      const result = await ctx.snapshotManager.getSnapshot({ interactive, compact, selector, depth, wcId });
+      const result = await ctx.snapshotManager.getSnapshot({
+        interactive,
+        compact,
+        selector,
+        depth,
+        wcId: requestedTab.tab?.webContentsId,
+      });
       res.json({ ok: true, snapshot: result.text, count: result.count, url: result.url });
     } catch (e) {
       handleRouteError(res, e);
@@ -53,7 +63,7 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  router.get('/snapshot/text', async (req: Request, res: Response) => {
+  router.get('/snapshot/text', injectionScannerMiddleware, async (req: Request, res: Response) => {
     const ref = req.query.ref as string;
     if (!ref) { res.status(400).json({ error: 'ref query parameter required (e.g. "?ref=@e1")' }); return; }
     try {
@@ -82,11 +92,11 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
   });
 
   router.post('/find/click', async (req: Request, res: Response) => {
-    const { fillValue: _fillValue, ...query } = req.body;
-    if (!query.by || !query.value) {
-      res.status(400).json({ error: '"by" and "value" required' }); return;
-    }
     try {
+      const { fillValue: _fillValue, ...query } = (req.body ?? {}) as LocatorQuery & { fillValue?: unknown };
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
       const result = await ctx.locatorFinder.find(query);
       if (!result.found || !result.ref) {
         res.status(404).json({ found: false, error: 'Element not found' }); return;
@@ -99,12 +109,12 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
   });
 
   router.post('/find/fill', async (req: Request, res: Response) => {
-    const { fillValue, ...query } = req.body;
-    if (!query.by || !query.value) {
-      res.status(400).json({ error: '"by" and "value" required' }); return;
-    }
-    if (!fillValue) { res.status(400).json({ error: 'fillValue required' }); return; }
     try {
+      const { fillValue, ...query } = (req.body ?? {}) as LocatorQuery & { fillValue?: string };
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
+      if (!fillValue) { res.status(400).json({ error: 'fillValue required' }); return; }
       const result = await ctx.locatorFinder.find(query);
       if (!result.found || !result.ref) {
         res.status(404).json({ found: false, error: 'Element not found' }); return;

@@ -2,12 +2,20 @@ import { session } from 'electron';
 import type { Session } from './types';
 import { DEFAULT_PARTITION } from '../utils/constants';
 
+/**
+ * SessionManager — manages isolated Electron sessions with named partitions.
+ */
 export class SessionManager {
+
+  // === 1. Private state ===
+
   private sessions: Map<string, Session> = new Map();
   private activeSession = 'default';
 
+  // === 2. Constructor ===
+
   constructor() {
-    // Register default session (Robin's persist:tandem)
+    // Register default session (the user's persist:tandem)
     this.sessions.set('default', {
       name: 'default',
       partition: DEFAULT_PARTITION,
@@ -15,6 +23,8 @@ export class SessionManager {
       isDefault: true,
     });
   }
+
+  // === 4. Public methods ===
 
   /** Create a new isolated session */
   create(name: string): Session {

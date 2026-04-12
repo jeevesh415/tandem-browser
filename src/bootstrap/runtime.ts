@@ -1,4 +1,5 @@
 import { dialog, session, type BrowserWindow, type WebContents } from 'electron';
+import { IpcChannels } from '../shared/ipc-channels';
 import type { TandemAPI } from '../api/server';
 import { ActivityTracker } from '../activity/tracker';
 import { WingmanStream } from '../activity/wingman-stream';
@@ -49,6 +50,7 @@ import { HeadlessManager } from '../headless/manager';
 import { BehaviorObserver } from '../behavior/observer';
 import { WorkflowEngine } from '../workflow/engine';
 import { WorkspaceManager } from '../workspaces/manager';
+import { ClipboardManager } from '../clipboard/manager';
 import { DEFAULT_PARTITION } from '../utils/constants';
 import type { RuntimeManagers } from './types';
 
@@ -80,17 +82,17 @@ function drainPendingContextMenus(contextMenuManager: ContextMenuManager, pendin
 function wireTaskManagerEvents(win: BrowserWindow, taskManager: TaskManager, canUseWindow: (win: BrowserWindow | null) => win is BrowserWindow): void {
   taskManager.on('approval-request', (data: Record<string, unknown>) => {
     if (canUseWindow(win)) {
-      win.webContents.send('approval-request', data);
+      win.webContents.send(IpcChannels.APPROVAL_REQUEST, data);
     }
   });
   taskManager.on('task-updated', (task: Record<string, unknown>) => {
     if (canUseWindow(win)) {
-      win.webContents.send('task-updated', task);
+      win.webContents.send(IpcChannels.TASK_UPDATED, task);
     }
   });
   taskManager.on('emergency-stop', (data: Record<string, unknown>) => {
     if (canUseWindow(win)) {
-      win.webContents.send('emergency-stop', data);
+      win.webContents.send(IpcChannels.EMERGENCY_STOP, data);
     }
   });
 }
@@ -173,6 +175,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.contentExtractor = new ContentExtractor();
   runtime.workflowEngine = new WorkflowEngine();
   runtime.loginManager = new LoginManager();
+  runtime.clipboardManager = new ClipboardManager();
   runtime.sessionRestoreManager = new SessionRestoreManager(runtime.syncManager);
 
   runtime.workspaceManager.setMainWindow(win);
@@ -219,7 +222,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
       return;
     }
 
-    win.webContents.send('emergency-stop', {
+    win.webContents.send(IpcChannels.EMERGENCY_STOP, {
       source: 'security-containment',
       incidentId: incident.id,
       domain: incident.domain,
@@ -314,6 +317,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     syncManager: runtime.syncManager,
     pinboardManager: runtime.pinboardManager,
     googlePhotosManager: runtime.googlePhotosManager,
+    clipboardManager: runtime.clipboardManager,
   };
 }
 

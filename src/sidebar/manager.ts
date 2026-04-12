@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
 import type { SidebarConfig, SidebarItem, SidebarState } from './types';
+
+const log = createLogger('SidebarManager');
+
+// ─── Default config ─────────────────────────────────────────────────
 
 // Sidebar items in 3 sections (similar to Opera):
 // Section 1: Workspaces (top)
@@ -9,7 +14,7 @@ import type { SidebarConfig, SidebarItem, SidebarState } from './types';
 // Section 3: Browser utilities — Pinboards, Bookmarks, History, Downloads, Personal News
 // Fixed footer (hardcoded in UI, not in items): Tips (💡) + Setup (⚙️)
 const DEFAULT_CONFIG: SidebarConfig = {
-  state: 'narrow',
+  state: 'wide',
   activeItemId: null,
   panelPinned: false,
   panelWidths: {},
@@ -29,28 +34,60 @@ const DEFAULT_CONFIG: SidebarConfig = {
     { id: 'pinboards',  label: 'Pinboards',       icon: '', type: 'panel',   enabled: true, order: 20 },
     { id: 'bookmarks',  label: 'Bookmarks',       icon: '', type: 'panel',   enabled: true, order: 21 },
     { id: 'history',    label: 'History',         icon: '', type: 'panel',   enabled: true, order: 22 },
-    { id: 'downloads',  label: 'Downloads',       icon: '', type: 'panel',   enabled: true, order: 23 },
-    { id: 'news',       label: 'Personal News',   icon: '', type: 'panel',   enabled: true, order: 24 },
+    { id: 'downloads',  label: 'Downloads',       icon: '', type: 'panel',   enabled: false, order: 23 },
+    { id: 'news',       label: 'Personal News',   icon: '', type: 'panel',   enabled: false, order: 24 },
   ]
 };
 
+// ─── Storage path ───────────────────────────────────────────────────
+
+const STORAGE_PATH = path.join(tandemDir(), 'sidebar-config.json');
+
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * SidebarManager — sidebar layout, item visibility, and panel state.
+ *
+ * Persistence: ~/.tandem/sidebar-config.json
+ * API routes:  src/api/routes/sidebar.ts
+ * MCP tools:   src/mcp/tools/sidebar.ts
+ */
 export class SidebarManager {
-  private storageFile: string;
+
+  // === 1. Private state ===
+
   private config: SidebarConfig;
 
+  // === 2. Constructor ===
+
   constructor() {
-    this.storageFile = path.join(tandemDir(), 'sidebar-config.json');
     this.config = this.load();
   }
 
+  // === 3. Dependency setters ===
+  // (none — SidebarManager has no external dependencies)
+
+  // === 4. Public methods ===
+
+  /** Get the current sidebar configuration. */
   getConfig(): SidebarConfig { return this.config; }
 
+  /**
+   * Merge partial updates into the sidebar configuration and persist.
+   * @param partial - fields to update (state, activeItemId, panelPinned, etc.)
+   * @returns the updated configuration
+   */
   updateConfig(partial: Partial<SidebarConfig>): SidebarConfig {
     this.config = { ...this.config, ...partial };
     this.save();
     return this.config;
   }
 
+  /**
+   * Toggle a sidebar item's enabled/disabled state.
+   * @param id - sidebar item ID
+   * @returns the toggled item, or undefined if not found
+   */
   toggleItem(id: string): SidebarItem | undefined {
     const item = this.config.items.find(i => i.id === id);
     if (!item) return undefined;
@@ -59,6 +96,10 @@ export class SidebarManager {
     return item;
   }
 
+  /**
+   * Reorder sidebar items by assigning new order values from the given ID sequence.
+   * @param orderedIds - item IDs in desired display order
+   */
   reorderItems(orderedIds: string[]): void {
     orderedIds.forEach((id, idx) => {
       const item = this.config.items.find(i => i.id === id);
@@ -68,35 +109,49 @@ export class SidebarManager {
     this.save();
   }
 
+  /** Set the sidebar visibility state (hidden, narrow, or wide). */
   setState(state: SidebarState): void {
     this.config.state = state;
     this.save();
   }
 
+  /** Set which sidebar item's panel is open, or null to close all panels. */
   setActiveItem(id: string | null): void {
     this.config.activeItemId = id;
     this.save();
   }
 
+  // === 5. Sync integration ===
+  // (none — sidebar config is local-only)
+
+  // === 6. Cleanup ===
+
+  /** Clean up resources (currently a no-op). */
+  destroy(): void { /* nothing to clean up */ }
+
+  // === 7. Private I/O ===
+
   private load(): SidebarConfig {
     try {
-      if (fs.existsSync(this.storageFile)) {
-        const raw = JSON.parse(fs.readFileSync(this.storageFile, "utf8"));
+      if (fs.existsSync(STORAGE_PATH)) {
+        const raw = JSON.parse(fs.readFileSync(STORAGE_PATH, "utf8"));
         const savedIds = new Set((raw.items || []).map((i: SidebarItem) => i.id));
         const missingItems = DEFAULT_CONFIG.items.filter(i => !savedIds.has(i.id));
         const mergedItems = [...(raw.items || []), ...missingItems];
         return { ...DEFAULT_CONFIG, ...raw, items: mergedItems };
       }
-    } catch { /* use defaults */ }
+    } catch (e) {
+      log.warn('Failed to load sidebar config:', e instanceof Error ? e.message : String(e));
+    }
     return { ...DEFAULT_CONFIG, items: [...DEFAULT_CONFIG.items] };
   }
 
   private save(): void {
     try {
       ensureDir(tandemDir());
-      fs.writeFileSync(this.storageFile, JSON.stringify(this.config, null, 2));
-    } catch { /* ignore */ }
+      fs.writeFileSync(STORAGE_PATH, JSON.stringify(this.config, null, 2));
+    } catch (e) {
+      log.warn('Failed to save sidebar config:', e instanceof Error ? e.message : String(e));
+    }
   }
-
-  destroy(): void { /* nothing to clean up */ }
 }

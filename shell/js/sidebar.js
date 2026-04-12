@@ -61,7 +61,12 @@
     };
 
     function getIconSvg(slug) {
-      return WORKSPACE_ICONS[slug] || WORKSPACE_ICONS.home;
+      if (WORKSPACE_ICONS[slug]) return WORKSPACE_ICONS[slug];
+      // If the slug isn't a known icon name, render it directly (supports emoji icons)
+      if (slug && typeof slug === 'string' && slug.trim()) {
+        return `<span class="workspace-emoji-icon">${slug}</span>`;
+      }
+      return WORKSPACE_ICONS.home;
     }
 
     async function loadQuickLinksConfig() {
@@ -162,6 +167,7 @@
             <div class="messenger-icon" style="background:${bg}">
               ${icon.svg}
             </div>
+            <span class="sidebar-item-label">${item.label}</span>
           </button>`;
       }
       return `
@@ -202,13 +208,16 @@
       const sec2 = sorted.filter(i => i.order >= 10 && i.order < 20);
       const sec3 = sorted.filter(i => i.order >= 20);
 
-      // 3 sections: workspace icons / communication / utilities, with separators in between
+      // 3 sections: workspace icons / communication / utilities, with group headers + separators
       const wsHtml = renderWorkspaceIcons();
       itemsEl.innerHTML =
+        (wsHtml ? '<p class="sidebar-group-header">Workspaces</p>' : '') +
         wsHtml +
         (wsHtml && sec2.length ? '<div class="sidebar-separator"></div>' : '') +
+        (sec2.length ? '<p class="sidebar-group-header">Communication</p>' : '') +
         sec2.map(renderItemHTML).join('') +
         (sec2.length && sec3.length ? '<div class="sidebar-separator"></div>' : '') +
+        (sec3.length ? '<p class="sidebar-group-header">Browser Utilities</p>' : '') +
         sec3.map(renderItemHTML).join('');
 
       // Panel — skip title/open state when setup panel is open
@@ -231,8 +240,9 @@
 
       // Wide toggle button
       const toggleBtn = document.getElementById('sidebar-toggle-width');
-      toggleBtn.textContent = config.state === 'wide' ? '\u2039' : '\u203a';
-      toggleBtn.title = config.state === 'wide' ? 'Collapse' : 'Expand';
+      const toggleLabel = config.state === 'wide' ? 'Collapse' : 'Expand';
+      toggleBtn.innerHTML = (config.state === 'wide' ? '\u2039' : '\u203a') + `<span class="sidebar-footer-label">${toggleLabel}</span>`;
+      toggleBtn.title = toggleLabel;
     }
 
     // === WEBVIEW MODULE ===
@@ -1415,7 +1425,7 @@
     const SETUP_SECTIONS = [
       { title: 'Workspaces',        ids: ['workspaces'] },
       { title: 'Communication',     ids: ['calendar','gmail','whatsapp','telegram','discord','slack','instagram','x'] },
-      { title: 'Browser Utilities', ids: ['pinboards','bookmarks','history','downloads','news'] },
+      { title: 'Browser Utilities', ids: ['pinboards','bookmarks','history'] },
     ];
 
     function renderSetupPanel(items) {
@@ -1855,12 +1865,23 @@
       });
 
       document.getElementById('sidebar-customize').addEventListener('click', () => {
-        renderSetupPanel(config.items);
+        if (isSetupPanelOpen) {
+          // Toggle off — close the panel
+          const panel = document.getElementById('sidebar-panel');
+          panel.classList.remove('open');
+          isSetupPanelOpen = false;
+          hideWebviews();
+        } else {
+          renderSetupPanel(config.items);
+        }
       });
 
       document.getElementById('sidebar-tips').addEventListener('click', () => {
         const webview = document.querySelector('webview.active');
-        if (webview) webview.loadURL('https://tandem.browser/help');
+        if (webview) {
+          const shellPath = window.location.href.replace(/\/[^/]*$/, '');
+          webview.loadURL(shellPath + '/help.html');
+        }
       });
 
       // Shortcut: Cmd+Shift+B (Mac) / Ctrl+Shift+B (Windows/Linux)
@@ -2034,7 +2055,7 @@
         targets.forEach(ws => {
           const si = document.createElement('div');
           si.className = 'tandem-ctx-submenu-item';
-          const icon = WORKSPACE_ICONS[ws.icon] || WORKSPACE_ICONS['home'];
+          const icon = getIconSvg(ws.icon);
           si.innerHTML = '<span class="ws-ctx-icon">' + icon + '</span><span>' + ws.name + '</span>';
           si.addEventListener('click', () => {
             closeCtxMenu();
@@ -2102,6 +2123,70 @@
       addItem(isMuted ? 'Unmute Tab' : 'Mute Tab', () => {
         if (wv) wv.audioMuted = !isMuted;
       });
+
+      // — Set Emoji (submenu)
+      {
+        const emojiItem = document.createElement('div');
+        emojiItem.className = 'tandem-ctx-menu-item';
+        const tabEl = document.querySelector('.tab[data-tab-id="' + domTabId + '"]');
+        const tabEmojiSpan = tabEl ? tabEl.querySelector('.tab-emoji') : null;
+        const currentEmoji = (tabEmojiSpan && tabEmojiSpan.style.display !== 'none') ? tabEmojiSpan.textContent : '';
+        const emojiLabel = document.createElement('span');
+        emojiLabel.textContent = currentEmoji ? ('Emoji: ' + currentEmoji) : 'Set Emoji...';
+        const emojiArrow = document.createElement('span');
+        emojiArrow.className = 'ctx-arrow';
+        emojiArrow.textContent = '▶';
+        emojiItem.appendChild(emojiLabel);
+        emojiItem.appendChild(emojiArrow);
+
+        const emojiSub = document.createElement('div');
+        emojiSub.className = 'tandem-ctx-submenu tandem-emoji-grid';
+
+        if (currentEmoji) {
+          const removeItem = document.createElement('div');
+          removeItem.className = 'tandem-ctx-submenu-item';
+          removeItem.textContent = 'Remove Emoji';
+          removeItem.addEventListener('click', async () => {
+            closeCtxMenu();
+            await fetch('http://localhost:8765/tabs/' + encodeURIComponent(domTabId) + '/emoji', {
+              method: 'DELETE',
+              headers: { Authorization: 'Bearer ' + TOKEN }
+            });
+          });
+          emojiSub.appendChild(removeItem);
+          const sep = document.createElement('div');
+          sep.className = 'tandem-ctx-separator';
+          emojiSub.appendChild(sep);
+        }
+
+        const emojis = [
+          '🔥','⭐','💡','🚀','✅','❌','⚠️','🎯','💬','📌',
+          '📚','🧪','🔧','🎨','📊','🔒','👀','💰','🎵','❤️',
+          '🏠','📧','🛒','📝','🗂️','🌍','☁️','📸','🎮','🤖',
+          '🧠','🔍','📅','🎁','🏷️','⏰','🔔','💻','📱','🎬',
+          '🍕','☕','🌟','💎','🦊','🐛','🏗️','📦','🔗','🏆',
+        ];
+        const grid = document.createElement('div');
+        grid.className = 'tandem-emoji-picker';
+        emojis.forEach(emoji => {
+          const btn = document.createElement('span');
+          btn.className = 'tandem-emoji-btn';
+          btn.textContent = emoji;
+          btn.addEventListener('click', async () => {
+            closeCtxMenu();
+            await fetch('http://localhost:8765/tabs/' + encodeURIComponent(domTabId) + '/emoji', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+              body: JSON.stringify({ emoji: emoji })
+            });
+          });
+          grid.appendChild(btn);
+        });
+        emojiSub.appendChild(grid);
+
+        emojiItem.appendChild(emojiSub);
+        menu.appendChild(emojiItem);
+      }
 
       addSep();
 

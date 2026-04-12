@@ -1,8 +1,14 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
 import { createRateLimitMiddleware } from '../rate-limit';
+import { handleRouteError } from '../../utils/errors';
 import { normalizeExistingDirectoryPath } from '../../utils/security';
 
+/**
+ * Register cross-device sync routes (config, remote devices, tabs).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // SYNC — Cross-device sync via shared folder
@@ -22,7 +28,7 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
         devicesFound: devices,
       });
     } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -31,7 +37,7 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
       const devices = ctx.syncManager.getRemoteDevices();
       res.json({ ok: true, devices });
     } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -71,7 +77,7 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
 
       res.json({ ok: true, deviceSync: newSyncConfig });
     } catch (e: unknown) {
-      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 
@@ -97,7 +103,7 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
 
       res.json({ ok: true, tabsPublished: tabs.length, historyPublished: history.length });
     } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      handleRouteError(res, e);
     }
   });
 }

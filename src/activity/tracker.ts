@@ -5,6 +5,7 @@ import type { DrawOverlayManager } from '../draw/overlay';
 import type { WingmanStream } from './wingman-stream';
 import { createLogger } from '../utils/logger';
 import { hostnameMatches, tryParseUrl, urlHasProtocol } from '../utils/security';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('ActivityTracker');
 const PANEL_ACTIVITY_TYPES: ReadonlySet<ActivityEvent['type']> = new Set([
@@ -21,12 +22,16 @@ function isPanelActivityType(value: string): value is ActivityEvent['type'] {
   return PANEL_ACTIVITY_TYPES.has(value as ActivityEvent['type']);
 }
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface ActivityEntry {
   id: number;
   type: string;
   timestamp: number;
   data: Record<string, unknown>;
 }
+
+// ─── Manager ────────────────────────────────────────────────────────
 
 /**
  * ActivityTracker — Tracks navigation, clicks, scrolls via Electron webview events.
@@ -37,6 +42,9 @@ export interface ActivityEntry {
  * Auto-snapshots on navigation events.
  */
 export class ActivityTracker {
+
+  // === 1. Private state ===
+
   private win: BrowserWindow;
   private panelManager: PanelManager;
   private drawManager: DrawOverlayManager;
@@ -46,12 +54,16 @@ export class ActivityTracker {
   private maxEntries = 1000;
   private autoSnapshotEnabled = false; // Disabled until stable
 
+  // === 2. Constructor ===
+
   constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, wingmanStream?: WingmanStream) {
     this.win = win;
     this.panelManager = panelManager;
     this.drawManager = drawManager;
     this.wingmanStream = wingmanStream;
   }
+
+  // === 4. Public methods ===
 
   /** Handle webview event forwarded from renderer */
   onWebviewEvent(data: { type: string; url?: string; tabId?: string; [key: string]: unknown }): void {
@@ -83,12 +95,28 @@ export class ActivityTracker {
       if (parsedUrl && urlHasProtocol(parsedUrl, 'http:', 'https:') && !hostnameMatches(parsedUrl, 'duckduckgo.com')) {
         setTimeout(() => {
           try {
-            this.win.webContents.send('auto-snapshot-request', { url });
+            this.win.webContents.send(IpcChannels.AUTO_SNAPSHOT_REQUEST, { url });
           } catch (e) { log.warn('Auto-snapshot send failed (window may be closed):', e instanceof Error ? e.message : String(e)); }
         }, 3000);
       }
     }
   }
+
+  /** Get activity log */
+  getLog(limit: number = 100, since?: number): ActivityEntry[] {
+    let entries = this.log;
+    if (since) {
+      entries = entries.filter(e => e.timestamp > since);
+    }
+    return entries.slice(-limit);
+  }
+
+  /** Enable/disable auto-snapshot */
+  setAutoSnapshot(enabled: boolean): void {
+    this.autoSnapshotEnabled = enabled;
+  }
+
+  // === 7. Private helpers ===
 
   /** Stream activity events to Wingman via WingmanStream */
   private streamToWingman(data: Record<string, unknown>): void {
@@ -126,8 +154,8 @@ export class ActivityTracker {
         break;
 
       case 'tab-open':
-        // Only stream user-initiated opens (source: 'robin'), not agent opens
-        if (data.source === 'robin') {
+        // Only stream user-initiated opens (source: 'user'), not agent opens
+        if (data.source === 'user') {
           void this.wingmanStream.emit({
             type: 'tab-opened',
             tabId,
@@ -176,19 +204,5 @@ export class ActivityTracker {
         }, 2000);
         break;
     }
-  }
-
-  /** Get activity log */
-  getLog(limit: number = 100, since?: number): ActivityEntry[] {
-    let entries = this.log;
-    if (since) {
-      entries = entries.filter(e => e.timestamp > since);
-    }
-    return entries.slice(-limit);
-  }
-
-  /** Enable/disable auto-snapshot */
-  setAutoSnapshot(enabled: boolean): void {
-    this.autoSnapshotEnabled = enabled;
   }
 }

@@ -13,9 +13,23 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Main] Unhandled rejection:', reason);
 });
 
-import { webContents, type WebContents } from 'electron';
+import { nativeTheme, webContents, type WebContents } from 'electron';
 import fs from 'fs';
 import { app, BrowserWindow, session, ipcMain } from 'electron';
+
+// Increase V8 heap limit for renderer processes to handle memory-heavy SPAs.
+// Default Electron renderer heap is ~1.5GB which causes OOM on sites like zhipin.com.
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+app.commandLine.appendSwitch('enable-precise-memory-info');
+// Disable Chromium features that break Electron:
+// - WebContentsForceDark: forces dark mode on sites that don't support it (unreadable pages)
+// - ThirdPartyStoragePartitioning: partitions cookies by top-level site, breaking Google
+//   cross-site auth (Electron doesn't support Related Website Sets)
+// - TrackingProtection3pcd: blocks third-party cookies in cross-site contexts,
+//   preventing Google auth cookies during youtube.com → accounts.google.com redirects
+app.commandLine.appendSwitch('disable-features',
+  'WebContentsForceDark,ThirdPartyStoragePartitioning,TrackingProtection3pcd');
+nativeTheme.themeSource = 'system';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
@@ -27,6 +41,7 @@ import { tandemDir } from './utils/paths';
 import { createLogger } from './utils/logger';
 import { createManagerRegistry, destroyRuntime, initializeRuntimeManagers, registerRuntimeIpcHandlers } from './bootstrap/runtime';
 import { registerInitialTabLifecycle } from './bootstrap/tab-session';
+import { IpcChannels } from './shared/ipc-channels';
 import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 import { isGoogleAuthUrl, shouldSkipStealth, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
 
@@ -45,8 +60,8 @@ const pendingContextMenuWebContents: WebContents[] = [];
 let pendingTabRegister: PendingTabRegister | null = null;
 
 function registerEarlyShellAuthIpc(): void {
-  try { ipcMain.removeHandler('get-api-token'); } catch { /* handler may not exist yet */ }
-  ipcMain.handle('get-api-token', async () => {
+  try { ipcMain.removeHandler(IpcChannels.GET_API_TOKEN); } catch { /* handler may not exist yet */ }
+  ipcMain.handle(IpcChannels.GET_API_TOKEN, async () => {
     try {
       return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
     } catch {
@@ -56,8 +71,8 @@ function registerEarlyShellAuthIpc(): void {
 }
 
 function registerEarlyTabRegisterIpc(): void {
-  ipcMain.removeAllListeners('tab-register');
-  ipcMain.on('tab-register', (_event, data: PendingTabRegister) => {
+  ipcMain.removeAllListeners(IpcChannels.TAB_REGISTER);
+  ipcMain.on(IpcChannels.TAB_REGISTER, (_event, data: PendingTabRegister) => {
     if (runtime?.tabManager) {
       return;
     }
@@ -176,22 +191,50 @@ async function createWindow(): Promise<BrowserWindow> {
   stealth.registerWith(dispatcher);
 
   // Cookie fix: ensure SameSite=None cookies have Secure flag (priority 10, response headers)
+  // Case-insensitive header lookup — Chromium may use any casing for Set-Cookie
   dispatcher.registerHeadersReceived({
     name: 'CookieFix',
     priority: 10,
     handler: (_details, responseHeaders) => {
-      const cookieHeaders = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
-      if (cookieHeaders) {
-        const fixedCookies = cookieHeaders.map((cookie: string) => {
-          if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
-            return cookie + '; Secure';
-          }
-          return cookie;
-        });
-        delete responseHeaders['Set-Cookie'];
-        responseHeaders['set-cookie'] = fixedCookies;
+      // Find all Set-Cookie header keys regardless of casing
+      const setCookieKeys = Object.keys(responseHeaders).filter(
+        k => k.toLowerCase() === 'set-cookie'
+      );
+      for (const key of setCookieKeys) {
+        const cookieHeaders = responseHeaders[key];
+        if (Array.isArray(cookieHeaders)) {
+          const fixedCookies = cookieHeaders.map((cookie: string) => {
+            if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
+              return cookie + '; Secure';
+            }
+            return cookie;
+          });
+          // Normalize to lowercase key
+          delete responseHeaders[key];
+          responseHeaders['set-cookie'] = fixedCookies;
+        }
       }
       return responseHeaders;
+    }
+  });
+
+  // Safety net: fix SameSite=None cookies in the jar that weren't caught by the header handler
+  // (e.g. cookies set via document.cookie or already present before the handler was attached)
+  ses.cookies.on('changed', (_event, cookie, _cause, removed) => {
+    if (removed) return;
+    if (cookie.sameSite === 'no_restriction' && !cookie.secure) {
+      const url = `https://${cookie.domain?.replace(/^\./, '') || 'unknown'}${cookie.path || '/'}`;
+      ses.cookies.set({
+        url,
+        name: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain || undefined,
+        path: cookie.path || undefined,
+        secure: true,
+        httpOnly: cookie.httpOnly || undefined,
+        sameSite: 'no_restriction',
+        expirationDate: cookie.expirationDate || undefined,
+      }).catch(() => { /* best effort — cookie may be read-only or expired */ });
     }
   });
 
@@ -310,7 +353,7 @@ async function createWindow(): Promise<BrowserWindow> {
         // Sidebar webviews: allow auth popups, open other links in a new tab
         if (isSidebarWebview && !isAuth) {
           if (url && url !== 'about:blank' && mainWindow) {
-            mainWindow.webContents.send('open-url-in-new-tab', url);
+            mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
           }
           return { action: 'deny' };
         }
@@ -335,7 +378,7 @@ async function createWindow(): Promise<BrowserWindow> {
         }
         // All other popups → new tab
         if (url && url !== 'about:blank' && mainWindow) {
-          mainWindow.webContents.send('open-url-in-new-tab', url);
+          mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
         }
         return { action: 'deny' };
       });
@@ -353,7 +396,7 @@ async function createWindow(): Promise<BrowserWindow> {
             if (!isGoogleAuthUrl(url)) {
               win.close();
               if (mainWindow) {
-                mainWindow.webContents.send('reload-sidebar-webview', sidebarId);
+                mainWindow.webContents.send(IpcChannels.RELOAD_SIDEBAR_WEBVIEW, sidebarId);
               }
             }
           });
@@ -375,7 +418,7 @@ async function createWindow(): Promise<BrowserWindow> {
           return;
         }
         if (!currentTabManager.hasWebContents(contents.id)) {
-          mainWindow.webContents.send('open-url-in-new-tab', url);
+          mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
           contents.stop();
         }
       });
@@ -391,7 +434,7 @@ async function createWindow(): Promise<BrowserWindow> {
           contents.setWindowOpenHandler(({ url: targetUrl }) => {
             log.info(`[ExtPopup] window.open intercepted from extension popup: ${targetUrl}`);
             if (mainWindow && targetUrl && targetUrl !== 'about:blank') {
-              mainWindow.webContents.send('open-url-in-new-tab', targetUrl);
+              mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, targetUrl);
             }
             return { action: 'deny' };
           });
@@ -426,7 +469,7 @@ async function createWindow(): Promise<BrowserWindow> {
     title: 'Tandem Browser',
     ...platformWindowOptions,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload', 'index.js'),
       partition,
       webviewTag: true,
       contextIsolation: true,
@@ -467,6 +510,20 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   api = new TandemAPI({ win, port: API_PORT, registry });
   await api.start();
   log.info(`🧠 Tandem API running on http://localhost:${API_PORT}`);
+
+  // Security: Monitor openclaw.json for unauthorized modifications (prompt injection defense)
+  const { startConfigIntegrityMonitor } = await import('./openclaw/connect');
+  startConfigIntegrityMonitor((detail) => {
+    log.warn(`[ConfigIntegrity] ${detail}`);
+    // Alert the user via notification
+    const { Notification } = require('electron');
+    new Notification({
+      title: '⚠️ Security Alert — Tandem Browser',
+      body: detail,
+      urgency: 'critical',
+    }).show();
+
+  });
 
   // Phase 4: Wire GatekeeperWebSocket + NM proxy WebSocket onto the running HTTP server
   const httpServer = api.getHttpServer();

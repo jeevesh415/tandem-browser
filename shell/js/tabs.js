@@ -87,8 +87,9 @@
       tabEl.dataset.tabId = tabId;
       tabEl.draggable = true;
       tabEl.innerHTML = `
-        <span class="tab-source" title="You controlled">👤</span>
+        <span class="tab-source" style="display:none"></span>
         <span class="group-dot" style="display:none"></span>
+        <span class="tab-emoji" style="display:none"></span>
         <img class="tab-favicon" src="" style="display:none">
         <span class="tab-title">New Tab</span>
         <button class="tab-close" title="Close tab">✕</button>
@@ -191,9 +192,10 @@
 
     function createRendererTab(tabId, url, partition = 'persist:tandem', options = {}) {
       const webview = document.createElement('webview');
-      webview.setAttribute('src', url);
-      webview.setAttribute('allowpopups', '');
+      // Chromium only applies a webview partition if it is present before first navigation.
       webview.setAttribute('partition', partition);
+      webview.setAttribute('allowpopups', '');
+      webview.setAttribute('src', url);
       webview.dataset.tabId = tabId;
       container.appendChild(webview);
 
@@ -344,6 +346,22 @@
       focusTab(tabId) {
         focusRendererTab(tabId);
       },
+
+      setEmoji(tabId, emoji, flash) {
+        const entry = tabs.get(tabId);
+        if (!entry) return;
+        const emojiEl = entry.tabEl.querySelector('.tab-emoji');
+        if (!emojiEl) return;
+        if (emoji) {
+          emojiEl.textContent = emoji;
+          emojiEl.style.display = '';
+          emojiEl.classList.toggle('flash', !!flash);
+        } else {
+          emojiEl.textContent = '';
+          emojiEl.style.display = 'none';
+          emojiEl.classList.remove('flash');
+        }
+      },
     };
 
     window.__tandemRenderer = {
@@ -384,10 +402,9 @@
 
     urlBar.addEventListener('focus', () => urlBar.select());
     urlBar.addEventListener('click', () => urlBar.select());
-    urlBar.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
 
-      let url = urlBar.value.trim();
+    function navigateToInput(raw) {
+      let url = raw.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         if (url.includes('.') && !url.includes(' ')) {
           url = 'https://' + url;
@@ -395,11 +412,21 @@
           url = 'https://duckduckgo.com/?q=' + encodeURIComponent(url);
         }
       }
-
       const entry = tabs.get(activeTabId);
       if (entry) {
         entry.webview.loadURL(url);
       }
+    }
+
+    // URL autocomplete integration
+    if (window.__urlAutocomplete) {
+      window.__urlAutocomplete.init(urlBar, (url) => navigateToInput(url));
+    }
+
+    urlBar.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      // If autocomplete handled this event via stopImmediatePropagation, we won't reach here.
+      navigateToInput(urlBar.value);
     });
 
     btnNewTab.addEventListener('click', () => {
@@ -435,5 +462,11 @@
           }
         });
       }
+
+    if (window.tandem && window.tandem.onTabEmojiChanged) {
+      window.tandem.onTabEmojiChanged((data) => {
+        window.__tandemTabs.setEmoji(data.tabId, data.emoji, data.flash);
+      });
+    }
     })();
 })();

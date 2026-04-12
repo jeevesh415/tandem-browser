@@ -6,6 +6,63 @@ import * as path from 'path';
 import { ensureDir, tandemDir } from '../utils/paths';
 
 const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+
+// ═══ Config Integrity Monitor ═══
+// Watch openclaw.json for unexpected modifications (prompt injection defense).
+// Tandem NEVER writes to this file — any change is either the user or a compromised agent.
+let configWatcher: fs.FSWatcher | null = null;
+let lastKnownConfigHash: string | null = null;
+
+function hashFileSync(filePath: string): string | null {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return crypto.createHash('sha256').update(content).digest('hex');
+  } catch { return null; }
+}
+
+export function startConfigIntegrityMonitor(onTamper: (detail: string) => void): void {
+  if (configWatcher) return;
+  if (!fs.existsSync(OPENCLAW_CONFIG_PATH)) return;
+
+  lastKnownConfigHash = hashFileSync(OPENCLAW_CONFIG_PATH);
+
+  configWatcher = fs.watch(OPENCLAW_CONFIG_PATH, () => {
+    const newHash = hashFileSync(OPENCLAW_CONFIG_PATH);
+    if (newHash && newHash !== lastKnownConfigHash) {
+      lastKnownConfigHash = newHash;
+      // Only alert on suspicious patterns — normal config changes are fine
+      try {
+        const content = JSON.parse(fs.readFileSync(OPENCLAW_CONFIG_PATH, 'utf-8'));
+        const suspicious: string[] = [];
+        // CORS wildcard = classic prompt injection target
+        const raw = JSON.stringify(content);
+        if (raw.includes('"*"') && (raw.includes('cors') || raw.includes('CORS') || raw.includes('allowedOrigins'))) {
+          suspicious.push('CORS set to wildcard (*)');
+        }
+        // Auth token replaced with something trivially short
+        if (content.auth?.token && content.auth.token.length < 10) {
+          suspicious.push(`Auth token suspiciously short: "${content.auth.token}"`);
+        }
+        // Gateway token replaced
+        if (content.token && typeof content.token === 'string' && content.token.length < 10) {
+          suspicious.push(`Gateway token suspiciously short: "${content.token}"`);
+        }
+        // Only fire if something actually looks wrong
+        if (suspicious.length > 0) {
+          onTamper(`⚠️ SUSPICIOUS openclaw.json modification: ${suspicious.join(', ')}`);
+        }
+      } catch {
+        // Parse failure after modification = also suspicious
+        onTamper('openclaw.json was modified but could not be parsed — possible corruption');
+      }
+    }
+  });
+}
+
+export function stopConfigIntegrityMonitor(): void {
+  configWatcher?.close();
+  configWatcher = null;
+}
 const OPENCLAW_IDENTITY_PATH = tandemDir('openclaw', 'identity', 'device.json');
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
 const OPENCLAW_SCOPES = ['operator.read', 'operator.write'] as const;
@@ -88,7 +145,7 @@ function generateIdentity(): DeviceIdentity {
   };
 }
 
-function writeIdentity(filePath: string, identity: DeviceIdentity): void {
+async function writeIdentity(filePath: string, identity: DeviceIdentity): Promise<void> {
   ensureDir(path.dirname(filePath));
   const stored: StoredDeviceIdentity = {
     version: 1,
@@ -97,13 +154,13 @@ function writeIdentity(filePath: string, identity: DeviceIdentity): void {
     privateKeyPem: identity.privateKeyPem,
     createdAtMs: Date.now(),
   };
-  fs.writeFileSync(filePath, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600 });
+  await fs.promises.writeFile(filePath, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600 });
 }
 
-function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceIdentity {
+async function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): Promise<DeviceIdentity> {
   try {
     if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, 'utf-8');
+      const raw = await fs.promises.readFile(filePath, 'utf-8');
       const parsed = JSON.parse(raw) as Partial<StoredDeviceIdentity>;
       if (
         parsed?.version === 1
@@ -118,7 +175,7 @@ function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceId
             publicKeyPem: parsed.publicKeyPem,
             privateKeyPem: parsed.privateKeyPem,
           };
-          writeIdentity(filePath, nextIdentity);
+          await writeIdentity(filePath, nextIdentity);
           return nextIdentity;
         }
 
@@ -134,7 +191,7 @@ function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceId
   }
 
   const identity = generateIdentity();
-  writeIdentity(filePath, identity);
+  await writeIdentity(filePath, identity);
   return identity;
 }
 
@@ -178,7 +235,7 @@ function buildDeviceAuthPayloadV3(params: {
   ].join('|');
 }
 
-export function buildOpenClawConnectParams(nonce: string): OpenClawConnectParams {
+export async function buildOpenClawConnectParams(nonce: string): Promise<OpenClawConnectParams> {
   const trimmedNonce = nonce.trim();
   if (!trimmedNonce) {
     throw new Error('nonce is required');
@@ -189,7 +246,7 @@ export function buildOpenClawConnectParams(nonce: string): OpenClawConnectParams
     throw new Error('No token field in openclaw.json');
   }
 
-  const identity = loadOrCreateDeviceIdentity();
+  const identity = await loadOrCreateDeviceIdentity();
   const signedAt = Date.now();
   const platform = process.platform;
   const deviceFamily = 'desktop';

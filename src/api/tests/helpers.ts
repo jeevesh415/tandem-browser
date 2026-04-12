@@ -57,7 +57,7 @@ export function createMockContext(): RouteContext {
         url: 'about:blank',
         title: '',
         active: true,
-        source: 'robin',
+        source: 'user',
         partition: 'persist:tandem',
       }),
       closeTab: vi.fn().mockResolvedValue(true),
@@ -74,9 +74,13 @@ export function createMockContext(): RouteContext {
         url: 'https://example.com',
         title: 'Example',
         active: true,
-        source: 'robin',
+        source: 'user',
         partition: 'persist:tandem',
       }),
+      setEmoji: vi.fn().mockReturnValue(true),
+      clearEmoji: vi.fn().mockReturnValue(true),
+      flashEmoji: vi.fn().mockReturnValue(true),
+      getEmoji: vi.fn().mockReturnValue(null),
       count: 1,
     } as any,
 
@@ -389,8 +393,13 @@ export function createMockContext(): RouteContext {
       queryXPath: vi.fn().mockResolvedValue([]),
       getStorage: vi.fn().mockResolvedValue({}),
       getPerformanceMetrics: vi.fn().mockResolvedValue(null),
+      attachToTab: vi.fn().mockResolvedValue(mockWC),
       evaluate: vi.fn().mockResolvedValue(undefined),
+      evaluateInTab: vi.fn().mockResolvedValue(undefined),
       sendCommand: vi.fn().mockResolvedValue({}),
+      sendCommandToTab: vi.fn().mockResolvedValue({}),
+      getAttachedWebContents: vi.fn().mockReturnValue(mockWC),
+      getDispatchWebContents: vi.fn().mockReturnValue(null),
       screenshotElement: vi.fn().mockResolvedValue(null),
     } as any,
 
@@ -519,7 +528,16 @@ export function createMockContext(): RouteContext {
       updateItem: vi.fn().mockReturnValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
       deleteItem: vi.fn().mockReturnValue(true),
       reorderItems: vi.fn().mockReturnValue(true),
+      updateBoardSettings: vi.fn().mockReturnValue({ id: 'pb-1', name: 'Test', emoji: '📌', createdAt: '', updatedAt: '', items: [], settings: {} }),
       destroy: vi.fn(),
+    } as any,
+
+    // ── clipboardManager ────────────────────────
+    clipboardManager: {
+      read: vi.fn().mockReturnValue({ hasText: false, hasImage: false, hasHTML: false, formats: [] }),
+      writeText: vi.fn(),
+      writeImage: vi.fn(),
+      saveAs: vi.fn().mockReturnValue({ path: '/tmp/test.png', size: 1024 }),
     } as any,
   };
 

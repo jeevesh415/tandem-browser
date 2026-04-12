@@ -1,20 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { IpcChannels } from '../../shared/ipc-channels';
+
+const mockTabWebContents = new Map<number, any>();
 
 // Mock electron before importing TabManager
 vi.mock('electron', () => {
-  const mockWebContents = new Map<number, any>();
-  let nextWcId = 100;
-
   return {
     BrowserWindow: vi.fn(),
     session: {},
     webContents: {
-      fromId: (id: number) => mockWebContents.get(id) || null,
+      fromId: (id: number) => mockTabWebContents.get(id) || null,
     },
     WebContents: {},
-    // Expose for test helpers
-    __mockWebContents: mockWebContents,
-    __nextWcId: () => nextWcId++,
   };
 });
 
@@ -30,7 +27,14 @@ function createMockWindow() {
     if (code.includes('createTab(')) {
       const tabIdMatch = code.match(/createTab\("(tab-\d+)"/);
       if (tabIdMatch) rendererTabs.set(tabIdMatch[1], true);
-      return Promise.resolve(wcIdCounter++);
+      const wcId = wcIdCounter++;
+      mockTabWebContents.set(wcId, {
+        id: wcId,
+        executeJavaScript: vi.fn().mockResolvedValue('{}'),
+        loadURL: vi.fn().mockResolvedValue(undefined),
+        isDestroyed: vi.fn().mockReturnValue(false),
+      });
+      return Promise.resolve(wcId);
     }
     if (code.includes('removeTab(')) {
       const tabIdMatch = code.match(/removeTab\("(tab-\d+)"/);
@@ -67,6 +71,7 @@ describe('TabManager', () => {
   let win: ReturnType<typeof createMockWindow>;
 
   beforeEach(() => {
+    mockTabWebContents.clear();
     win = createMockWindow();
     tm = new TabManager(win);
   });
@@ -93,7 +98,7 @@ describe('TabManager', () => {
     it('creates a new tab with default values', async () => {
       const tab = await tm.openTab('https://test.com');
       expect(tab.url).toBe('https://test.com');
-      expect(tab.source).toBe('robin');
+      expect(tab.source).toBe('user');
       expect(tab.pinned).toBe(false);
       expect(tab.partition).toBe('persist:tandem');
       expect(tm.count).toBe(1);
@@ -115,15 +120,58 @@ describe('TabManager', () => {
 
     it('does not focus when focus=false', async () => {
       const t1 = await tm.openTab('https://one.com');
-      await tm.openTab('https://two.com', undefined, 'robin', 'persist:tandem', false);
+      await tm.openTab('https://two.com', undefined, 'user', 'persist:tandem', false);
       expect(tm.getActiveTab()?.id).toBe(t1.id);
     });
 
+    it('copies IndexedDB from the source tab and reloads the target URL', async () => {
+      const sourceTab = await tm.openTab('https://discord.com/channels/@me');
+      const sourceWc = tm.getWebContents(sourceTab.id) as any;
+      sourceWc.executeJavaScript.mockResolvedValueOnce(
+        JSON.stringify({
+          'keyval-store': {
+            version: 1,
+            stores: {
+              keyval: [['token', 'secret']],
+            },
+          },
+        })
+      );
+
+      const inheritedTab = await tm.openTab(
+        'https://discord.com/channels/123',
+        undefined,
+        'user',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: sourceTab.id },
+      );
+      const targetWc = tm.getWebContents(inheritedTab.id) as any;
+
+      expect(sourceWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('indexedDB.databases()'));
+      expect(targetWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('store.put'));
+      expect(targetWc.loadURL).toHaveBeenCalledWith('https://discord.com/channels/123');
+    });
+
+    it('falls back to a normal open when the source tab no longer exists', async () => {
+      const tab = await tm.openTab(
+        'https://discord.com/channels/@me',
+        undefined,
+        'user',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: 'tab-999' },
+      );
+
+      expect(tab.url).toBe('https://discord.com/channels/@me');
+      expect(tab.partition).toBe('persist:tandem');
+    });
+
     it('sends tab-source-changed IPC', async () => {
-      await tm.openTab('https://test.com', undefined, 'kees');
+      await tm.openTab('https://test.com', undefined, 'wingman');
       expect(win.webContents.send).toHaveBeenCalledWith(
         'tab-source-changed',
-        expect.objectContaining({ source: 'kees' })
+        expect.objectContaining({ source: 'wingman' })
       );
     });
   });
@@ -180,7 +228,7 @@ describe('TabManager', () => {
   describe('focusTab()', () => {
     it('activates the target tab and deactivates the previous', async () => {
       const t1 = await tm.openTab('https://one.com');
-      const t2 = await tm.openTab('https://two.com', undefined, 'robin', 'persist:tandem', false);
+      const t2 = await tm.openTab('https://two.com', undefined, 'user', 'persist:tandem', false);
       await tm.focusTab(t2.id);
       expect(tm.getActiveTab()?.id).toBe(t2.id);
       expect(tm.getTab(t1.id)?.active).toBe(false);
@@ -233,7 +281,7 @@ describe('TabManager', () => {
       const tab = await tm.openTab('https://test.com');
       tm.pinTab(tab.id);
       expect(win.webContents.send).toHaveBeenCalledWith(
-        'tab-pin-changed',
+        IpcChannels.TAB_PIN_CHANGED,
         { tabId: tab.id, pinned: true }
       );
     });
@@ -242,12 +290,12 @@ describe('TabManager', () => {
   describe('setTabSource()', () => {
     it('changes the tab source', async () => {
       const tab = await tm.openTab('https://test.com');
-      tm.setTabSource(tab.id, 'kees');
-      expect(tm.getTabSource(tab.id)).toBe('kees');
+      tm.setTabSource(tab.id, 'wingman');
+      expect(tm.getTabSource(tab.id)).toBe('wingman');
     });
 
     it('returns false for unknown tab', () => {
-      expect(tm.setTabSource('nope', 'kees')).toBe(false);
+      expect(tm.setTabSource('nope', 'wingman')).toBe(false);
     });
   });
 
@@ -402,6 +450,84 @@ describe('TabManager', () => {
         const { removed } = await tm.reconcileWithRenderer();
         expect(removed).toHaveLength(0);
       });
+    });
+  });
+
+  // ─── Emoji Methods ──────────────────────────────────
+
+  describe('setEmoji()', () => {
+    it('sets emoji on a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      const result = tm.setEmoji(tab.id, '🔥');
+      expect(result).toBe(true);
+      expect(tab.emoji).toBe('🔥');
+      expect(tab.emojiFlash).toBe(false);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: '🔥', flash: false },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.setEmoji('nonexistent', '🔥')).toBe(false);
+    });
+
+    it('clears flash when setting emoji', async () => {
+      const tab = await tm.openTab('https://test.com');
+      tm.flashEmoji(tab.id, '⚡');
+      expect(tab.emojiFlash).toBe(true);
+      tm.setEmoji(tab.id, '🔥');
+      expect(tab.emojiFlash).toBe(false);
+    });
+  });
+
+  describe('clearEmoji()', () => {
+    it('clears emoji from a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      tm.setEmoji(tab.id, '🔥');
+      const result = tm.clearEmoji(tab.id);
+      expect(result).toBe(true);
+      expect(tab.emoji).toBeNull();
+      expect(tab.emojiFlash).toBe(false);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: null, flash: false },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.clearEmoji('nonexistent')).toBe(false);
+    });
+  });
+
+  describe('flashEmoji()', () => {
+    it('sets emoji with flash on a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      const result = tm.flashEmoji(tab.id, '⚡');
+      expect(result).toBe(true);
+      expect(tab.emoji).toBe('⚡');
+      expect(tab.emojiFlash).toBe(true);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: '⚡', flash: true },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.flashEmoji('nonexistent', '⚡')).toBe(false);
+    });
+  });
+
+  describe('getEmoji()', () => {
+    it('returns emoji for a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      expect(tm.getEmoji(tab.id)).toBeNull();
+      tm.setEmoji(tab.id, '🔥');
+      expect(tm.getEmoji(tab.id)).toBe('🔥');
+    });
+
+    it('returns null for unknown tab', () => {
+      expect(tm.getEmoji('nonexistent')).toBeNull();
     });
   });
 });

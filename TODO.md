@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: March 17, 2026
+Last updated: April 9, 2026
 
 ## Purpose
 
@@ -14,7 +14,8 @@ Last updated: March 17, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.62.16`
+- Current app version: `0.70.0`
+- MCP server: 239 tools (full API parity + awareness)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -24,6 +25,7 @@ Last updated: March 17, 2026
 
 ### Product Features
 
+- [ ] Update `skill/SKILL.md` to document MCP as a first-class connection method alongside direct HTTP, with examples for Claude Code, Cursor, and other MCP clients
 - [ ] Remove the remaining legacy OpenClaw compatibility IPC and unused webhook chat code after the signed gateway-chat path has shipped for a release or two
 - [ ] `WebSocket /watch/live` for live watch updates
 - [ ] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
@@ -86,6 +88,21 @@ Last updated: March 17, 2026
 
 ## Recently Completed
 
+- [x] Awareness tools: activity digest and real-time focus detection for shared human-AI context
+- [x] URL bar autocomplete from browsing history (Chrome-style dropdown with inline completion)
+- [x] MCP bookmark management: list, add, delete, update, folders, move, check (7 tools)
+- [x] MCP history and site memory: list, clear, activity log, site memory search (6 tools)
+- [x] MCP keyboard input: press-key and press-key-combo with new HTTP endpoints (2 tools)
+- [x] MCP live preview: create, update, list, delete HTML previews in browser (4 tools)
+- [x] Dark mode rendering fix: disabled Chromium WebContentsForceDark, set nativeTheme to system
+- [x] Google CookieMismatch fix: restored real Electron UA for Google auth, disabled cookie partitioning, fixed Sec-CH-UA mismatch
+- [x] Stealth UA auto-sync: dynamic version from process.versions.chrome instead of hardcoded Chrome/131
+- [x] Workspace emoji icons: emoji strings now render directly in sidebar
+- [x] MCP Server — Full API Parity: expanded from 24 to 231 tools across 29 modular files, covering every HTTP API endpoint. Refactored from monolithic server.ts into tools/ directory matching API route structure.
+- [x] Preload sandbox fix: added esbuild bundling step so the split preload modules work with Electron's `sandbox: true`
+- [x] Security dependency updates: resolved all 28 Dependabot alerts (electron, hono, lodash, brace-expansion, path-to-regexp)
+- [x] Workspace API handoff for OpenClaw: `/tabs/open` now honors `workspaceId`, `/workspaces/:id/activate` and `/workspaces/:id/tabs` exist, and `/wingman-alert` can bring the requested workspace into view before notifying the user
+- [x] API `X-Tab-Id` targeting for `/snapshot`, `/page-content`, `/page-html`, and `/execute-js`, with background-tab-safe CDP evaluation and tab-scoped snapshot refs
 - [x] Password manager: local SQLite + AES-256-GCM vault, master password, autofill, password generator, and `GET /passwords/suggest`
 - [x] Behavioral learning models: profile compiler, typing timing model, mouse trajectory replay, and fallback humanization behavior
 - [x] SPA rendering fix for `/page-content` on dynamic pages; see `docs/archive/plans/spa-rendering-bug.md`

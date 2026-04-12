@@ -1,44 +1,27 @@
 # Documentation Guide
 
-This directory contains both public project documentation and maintainer-facing
-working material.
-
-Tandem itself is a public developer preview and is intentionally positioned as
-an OpenClaw-first browser environment, so documentation should stay consistent
-with that framing.
-
-That positioning is first-party, not incidental: Tandem is maintained in the
-same ecosystem as OpenClaw and should be documented accordingly.
+This directory contains project documentation for Tandem — an agent-first
+browser for human-AI collaboration.
 
 ## Start Here
 
-If you are new to the project, use this order:
+If you are new to the project:
 
 1. [README.md](../README.md)
 2. [PROJECT.md](../PROJECT.md)
 3. [CHANGELOG.md](../CHANGELOG.md)
-4. the specific docs folder relevant to the subsystem you are touching
 
-## Public-Facing Docs
+## Directory Structure
 
-- `plans/`: design proposals for not-yet-implemented features
-- `research/`: browser and feature research material
-- `implementations/`: subsystem notes and implementation writeups
-- `archive/`: historical material kept for engineering context
+| Directory | Contents |
+|-----------|----------|
+| `plans/` | Design documents for upcoming features |
+| `templates/` | Standard patterns for contributing |
+| `research/` | Competitive analysis and feature inventories |
+| `archive/` | Historical documentation for completed work |
+| `screenshots/` | UI reference images |
 
-## Maintainer Workflow Docs
+## Key Files
 
-Some directories still contain files such as `CLAUDE.md`,
-`LEES-MIJ-EERST.md`, phase documents, and session prompts. Those files are
-retained because they still capture useful implementation context, but they are
-not the recommended entry point for new public readers.
-
-## Internal Planning Docs
-
-Project-management material lives under `internal/`.
-
-- `internal/ROADMAP.md`
-- `internal/STATUS.md`
-
-These files are intentionally separated from the main public documentation
-surface.
+- `api-current.md` — Current API surface overview
+- `INDEX.md` — Full navigation map (updated separately)

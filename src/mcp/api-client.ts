@@ -10,7 +10,7 @@ function getToken(): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MCP relays many heterogeneous Tandem API responses
-export async function apiCall(method: string, endpoint: string, body?: any): Promise<any> {
+export async function apiCall(method: string, endpoint: string, body?: any, headers?: Record<string, string>): Promise<any> {
   const token = getToken();
 
   let response: Response;
@@ -19,7 +19,8 @@ export async function apiCall(method: string, endpoint: string, body?: any): Pro
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined
     });
@@ -43,6 +44,18 @@ export async function apiCall(method: string, endpoint: string, body?: any): Pro
   }
 
   return response.json();
+}
+
+/** Build X-Tab-Id headers when a tabId is provided */
+export function tabHeaders(tabId?: string): Record<string, string> | undefined {
+  return tabId ? { 'X-Tab-Id': tabId } : undefined;
+}
+
+/** Truncate text to a maximum number of words */
+export function truncateToWords(text: string, maxWords: number): string {
+  const words = text.split(/\s+/);
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '\n\n[... truncated, ' + (words.length - maxWords) + ' more words]';
 }
 
 /** Log an activity message to the Wingman panel */

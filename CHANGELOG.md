@@ -2,6 +2,284 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.71.0] - 2026-04-11
+
+- feat: tab emoji badges — assign emoji to tabs for quick visual identification
+
+New endpoints:
+- POST /tabs/:id/emoji — set or flash an emoji badge on a tab
+- DELETE /tabs/:id/emoji — remove emoji badge from a tab
+
+New MCP tools:
+- tandem_tab_emoji_set — set emoji badge on a tab
+- tandem_tab_emoji_remove — remove emoji badge from a tab
+- tandem_tab_emoji_flash — flash a pulsing emoji to attract user attention
+
+Emoji badges are per tab session. The AI can flash emojis to signal the user
+(e.g. "this tab is ready for review"). Users assign emojis via right-click
+context menu. Everything runs in the shell — no injection into webviews.
+
+## [v0.70.0] - 2026-04-10
+
+- feat: add awareness tools — digest and focus for shared human-AI context
+
+Two new endpoints + MCP tools:
+- GET /awareness/digest — recent browser activity (navigation, interactions,
+  errors, tabs, downloads, watches) for the last N minutes
+- GET /awareness/focus — lightweight current-state check (active tab,
+  activity type, idle time, error flags)
+
+These enable the AI to understand what the human is doing and contribute
+meaningfully — the core of the tandem principle.
+
+## [v0.69.3] - 2026-04-10
+
+- fix: add .nojekyll to enable static GitHub Pages
+
+## [v0.69.2] - 2026-04-10
+
+- fix: move FUNDING.yml to correct location (.github/)
+
+## [v0.69.1] - 2026-04-10
+
+- fix: route MCP server logging to stderr to prevent protocol corruption
+
+MCP uses stdio for JSON protocol messages. console.info/debug go to stdout
+and break the protocol. All MCP server logging now goes through console.error
+(stderr) only.
+
+## [v0.69.0] - 2026-04-09
+
+### Added
+
+- Chrome-style URL bar autocomplete from browsing history — dropdown with matching URLs, inline completion, keyboard navigation
+- MCP bookmark management tools: `tandem_bookmarks_list`, `tandem_bookmark_add`, `tandem_bookmark_delete`, `tandem_bookmark_update`, `tandem_bookmark_folder_add`, `tandem_bookmark_move`, `tandem_bookmark_check`
+- MCP history and site memory tools: `tandem_history_list`, `tandem_history_clear`, `tandem_activity_log`, `tandem_site_memory_list`, `tandem_site_memory_get`, `tandem_site_memory_search`
+- MCP keyboard input tools: `tandem_press_key`, `tandem_press_key_combo` with `POST /press-key` and `POST /press-key-combo` HTTP endpoints
+- MCP live preview tools: `tandem_preview_create`, `tandem_preview_update`, `tandem_preview_list`, `tandem_preview_delete`
+- MCP server now exposes **231 tools** with full HTTP API parity (up from 63 in v0.68.0)
+- MCP tools refactored into 29 modular files under `src/mcp/tools/` matching the HTTP API route structure
+- MCP Chrome import tools: profiles, bookmarks, history, cookies, sync start/stop/status
+- MCP extension extras: Chrome import, gallery, updates lifecycle, disk usage, conflicts, native messaging
+- MCP sidebar tools: config, toggle/activate items, reorder, state
+- MCP media tools: voice start/stop/status, audio start/stop/status/recordings, draw toggle, panel toggle
+- MCP screenshot extras: annotated capture, screenshot list
+- MCP events/behavior tools: recent events, live status/toggle, behavior stats/clear
+- MCP system tools: folder picker, injection override, Google Photos integration
+- MCP agent extras: autonomy get/update, approval check, agent activity log, per-tab lock status
+- MCP password, form, workflow, task, pinboard, watch, headless, auth, context, script/style, session, device, data, preview tools — all at full parity
+
+### Fixed
+
+- Dark mode rendering: disabled Chromium's `WebContentsForceDark` that forcefully darkened websites without native dark mode support; set `nativeTheme.themeSource = 'system'` so sites receive OS preference naturally
+- Google CookieMismatch: restored real Electron UA for Google auth URLs (session.setUserAgent baked fake Chrome UA into defaults — must overwrite, not delete); disabled cookie partitioning features that Electron can't handle without Related Website Sets; fixed Sec-CH-UA header mismatch for Google auth
+- Stealth UA auto-sync: replaced hardcoded `Chrome/131` with dynamic version from `process.versions.chrome` to prevent version mismatch detection
+- Workspace emoji icons: `getIconSvg()` now renders emoji strings directly instead of falling back to default SVG
+- History date formatting: fixed `Invalid Date` in `tandem_history_list` (field name mismatch: `visitedAt` → `lastVisitTime`)
+- URL autocomplete auth: added missing `Authorization: Bearer` header to history search API calls
+
+## [v0.68.0] - 2026-04-09
+
+### Added
+
+- MCP server expanded from 24 to 63 tools — full API coverage for any MCP-connected agent (Claude Code, Cursor, OpenClaw, or third-party)
+- MCP tab targeting: optional `tabId` parameter on all read/interaction tools for background tab operations via `X-Tab-Id`
+- MCP accessibility snapshots: `tandem_snapshot`, `tandem_snapshot_click`, `tandem_snapshot_fill` with `@ref` IDs
+- MCP semantic locators: `tandem_find`, `tandem_find_click`, `tandem_find_fill` for role/text/label/placeholder queries
+- MCP DevTools tools: console log inspection, network monitoring, DOM queries, performance metrics, storage inspection, JS evaluation via CDP
+- MCP network tools: network log, API endpoint discovery, HAR export, request mocking/unmocking
+- MCP workspace tools: create, activate, delete, move tabs between workspaces
+- MCP session tools: isolated session create/switch/destroy, same-origin fetch relay
+- MCP tab locks: acquire/release for multi-agent coordination
+- MCP content tools: structured content extraction, raw HTML, cookie management
+- `tandem_wingman_alert` MCP tool for agent→human escalation with notification levels
+- `tandem_scroll` now supports `target` (top/bottom) and `selector` (scroll-into-view) parameters
+- `tandem_open_tab` now accepts optional `workspaceId` parameter via MCP
+- esbuild bundling for preload scripts to support Electron sandbox mode with modular source files
+
+### Fixed
+
+- Preload module split (PR #49) broke all renderer→main IPC because `sandbox: true` only allows `require('electron')` in preload scripts; resolved by bundling with esbuild
+
+### Security
+
+- Updated electron 40.6.0 → 40.8.5 (17 alerts resolved)
+- Updated hono → 4.12.12, @hono/node-server → 1.19.13 (6 alerts resolved)
+- Updated lodash → 4.18.1 (2 alerts: code injection, prototype pollution)
+- Fixed brace-expansion and path-to-regexp vulnerabilities
+- Resolved all 28 Dependabot security alerts → 0 vulnerabilities
+
+## [v0.67.0] - 2026-04-02
+
+### Added
+- AI workspaces for agents: OpenClaw or any API-driven agent can now operate in its own dedicated Tandem workspace, keep its tabs separate from Robin's browsing, and persist that workspace across sessions
+- `POST /workspaces/:id/activate` switches the active workspace via API so Tandem can bring the agent's workspace into view instantly
+- `POST /workspaces/:id/tabs` moves an existing tab into a workspace by webContents ID
+- `POST /tabs/open` now accepts `inheritSessionFrom` and copies IndexedDB data from the source tab into the new tab before reloading the destination, preserving Discord-style IndexedDB-backed logins.
+
+### Changed
+- `POST /tabs/open` now accepts `workspaceId`, so new tabs can be assigned directly into the agent's workspace at creation time
+- `POST /wingman-alert` now accepts optional `workspaceId`, so captcha or takeover alerts can automatically switch Tandem into the right workspace before notifying Robin
+
+## [v0.66.0] - 2026-04-02
+
+### Added
+- `X-Tab-Id` header support for background-tab targeting on `GET /snapshot`, `GET /page-content`, `GET /page-html`, `POST /execute-js`, `POST /wait`, `GET /links`, and `GET /forms`
+- Snapshot refs now remember which tab produced them, so ref follow-up actions stay attached to the correct tab
+
+### Changed
+- `skill/SKILL.md` now reflects the current Tandem API targeting model and includes ClawHub frontmatter metadata
+
+### Fixed
+- `/find/click` and `/find/fill` now catch thrown route errors and return JSON `500` responses instead of dropping the connection
+
+## [v0.65.5] - 2026-03-21
+
+- fix: CodeQL config — exclude security scanner modules from XSS taint analysis
+
+The PromptInjectionGuard and injection-scanner middleware intentionally parse
+untrusted HTML to detect prompt injection. Matched text is sanitized via
+character-level escaping and only appears in JSON API responses, never in
+browser DOM context. CodeQL's js/xss taint tracking cannot distinguish this
+from actual XSS vulnerabilities.
+
+## [v0.65.4] - 2026-03-21
+
+- fix: CodeQL — use char-level sanitization to break taint tracking for HTML output
+
+## [v0.65.3] - 2026-03-21
+
+- fix: CodeQL — strengthen HTML/JS escaping, escape at extraction point, strip script tags
+
+## [v0.65.2] - 2026-03-21
+
+- fix: CodeQL — escape HTML/JS in injection scanner output to prevent XSS
+
+## [v0.65.1] - 2026-03-21
+
+- fix: lint — prefer-const for zeroWidthPositions
+
+## [v0.65.0] - 2026-03-21
+
+- feat: Prompt Injection Guard — browser-level AI content defense (Layer 8)
+
+- New PromptInjectionGuard module with 40+ detection patterns
+- Hidden text detection: CSS, HTML, Unicode tricks
+- API middleware on /page-content, /page-html, /snapshot, /execute-js
+- Risk scoring: ≥70 blocks content, 30-70 warns, <30 passes
+- Centered modal alerts with tab highlighting (red/orange)
+- Double-confirmation override with 5-min TTL per domain
+- Config integrity monitor on openclaw.json
+- 89 tests with false positive validation
+
+## [v0.64.0] - 2026-03-21
+
+### New: Prompt Injection Guard (Security Layer 8)
+
+Tandem now detects and blocks prompt injection attacks in web page content before
+it reaches the AI agent. This is the first browser-level prompt injection defense.
+
+- **New module:** `PromptInjectionGuard` — 40+ regex patterns detecting instruction
+  override, role hijacking, config manipulation, credential theft, stealth instructions,
+  and filesystem write attempts
+- **Hidden text detection:** CSS tricks (font-size:0, opacity:0, off-screen positioning),
+  HTML tricks (comments, noscript, template, data attributes, aria-labels),
+  Unicode tricks (zero-width chars, RTL override, homoglyphs)
+- **API middleware:** Scans all content returned via `/page-content`, `/page-html`,
+  `/snapshot`, `/snapshot/text`, and `/execute-js`
+- **Risk scoring:** 0-100 scale. Score ≥70 = content BLOCKED (AI receives nothing).
+  Score 30-70 = content forwarded with `injectionWarnings` field
+- **User alerts:** Centered modal with detected threats, source URL, and tab highlighting
+  (red for blocked, orange for warnings)
+- **User override:** "Override — Allow this page" button with double confirmation
+  ("Are you absolutely sure?"). Override grants 5-minute access per domain
+- **Config integrity monitor:** Watches `openclaw.json` for suspicious modifications
+  (CORS wildcard, short auth tokens). Triggers OS notification on tamper detection
+- **89 tests** covering text patterns, CSS/HTML/Unicode tricks, combined scanning,
+  and false positive validation
+
+### Security endpoint
+- `POST /security/injection-override` — User override for blocked domains (5 min TTL)
+
+### Dialog endpoint
+- `POST /dialog/pick-folder` — Native folder picker for screenshot settings
+
+## [v0.63.6] - 2026-03-20
+
+- fix: add zhipin.com to stealth skip list — bypasses bot detection after login
+
+## [v0.63.5] - 2026-03-20
+
+- fix: resolve CHANGELOG merge conflict
+
+## [v0.63.4] - 2026-03-20
+
+- fix: increase V8 heap limit to 4GB to prevent OOM on memory-heavy SPAs
+
+### Linux Fixes
+
+- **fix(linux): make OpenClaw identity loading async to prevent main process blocking**
+  
+  Converted synchronous `fs.readFileSync`/`writeFileSync` calls in OpenClaw identity 
+  loading to async `fs.promises` API. The sync calls were blocking the main process 
+  during WebSocket connect handshake, causing "not responding" dialogs on Linux 
+  (macOS was unaffected due to different I/O scheduling).
+
+- **fix(linux): add overflow scrolling to sidebar for screens with limited height**
+  
+  Added `overflow-y: auto` to `.sidebar-items` so sidebar icons are accessible via 
+  scroll on smaller screens. Settings/Help/Collapse buttons no longer get cut off.
+
+## [v0.63.3] - 2026-03-20
+
+- fix: resolve CI test failures — safe app.getVersion(), update quickLinks count in tests
+
+## [v0.63.2] - 2026-03-20
+
+- fix: remove unused imports in app-menu, fix eslint any in overlay
+
+## [v0.63.1] - 2026-03-20
+
+- fix: UI/UX polish pass v0.63.0 — 18 fixes across shell, sidebar, settings, screenshots
+
+## [v0.63.0] - 2026-03-20
+
+UI/UX polish pass — 18 fixes across shell, sidebar, settings, and screenshots.
+
+### Shell & Menus
+- fix: rename first app menu from "Electron" to "Tandem Browser"
+- fix: remove redundant Window menu
+- fix: move Draw Mode to Edit menu, remove Copilot/Wingman menu
+- fix: move "About Tandem Browser" to Help menu
+
+### Sidebar
+- fix: sidebar defaults to wide mode on first launch, remembers preference thereafter
+- fix: wide mode shows labels next to icons, group headers visible
+- fix: tooltips only shown in narrow mode
+- fix: footer buttons left-aligned with labels (Collapse, Customize, Tips & Tutorials)
+- fix: Customize button now works as toggle (click to open, click again to close)
+- fix: remove Downloads and Personal News from sidebar settings
+
+### Quick Links
+- fix: auto-save on add/remove/change (no more Save button, debounced 600ms)
+- fix: default quick links updated to public profiles (DuckDuckGo, Google, GitHub, X, LinkedIn, YouTube)
+
+### Wingman
+- fix: display name changed from "Robin" to "You" in Wingman chat
+
+### Help
+- fix: Help/lamp button links to local help.html instead of external URL
+
+### About
+- fix: About panel now shows dynamic version from app (was hardcoded v0.57.6)
+
+### Settings
+- fix: Language, Wingman panel default open, and Show bookmarks bar marked as "Coming soon" and disabled
+- fix: Screenshot storage path now uses native folder picker dialog instead of text input
+
+### Screenshots
+- fix: Apple Photos import error -1728 — more robust AppleScript, 300ms flush delay, permission check
+
 ## [v0.62.17] - 2026-03-18
 
 - fix: update default quick links — remove personal/ClaroNote links, add Robin's public profiles
