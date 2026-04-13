@@ -280,5 +280,52 @@ describe('TaskManager', () => {
       expect(written.status).toBe('failed');
       expect(written.results).toContainEqual({ error: 'Something went wrong' });
     });
+
+    it('pauses a task for a human handoff and records step metadata', () => {
+      const updated = tm.pauseTaskForHandoff(task.id, task.steps[1].id, 'handoff-1', 'human');
+
+      expect(updated?.status).toBe('paused');
+      expect(updated?.steps[1]).toEqual(expect.objectContaining({
+        handoffId: 'handoff-1',
+        waitingOn: 'human',
+      }));
+    });
+
+    it('marks a paused task ready to resume and can resume it', () => {
+      tm.pauseTaskForHandoff(task.id, task.steps[1].id, 'handoff-1', 'human');
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'paused',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], handoffId: 'handoff-1', waitingOn: 'human' },
+        ],
+      }));
+
+      const ready = tm.markTaskReadyToResume(task.id, task.steps[1].id, 'handoff-1');
+      expect(ready?.status).toBe('ready-to-resume');
+      expect(ready?.steps[1].readyToResumeAt).toBeDefined();
+
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'ready-to-resume',
+        steps: [
+          task.steps[0],
+          {
+            ...task.steps[1],
+            status: 'pending',
+            handoffId: 'handoff-1',
+            readyToResumeAt: Date.now(),
+          },
+        ],
+      }));
+
+      const resumed = tm.resumeTask(task.id, task.steps[1].id, 'handoff-1');
+      expect(resumed?.status).toBe('running');
+      expect(resumed?.steps[1]).toEqual(expect.objectContaining({
+        status: 'running',
+      }));
+      expect(resumed?.steps[1].handoffId).toBeUndefined();
+    });
   });
 });

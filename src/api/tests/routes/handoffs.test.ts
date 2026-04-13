@@ -134,6 +134,9 @@ describe('Handoff Routes', () => {
         workspaceId: 'ws-1',
         tabId: 'tab-1',
       }));
+      expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'handoff-2',
+      }));
       expect(res.body.workspaceName).toBe('AI Workspace');
     });
 
@@ -181,6 +184,9 @@ describe('Handoff Routes', () => {
       expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
         source: null,
         actionLabel: null,
+      }));
+      expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'handoff-5',
       }));
       expect(wingmanAlert).toHaveBeenCalledWith('Need approval', 'Please confirm');
     });
@@ -243,6 +249,9 @@ describe('Handoff Routes', () => {
         status: 'ready_to_resume',
         actionLabel: 'Resume agent',
       }));
+      expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'handoff-3',
+      }));
     });
 
     it('returns 400 when open is not a boolean', async () => {
@@ -295,6 +304,9 @@ describe('Handoff Routes', () => {
         actionable: false,
         status: 'resolved',
       }));
+      expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'handoff-6',
+      }));
     });
 
     it('returns 404 when resolving a missing handoff', async () => {
@@ -302,6 +314,119 @@ describe('Handoff Routes', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Handoff not found');
+    });
+  });
+
+  describe('POST /handoffs/:id/ready', () => {
+    it('marks a handoff ready to resume', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.markReady).mockReturnValue({
+        id: 'handoff-ready',
+        status: 'ready_to_resume',
+        title: 'Captcha solved',
+        body: 'Ready now',
+        reason: 'captcha',
+        workspaceId: null,
+        tabId: null,
+        agentId: 'claude',
+        source: 'claude',
+        actionLabel: 'Resume agent',
+        taskId: 'task-1',
+        stepId: 'step-1',
+        open: true,
+        createdAt: 1,
+        updatedAt: 2,
+      } as any);
+
+      const res = await request(app).post('/handoffs/handoff-ready/ready');
+
+      expect(res.status).toBe(200);
+      expect(ctx.taskHandoffCoordinator.markReady).toHaveBeenCalledWith('handoff-ready');
+      expect(res.body.status).toBe('ready_to_resume');
+    });
+  });
+
+  describe('POST /handoffs/:id/resume', () => {
+    it('resumes a handoff-linked task', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.resume).mockReturnValue({
+        id: 'handoff-resume',
+        status: 'resolved',
+        title: 'Resume task',
+        body: 'Resumed',
+        reason: 'human_help',
+        workspaceId: null,
+        tabId: null,
+        agentId: 'claude',
+        source: 'claude',
+        actionLabel: 'Agent resumed',
+        taskId: 'task-1',
+        stepId: 'step-1',
+        open: false,
+        createdAt: 1,
+        updatedAt: 2,
+        resolvedAt: 2,
+      } as any);
+
+      const res = await request(app).post('/handoffs/handoff-resume/resume');
+
+      expect(res.status).toBe(200);
+      expect(ctx.taskHandoffCoordinator.resume).toHaveBeenCalledWith('handoff-resume');
+      expect(res.body.status).toBe('resolved');
+    });
+  });
+
+  describe('POST /handoffs/:id/approve', () => {
+    it('approves a waiting handoff', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.approve).mockReturnValue({
+        id: 'handoff-approve',
+        status: 'resolved',
+        title: 'Approve delete',
+        body: 'Approval granted.',
+        reason: 'approval_required',
+        workspaceId: null,
+        tabId: null,
+        agentId: 'claude',
+        source: 'claude',
+        actionLabel: 'Approval granted',
+        taskId: 'task-1',
+        stepId: 'step-1',
+        open: false,
+        createdAt: 1,
+        updatedAt: 2,
+        resolvedAt: 2,
+      } as any);
+
+      const res = await request(app).post('/handoffs/handoff-approve/approve');
+
+      expect(res.status).toBe(200);
+      expect(ctx.taskHandoffCoordinator.approve).toHaveBeenCalledWith('handoff-approve');
+    });
+  });
+
+  describe('POST /handoffs/:id/reject', () => {
+    it('rejects a waiting handoff', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.reject).mockReturnValue({
+        id: 'handoff-reject',
+        status: 'resolved',
+        title: 'Reject delete',
+        body: 'Approval rejected.',
+        reason: 'approval_required',
+        workspaceId: null,
+        tabId: null,
+        agentId: 'claude',
+        source: 'claude',
+        actionLabel: 'Approval rejected',
+        taskId: 'task-1',
+        stepId: 'step-1',
+        open: false,
+        createdAt: 1,
+        updatedAt: 2,
+        resolvedAt: 2,
+      } as any);
+
+      const res = await request(app).post('/handoffs/handoff-reject/reject');
+
+      expect(res.status).toBe(200);
+      expect(ctx.taskHandoffCoordinator.reject).toHaveBeenCalledWith('handoff-reject');
     });
   });
 
