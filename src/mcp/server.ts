@@ -1,5 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { apiCall, truncateToWords } from './api-client.js';
 import { API_PORT } from '../utils/constants';
 // MCP uses stdio for protocol messages — ALL logging must go to stderr.
@@ -48,9 +50,23 @@ import { registerClipboardTools } from './tools/clipboard.js';
 
 // log is defined above — stderr-only for MCP stdio safety
 
+function readPackageVersion(): string {
+  const packagePath = path.resolve(__dirname, '..', '..', 'package.json');
+  try {
+    const raw = fs.readFileSync(packagePath, 'utf-8');
+    const pkg = JSON.parse(raw) as { version?: string };
+    if (typeof pkg.version === 'string' && pkg.version.trim().length > 0) {
+      return pkg.version.trim();
+    }
+  } catch (error) {
+    log.warn('Falling back to MCP version placeholder; failed to read package.json', error);
+  }
+  return '0.72.2';
+}
+
 const server = new McpServer({
   name: 'tandem-browser',
-  version: '0.70.0',  // 236 tools — full API parity + awareness + clipboard
+  version: readPackageVersion(),
 });
 
 // ═══════════════════════════════════════════════

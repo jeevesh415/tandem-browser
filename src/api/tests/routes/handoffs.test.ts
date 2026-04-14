@@ -65,6 +65,7 @@ describe('Handoff Routes', () => {
       expect(res.body.handoffs[0]).toEqual(expect.objectContaining({
         id: 'handoff-1',
         actionable: true,
+        attentionLevel: 'action',
         workspaceName: 'AI Workspace',
         tabTitle: 'Example',
         tabUrl: 'https://example.com',
@@ -134,6 +135,7 @@ describe('Handoff Routes', () => {
         workspaceId: 'ws-1',
         tabId: 'tab-1',
       }));
+      expect(res.body.attentionLevel).toBe('urgent');
       expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
         id: 'handoff-2',
       }));

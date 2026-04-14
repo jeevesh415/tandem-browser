@@ -631,7 +631,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/wingman-alert', (req: Request, res: Response) => {
-    const { title = 'Need help', body = '', workspaceId, tabId, agentId, source, actionLabel, reason } = req.body;
+    const { title = 'Need help', body = '', workspaceId, tabId, agentId, source, actionLabel, reason, activateContext = false } = req.body;
     if (workspaceId !== undefined && typeof workspaceId !== 'string') {
       res.status(400).json({ error: 'workspaceId must be a workspace ID string' });
       return;
@@ -640,8 +640,12 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       res.status(400).json({ error: 'tabId must be a tab ID string' });
       return;
     }
+    if (activateContext !== undefined && typeof activateContext !== 'boolean') {
+      res.status(400).json({ error: 'activateContext must be a boolean' });
+      return;
+    }
     try {
-      if (workspaceId) {
+      if (activateContext && workspaceId) {
         ctx.workspaceManager.switch(workspaceId);
       }
       ctx.handoffManager.create({

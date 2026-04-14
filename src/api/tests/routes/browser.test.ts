@@ -1241,17 +1241,29 @@ describe('Browser Routes', () => {
       expect(wingmanAlert).toHaveBeenCalledWith('Need help', '');
     });
 
-    it('activates the requested workspace before sending the alert', async () => {
+    it('keeps the user in the current workspace by default', async () => {
       const res = await request(app)
         .post('/wingman-alert')
         .send({ title: 'Captcha', body: 'Please take over', workspaceId: 'ws-ai' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.workspaceManager.switch).not.toHaveBeenCalled();
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceId: 'ws-ai',
+      }));
+      expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
+    });
+
+    it('activates the requested workspace only when explicitly asked', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ title: 'Captcha', body: 'Please take over', workspaceId: 'ws-ai', activateContext: true });
 
       expect(res.status).toBe(200);
       expect(ctx.workspaceManager.switch).toHaveBeenCalledWith('ws-ai');
       expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
         workspaceId: 'ws-ai',
       }));
-      expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
     });
 
     it('returns 400 when workspaceId is not a string', async () => {
@@ -1272,6 +1284,17 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('tabId must be a tab ID string');
+      expect(ctx.handoffManager.create).not.toHaveBeenCalled();
+      expect(wingmanAlert).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when activateContext is not a boolean', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ activateContext: 'yes' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('activateContext must be a boolean');
       expect(ctx.handoffManager.create).not.toHaveBeenCalled();
       expect(wingmanAlert).not.toHaveBeenCalled();
     });

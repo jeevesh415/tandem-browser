@@ -25,7 +25,7 @@ The security layer exists because when an AI has access to your browser, your th
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
-**Current version:** `0.70.0`  
+**Current version:** `0.72.2`  
 **Repository status:** Public developer preview  
 **Started:** February 11, 2026
 

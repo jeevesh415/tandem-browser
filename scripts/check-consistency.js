@@ -46,17 +46,24 @@ const TOOL_HTML_STAT = /(<span class="stat-num">)(\d+)(<\/span><span class="stat
 
 /** TODO.md summary line: "MCP server: 236 tools" */
 const TOOL_TODO_SUMMARY = /MCP server: (\d+) tools/g;
+const VERSION_JSON = /("version"\s*:\s*")([^"]+)(")/g;
+const VERSION_LOCKFILE_ROOT = /("name":\s*"tandem-browser",\s*\n\s*"version":\s*")([^"]+)(")/g;
+const VERSION_LOCKFILE_PACKAGE = /("":\s*{\s*\n\s*"name":\s*"tandem-browser",\s*\n\s*"version":\s*")([^"]+)(")/g;
+const VERSION_PROJECT = /(\*\*Current version:\*\*\s*`)([^`]+)(`)/g;
+const VERSION_README = /(- Current version:\s*`)([^`]+)(`)/g;
+const VERSION_HERO = /(developer preview &middot; v)([^<]+)(<\/div>)/g;
 
 // ── Files to check ──────────────────────────────────────────────────
 // [path, { version?, toolPatterns?: RegExp[] }]
 
 const targets = [
-  ['package.json',          { toolPatterns: [TOOL_PROSE] }],
-  ['README.md',             { toolPatterns: [TOOL_PROSE] }],
-  ['PROJECT.md',            { version: true, toolPatterns: [TOOL_PROSE] }],
+  ['package.json',          { toolPatterns: [TOOL_PROSE], versionPatterns: [VERSION_JSON] }],
+  ['package-lock.json',     { versionPatterns: [VERSION_LOCKFILE_ROOT, VERSION_LOCKFILE_PACKAGE] }],
+  ['README.md',             { toolPatterns: [TOOL_PROSE], versionPatterns: [VERSION_README] }],
+  ['PROJECT.md',            { version: true, toolPatterns: [TOOL_PROSE], versionPatterns: [VERSION_PROJECT] }],
   ['AGENTS.md',             { toolPatterns: [TOOL_PROSE] }],
   ['skill/SKILL.md',        { toolPatterns: [TOOL_PROSE] }],
-  ['docs/index.html',       { version: true, toolPatterns: [TOOL_PROSE, TOOL_HTML_STAT] }],
+  ['docs/index.html',       { version: true, toolPatterns: [TOOL_PROSE, TOOL_HTML_STAT], versionPatterns: [VERSION_HERO] }],
   ['docs/api.html',         { toolPatterns: [TOOL_HTML_STAT] }],
   ['docs/public-launch.md', { toolPatterns: [TOOL_PROSE] }],
   ['TODO.md',               { toolPatterns: [TOOL_TODO_SUMMARY] }],
@@ -104,6 +111,31 @@ function findMatches(content, pattern) {
   return matches;
 }
 
+function findVersionMatches(content, pattern) {
+  const re = new RegExp(pattern.source, pattern.flags);
+  const matches = [];
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    matches.push(String(m[2]));
+  }
+  return matches;
+}
+
+function replaceVersions(content, pattern, expectedVersion) {
+  const issues = [];
+  const re = new RegExp(pattern.source, pattern.flags);
+  const newContent = content.replace(re, (...args) => {
+    const full = args[0];
+    const current = String(args[2]);
+    if (current !== expectedVersion) {
+      issues.push({ old: current });
+      return String(args[1]) + expectedVersion + String(args[3] ?? '');
+    }
+    return full;
+  });
+  return { content: newContent, issues };
+}
+
 // ── Run checks ──────────────────────────────────────────────────────
 
 const errors = [];
@@ -148,6 +180,29 @@ for (const [rel, checks] of targets) {
     const re = new RegExp(`(?<![\\d.])${escaped}(?![\\d.])`, 'g');
     if (!re.test(content)) {
       errors.push({ file: rel, issue: `version ${version} not found` });
+    }
+  }
+
+  if (checks.versionPatterns) {
+    let totalMatches = 0;
+    for (const pattern of checks.versionPatterns) {
+      const matches = findVersionMatches(content, pattern);
+      totalMatches += matches.length;
+
+      const wrong = matches.filter(v => v !== version);
+      if (wrong.length > 0) {
+        for (const current of wrong) {
+          errors.push({ file: rel, issue: `version ${current} → ${version}` });
+        }
+        if (fix) {
+          const result = replaceVersions(content, pattern, version);
+          content = result.content;
+          modified = true;
+        }
+      }
+    }
+    if (totalMatches === 0) {
+      errors.push({ file: rel, issue: 'no version reference found' });
     }
   }
 

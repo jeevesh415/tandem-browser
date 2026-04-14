@@ -622,6 +622,10 @@
     }
 
     .wingman-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 11px;
       padding: 3px 8px;
       background: rgba(233, 69, 96, 0.2);
@@ -629,6 +633,7 @@
       border-radius: 12px;
       color: var(--accent);
       cursor: default;
+      transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, color 0.18s, transform 0.18s;
     }
 
     /* ═══ Extension toolbar ═══ */
