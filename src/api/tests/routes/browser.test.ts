@@ -15,8 +15,62 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('../../../input/humanized', () => ({
-  humanizedClick: vi.fn().mockResolvedValue({ ok: true, clicked: true }),
-  humanizedType: vi.fn().mockResolvedValue({ ok: true, typed: true }),
+  humanizedClick: vi.fn().mockResolvedValue({
+    ok: true,
+    target: { selector: '#btn', found: true, tagName: 'BUTTON', text: 'Submit' },
+    completion: { dispatchCompleted: true, effectConfirmed: true, mode: 'confirmed' },
+    postAction: {
+      page: {
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        activeElement: { tagName: 'BUTTON', id: 'submit', name: null, type: null, value: null },
+      },
+      element: {
+        found: true,
+        tagName: 'BUTTON',
+        text: 'Submit',
+        value: null,
+        focused: true,
+        connected: true,
+        checked: null,
+        disabled: false,
+      },
+      navigation: {
+        urlBefore: 'https://example.com',
+        urlAfter: 'https://example.com',
+        changed: false,
+        loading: false,
+        waitApplied: false,
+        completed: true,
+        timeout: false,
+      },
+    },
+  }),
+  humanizedType: vi.fn().mockResolvedValue({
+    ok: true,
+    target: { selector: '#input', found: true, tagName: 'INPUT', text: null },
+    completion: { dispatchCompleted: true, effectConfirmed: true, mode: 'confirmed' },
+    postAction: {
+      page: {
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        activeElement: { tagName: 'INPUT', id: 'search', name: 'search', type: 'text', value: 'hello world' },
+      },
+      element: {
+        found: true,
+        tagName: 'INPUT',
+        text: null,
+        value: 'hello world',
+        focused: true,
+        connected: true,
+        checked: null,
+        disabled: false,
+      },
+      observedAfterMs: 25,
+    },
+  }),
 }));
 
 vi.mock('../../../notifications/alert', () => ({
@@ -301,15 +355,61 @@ describe('Browser Routes', () => {
         .send({ selector: '#submit-btn' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, clicked: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'click',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#submit-btn',
+          resolved: true,
+          tagName: 'BUTTON',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
       expect(humanizedClick).toHaveBeenCalled();
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith('click', {
         selector: '#submit-btn',
       });
     });
 
+    it('uses X-Tab-Id to target a background tab and reports scoped metadata', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+
+      const res = await request(app)
+        .post('/click')
+        .set('X-Tab-Id', 'tab-2')
+        .send({ selector: '#submit-btn' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual(expect.objectContaining({
+        tabId: 'tab-2',
+        wcId: 202,
+        source: 'header',
+      }));
+    });
+
     it('returns 500 when no active tab', async () => {
-      vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
 
       const res = await request(app)
         .post('/click')
@@ -317,6 +417,55 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('No active tab');
+    });
+
+    it('returns 404 with scope and completion when humanizedClick reports selector not found', async () => {
+      vi.mocked(humanizedClick).mockResolvedValueOnce({
+        ok: false,
+        completion: { dispatchCompleted: false, effectConfirmed: false, mode: 'dispatched' },
+        error: 'Element not found: #ghost',
+      } as any);
+
+      const res = await request(app)
+        .post('/click')
+        .send({ selector: '#ghost' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: false,
+        action: 'click',
+        scope: expect.objectContaining({ kind: 'tab' }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#ghost',
+          resolved: false,
+        }),
+        error: 'Element not found: #ghost',
+      }));
+    });
+
+    it('passes confirm and waitForNavigation options to humanizedClick', async () => {
+      const res = await request(app)
+        .post('/click')
+        .send({
+          selector: '#btn',
+          confirm: true,
+          waitForNavigation: true,
+          navigationTimeoutMs: 5000,
+          confirmTimeoutMs: 1000,
+        });
+
+      expect(res.status).toBe(200);
+      expect(humanizedClick).toHaveBeenCalledWith(
+        expect.anything(),
+        '#btn',
+        {
+          confirm: true,
+          waitForNavigation: true,
+          timeoutMs: 5000,
+          confirmTimeoutMs: 1000,
+        },
+      );
     });
   });
 
@@ -347,12 +496,45 @@ describe('Browser Routes', () => {
         .send({ selector: '#search', text: 'hello world' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, typed: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'type',
+        requestedValue: 'hello world',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#search',
+          resolved: true,
+          tagName: 'INPUT',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
       expect(humanizedType).toHaveBeenCalled();
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith('input', {
         selector: '#search',
         textLength: 11,
       });
+    });
+
+    it('returns 404 when the selector action targets a missing tab via X-Tab-Id', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .post('/type')
+        .set('X-Tab-Id', 'tab-missing')
+        .send({ selector: '#input', text: 'hello' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
     });
 
     it('passes clear flag when provided', async () => {
@@ -365,11 +547,12 @@ describe('Browser Routes', () => {
         '#input',
         'test',
         true,
+        { confirm: undefined, confirmTimeoutMs: undefined },
       );
     });
 
     it('returns 500 when no active tab', async () => {
-      vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
 
       const res = await request(app)
         .post('/type')
@@ -377,6 +560,31 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('No active tab');
+    });
+
+    it('returns 404 with scope and completion when humanizedType reports selector not found', async () => {
+      vi.mocked(humanizedType).mockResolvedValueOnce({
+        ok: false,
+        completion: { dispatchCompleted: false, effectConfirmed: false, mode: 'dispatched' },
+        error: 'Element not found: #ghost-input',
+      } as any);
+
+      const res = await request(app)
+        .post('/type')
+        .send({ selector: '#ghost-input', text: 'hello' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: false,
+        action: 'type',
+        scope: expect.objectContaining({ kind: 'tab' }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#ghost-input',
+          resolved: false,
+        }),
+        error: 'Element not found: #ghost-input',
+      }));
     });
   });
 
@@ -768,6 +976,239 @@ describe('Browser Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
+  // POST /press-key + /press-key-combo
+  // ═══════════════════════════════════════════════
+
+  describe('POST /press-key', () => {
+    it('returns scoped completion metadata for a key press', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'INPUT', id: 'email', name: 'email', type: 'text', value: 'a' },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'INPUT', id: 'email', name: 'email', type: 'text', value: 'ab' },
+        });
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'b' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'press-key',
+        scope: expect.objectContaining({
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+        target: expect.objectContaining({
+          kind: 'keyboard',
+          key: 'b',
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+    });
+
+    it('returns 400 when key is missing', async () => {
+      const res = await request(app).post('/press-key').send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('key required');
+    });
+
+    it('returns 404 when X-Tab-Id does not match a tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .post('/press-key')
+        .set('X-Tab-Id', 'tab-missing')
+        .send({ key: 'Enter' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
+    });
+
+    it('returns 500 when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'Enter' });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('No active tab');
+    });
+
+    it('reports dispatched mode when no observable effect', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      const sameState = {
+        title: 'Example',
+        activeElement: { tagName: 'BODY', id: null, name: null, type: null, value: null },
+      };
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce(sameState)
+        .mockResolvedValueOnce(sameState);
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'PageDown' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completion.effectConfirmed).toBe(false);
+      expect(res.body.completion.mode).toBe('dispatched');
+      expect(res.body.completion.caveat).toContain('no immediate');
+    });
+
+    it('confirms focus movement when the active element changes within the same tag type', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'previous', name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'next', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'Tab' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completion.effectConfirmed).toBe(true);
+      expect(res.body.completion.mode).toBe('confirmed');
+      expect(res.body.completion.caveat).toBeUndefined();
+      expect(res.body.postAction.page.activeElement.id).toBe('next');
+    });
+
+    it('includes modifiers in target and calls sendInputEvent', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      const state = {
+        title: 'Example',
+        activeElement: { tagName: 'BODY', id: null, name: null, type: null, value: null },
+      };
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce(state)
+        .mockResolvedValueOnce(state);
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'c', modifiers: ['control'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.target.modifiers).toEqual(['control']);
+      expect(mockWC!.sendInputEvent).toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /press-key-combo', () => {
+    it('returns scoped completion metadata for a key sequence', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BODY', id: null, name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .send({ keys: ['Tab', 'Enter'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'press-key-combo',
+        scope: expect.objectContaining({
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+        target: expect.objectContaining({
+          kind: 'keyboard-sequence',
+          keys: ['Tab', 'Return'],
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+    });
+
+    it('returns 400 when keys array is missing', async () => {
+      const res = await request(app).post('/press-key-combo').send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('keys array required');
+    });
+
+    it('returns 400 when keys array is empty', async () => {
+      const res = await request(app).post('/press-key-combo').send({ keys: [] });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('keys array required');
+    });
+
+    it('returns 404 when X-Tab-Id does not match a tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .set('X-Tab-Id', 'tab-missing')
+        .send({ keys: ['Tab', 'Enter'] });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
+    });
+
+    it('returns 500 when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .send({ keys: ['Tab'] });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('No active tab');
+    });
+
+    it('confirms same-tag active-element changes for key sequences', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'cancel', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .send({ keys: ['Tab', 'Tab'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completion.effectConfirmed).toBe(true);
+      expect(res.body.completion.mode).toBe('confirmed');
+      expect(res.body.postAction.page.activeElement.id).toBe('cancel');
+    });
+  });
+
+  // ═══════════════════════════════════════════════
   // POST /wingman-alert
   // ═══════════════════════════════════════════════
 
@@ -779,6 +1220,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Attention',
+        body: 'Something happened',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Attention', 'Something happened');
     });
 
@@ -787,6 +1233,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Need help',
+        body: '',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Need help', '');
     });
 
@@ -797,6 +1248,9 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(ctx.workspaceManager.switch).toHaveBeenCalledWith('ws-ai');
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceId: 'ws-ai',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
     });
 
@@ -810,6 +1264,34 @@ describe('Browser Routes', () => {
       expect(ctx.workspaceManager.switch).not.toHaveBeenCalled();
       expect(wingmanAlert).not.toHaveBeenCalled();
     });
+
+    it('returns 400 when tabId is not a string', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ tabId: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('tabId must be a tab ID string');
+      expect(ctx.handoffManager.create).not.toHaveBeenCalled();
+      expect(wingmanAlert).not.toHaveBeenCalled();
+    });
+
+    it('stores legacy defaults for handoff metadata when optional fields are omitted', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ title: 'Captcha detected' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Captcha detected',
+        reason: 'legacy_alert',
+        workspaceId: null,
+        tabId: null,
+        agentId: null,
+        source: 'wingman-alert',
+        actionLabel: null,
+      }));
+    });
   });
 
   // ═══════════════════════════════════════════════
@@ -818,8 +1300,7 @@ describe('Browser Routes', () => {
 
   describe('POST /wait', () => {
     it('waits for a selector and returns result', async () => {
-      const mockWC = await ctx.tabManager.getActiveWebContents();
-      vi.mocked(mockWC!.executeJavaScript).mockResolvedValueOnce({
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce({
         ok: true,
         found: true,
       });
@@ -829,12 +1310,19 @@ describe('Browser Routes', () => {
         .send({ selector: '#loaded' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, found: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        found: true,
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+      }));
     });
 
     it('waits for load event when no selector', async () => {
-      const mockWC = await ctx.tabManager.getActiveWebContents();
-      vi.mocked(mockWC!.executeJavaScript).mockResolvedValueOnce({
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce({
         ok: true,
         ready: true,
       });
@@ -842,10 +1330,19 @@ describe('Browser Routes', () => {
       const res = await request(app).post('/wait').send({});
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ready: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        ready: true,
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+      }));
     });
 
     it('returns 500 when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
       vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
 
       const res = await request(app)

@@ -73,12 +73,28 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_snapshot_click');
 
     it('clicks an element by ref', async () => {
-      mockApiCall.mockResolvedValueOnce({});
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-1' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ ref: '@e1' });
-      expectTextContent(result, 'Clicked element @e1');
+      expectTextContent(result, 'Clicked element @e1 (tab tab-1; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/snapshot/click', { ref: '@e1' }, undefined);
+    });
+
+    it('passes tabId as header when provided', async () => {
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-2' }, completion: { mode: 'confirmed' } });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      await handler({ ref: '@e1', tabId: 'tab-2' });
+      expect(vi.mocked(tabHeaders)).toHaveBeenCalledWith('tab-2');
+    });
+
+    it('reports dispatched mode when scope has no tabId', async () => {
+      mockApiCall.mockResolvedValueOnce({ scope: {}, completion: { mode: 'dispatched' } });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ ref: '@e5' });
+      expectTextContent(result, 'active scope; dispatched');
     });
   });
 
@@ -87,12 +103,20 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_snapshot_fill');
 
     it('fills an input by ref', async () => {
-      mockApiCall.mockResolvedValueOnce({});
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-1' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ ref: '@e3', value: 'hello' });
-      expectTextContent(result, 'Filled element @e3 with "hello"');
+      expectTextContent(result, 'Filled element @e3 with "hello" (tab tab-1; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/snapshot/fill', { ref: '@e3', value: 'hello' }, undefined);
+    });
+
+    it('passes tabId as header when provided', async () => {
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-3' }, completion: { mode: 'confirmed' } });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      await handler({ ref: '@e3', value: 'data', tabId: 'tab-3' });
+      expect(vi.mocked(tabHeaders)).toHaveBeenCalledWith('tab-3');
     });
   });
 
@@ -106,6 +130,23 @@ describe('MCP snapshot tools', () => {
 
       const result = await handler({ ref: '@e1' });
       expectTextContent(result, 'Hello World');
+    });
+
+    it('returns empty string when text is null', async () => {
+      mockApiCall.mockResolvedValueOnce({});
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ ref: '@e1' });
+      const text = expectTextContent(result);
+      expect(text).toBe('');
+    });
+
+    it('passes tabId as header when provided', async () => {
+      mockApiCall.mockResolvedValueOnce({ text: 'Some text' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      await handler({ ref: '@e1', tabId: 'tab-5' });
+      expect(vi.mocked(tabHeaders)).toHaveBeenCalledWith('tab-5');
     });
   });
 
@@ -128,11 +169,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_find_click');
 
     it('finds and clicks an element', async () => {
-      mockApiCall.mockResolvedValueOnce({ ref: '@e7' });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-7' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ by: 'text', value: 'Submit' });
-      expectTextContent(result, 'Clicked element found by text="Submit"');
+      expectTextContent(result, 'Clicked element found by text="Submit" (tab tab-7; confirmed)');
     });
   });
 
@@ -141,11 +182,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_find_fill');
 
     it('finds and fills an input', async () => {
-      mockApiCall.mockResolvedValueOnce({ ref: '@e8' });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-8' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ by: 'placeholder', value: 'Email', text: 'a@b.com' });
-      expectTextContent(result, 'Filled element found by placeholder="Email"');
+      expectTextContent(result, 'Filled element found by placeholder="Email" with "a@b.com" (tab tab-8; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith(
         'POST', '/find/fill',
         { by: 'placeholder', value: 'Email', fillValue: 'a@b.com' },

@@ -2,6 +2,76 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.72.0] - 2026-04-13
+
+- feat: add explicit human↔agent handoffs across API, MCP, events, and Wingman UI
+
+### Added
+
+- Durable `HandoffManager` persistence in `~/.tandem/handoffs.json` with explicit statuses for `needs_human`, `blocked`, `waiting_approval`, `ready_to_resume`, `completed_review`, and `resolved`
+- New HTTP API routes for handoff lifecycle and targeting: `GET /handoffs`, `GET /handoffs/:id`, `POST /handoffs`, `PATCH /handoffs/:id`, `POST /handoffs/:id/resolve`, and `POST /handoffs/:id/activate`
+- New MCP tools for the same handoff system: `tandem_handoff_create`, `tandem_handoff_list`, `tandem_handoff_get`, `tandem_handoff_update`, and `tandem_handoff_resolve`
+- New MCP resource `tandem://handoffs/open` plus SSE handoff events so open handoffs can be observed live
+- A real Wingman Activity inbox for open handoffs, including workspace/tab context, action hints, open-context targeting, and resolve/mark-ready actions
+
+### Changed
+
+- `POST /wingman-alert` now acts as a compatibility wrapper over the handoff system, preserving the old alert behavior while also creating a durable `needs_human` handoff
+- Task approval requests now also appear as structured handoffs instead of only transient approval cards, keeping human attention requests visible in one place
+- Wingman Activity logging now records handoff lifecycle updates so the user can see when a handoff was created, updated, or resolved
+- Handoff metadata normalization now treats blank titles/reasons as defaults, and focused route/MCP/manager tests cover the new handoff lifecycle more thoroughly so coverage matches the added product surface
+
+## [v0.71.4] - 2026-04-13
+
+- fix: make fill replacement and keyboard completion confirmation match observed browser state
+
+### Fixed
+
+- `POST /snapshot/fill` now prepares a real replacement selection on the target field before trusted key events are sent, so filling a populated input replaces the old value instead of corrupting it through caret-dependent append behavior
+- Selector-based `POST /type` with `clear: true` now uses the same replacement-first strategy, preserving trusted input events while making pre-populated field replacement deterministic
+- Keyboard actions (`POST /press-key`, `POST /press-key-combo`) now confirm observable active-element focus shifts even when the focused element keeps the same tag name, keeping `completion.effectConfirmed` aligned with the returned `postAction.page.activeElement`
+- Label locators now fall back to a runtime DOM association pass when the CDP label search misses, improving `POST /find` by `label` on simple `label[for]` fixtures
+- Added focused tests for selector replacement typing, snapshot ref fill replacement, focus-shift confirmation, and runtime label lookup fallback
+
+## [v0.71.3] - 2026-04-13
+
+- fix: strengthen interaction completion semantics across HTTP API and MCP
+
+### Fixed
+
+- Selector-based `POST /click` and `POST /type` now return explicit tab scope, target resolution, completion mode, and lightweight post-action state instead of leaving agents to infer whether the action actually landed
+- Snapshot ref actions (`POST /snapshot/click`, `POST /snapshot/fill`) now distinguish dispatch completion from confirmed effect, include the resolved tab scope for the ref target, and report post-action element/page state when it can be observed cheaply
+- Semantic locator routes (`POST /find`, `/find/click`, `/find/fill`, `/find/all`) now honor tab targeting, expose the resolved scope in their responses, and preserve locator resolution details when they chain into ref actions
+- Keyboard actions (`POST /press-key`, `POST /press-key-combo`) now return scoped completion metadata and post-action page/navigation state instead of a bare acknowledgement
+- MCP navigation and snapshot tools now describe the underlying guarantees accurately and surface the richer HTTP action contracts instead of flattening them into vague success text
+- Added focused route, MCP, and confirmation-helper tests for delayed fill confirmation, post-click/navigation state, and tab-targeted interaction semantics
+
+## [v0.71.2] - 2026-04-13
+
+- fix: harden tab-scoped devtools and network inspection across HTTP API and MCP
+
+### Fixed
+
+- DevTools read routes now resolve an explicit tab target, default to the active tab, and return scope metadata so `status`, `console`, `network`, `performance`, `storage`, `evaluate`, DOM queries, and raw CDP calls no longer imply global state when they are tab-scoped
+- CDP network capture now keys requests by `webContents` target instead of raw `requestId` alone, preventing cross-tab collisions and making `/devtools/network/:requestId/body` trustworthy when multiple attached tabs are active
+- The webRequest-based network inspector now records tab identity and resource type, so `/network/log`, `/network/apis`, `/network/domains`, and `/network/har` can be filtered per tab instead of mixing traffic from unrelated tabs or extension noise
+- MCP DevTools and network tools now describe active-tab-by-default behavior accurately, forward `tabId` only where the HTTP API truly honors it, and expose scoped status/body/summary calls that match the underlying routes
+- Added focused route, MCP, DevTools capture, and network inspector tests to keep scoped-vs-global behavior aligned across the API surface
+
+## [v0.71.1] - 2026-04-13
+
+- fix: stabilize multi-actor workspace, tab, SSE, and MCP ownership context
+
+### Fixed
+
+- Active workspace selection and active tab ownership now reconcile deterministically instead of drifting apart during focus changes, workspace switches, or agent-opened tabs
+- `GET /workspaces` now reports whether the active workspace comes from a focused tab or an explicit workspace selection
+- `GET /active-tab/context` now includes trustworthy workspace/source/actor ownership data for the active tab and the global tab list
+- `/events/stream` now attaches workspace and actor/source context to tab-driven events when known
+- Workspace activation no longer forces a focus churn when the target workspace already has a live tab; empty-workspace activation remains explicit as a `selection`
+- MCP tab/chat actions now use a single configurable actor source (`TANDEM_SOURCE` / `TANDEM_MCP_SOURCE` / `TANDEM_ACTOR_SOURCE`) instead of a hardcoded `wingman`/`claude` split
+- MCP resources (`tandem://tabs/list`, `tandem://context`) now surface workspace/source ownership details instead of hiding them behind older global summaries
+
 ## [v0.71.0] - 2026-04-11
 
 - feat: tab emoji badges — assign emoji to tabs for quick visual identification

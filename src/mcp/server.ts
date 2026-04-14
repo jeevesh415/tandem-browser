@@ -24,6 +24,7 @@ import { registerBookmarkTools } from './tools/bookmarks.js';
 import { registerHistoryTools } from './tools/history.js';
 import { registerChatTools } from './tools/chat.js';
 import { registerTaskTools } from './tools/tasks.js';
+import { registerHandoffTools } from './tools/handoffs.js';
 import { registerWorkflowTools } from './tools/workflows.js';
 import { registerExtensionTools } from './tools/extensions.js';
 import { registerDeviceTools } from './tools/devices.js';
@@ -68,6 +69,7 @@ registerBookmarkTools(server);
 registerHistoryTools(server);
 registerChatTools(server);
 registerTaskTools(server);
+registerHandoffTools(server);
 registerWorkflowTools(server);
 registerExtensionTools(server);
 registerDeviceTools(server);
@@ -111,15 +113,26 @@ server.resource(
 server.resource(
   'tabs-list',
   'tandem://tabs/list',
-  { description: 'All open browser tabs' },
+  { description: 'All open browser tabs with workspace/source context when known' },
   async () => {
-    const data = await apiCall('GET', '/tabs/list');
-    const tabs: Array<{ id: string; title: string; url: string; active: boolean }> = data.tabs || [];
+    const data = await apiCall('GET', '/active-tab/context');
+    const tabs: Array<{
+      id: string;
+      title: string;
+      url: string;
+      active?: boolean;
+      workspaceName?: string | null;
+      source?: string | null;
+    }> = data.tabs || [];
 
     let text = `Open tabs (${tabs.length}):\n\n`;
     for (const tab of tabs) {
-      const marker = tab.active ? '→ ' : '  ';
-      text += `${marker}[${tab.id}] ${tab.title || '(untitled)'} — ${tab.url}\n`;
+      const marker = tab.active ? '-> ' : '   ';
+      const details: string[] = [];
+      if (tab.workspaceName) details.push(`workspace: ${tab.workspaceName}`);
+      if (tab.source) details.push(`source: ${tab.source}`);
+      const suffix = details.length > 0 ? ` [${details.join(', ')}]` : '';
+      text += `${marker}[${tab.id}] ${tab.title || '(untitled)'} — ${tab.url}${suffix}\n`;
     }
     return { contents: [{ uri: 'tandem://tabs/list', mimeType: 'text/plain', text }] };
   }
@@ -143,12 +156,89 @@ server.resource(
 );
 
 server.resource(
+  'handoffs-open',
+  'tandem://handoffs/open',
+  { description: 'Open human↔agent handoffs that still need attention or review' },
+  async () => {
+    const data = await apiCall('GET', '/handoffs?openOnly=true');
+    const handoffs: Array<{
+      id: string;
+      status: string;
+      title: string;
+      reason?: string | null;
+      workspaceName?: string | null;
+      tabTitle?: string | null;
+    }> = data.handoffs || [];
+
+    let text = `Open handoffs (${handoffs.length}):\n\n`;
+    for (const handoff of handoffs) {
+      const details = [
+        `status=${handoff.status}`,
+        handoff.reason ? `reason=${handoff.reason}` : null,
+        handoff.workspaceName ? `workspace=${handoff.workspaceName}` : null,
+        handoff.tabTitle ? `tab=${handoff.tabTitle}` : null,
+      ].filter(Boolean).join(' | ');
+      text += `- [${handoff.id}] ${handoff.title}${details ? ` (${details})` : ''}\n`;
+    }
+    return { contents: [{ uri: 'tandem://handoffs/open', mimeType: 'text/plain', text }] };
+  }
+);
+
+server.resource(
   'context',
   'tandem://context',
-  { description: 'Live browser context: active tab, open tabs, recent events, voice status' },
+  { description: 'Live browser context including active workspace/tab ownership and recent events' },
   async () => {
-    const summary = await apiCall('GET', '/context/summary');
-    return { contents: [{ uri: 'tandem://context', mimeType: 'text/plain', text: summary.text || '' }] };
+    const [summary, activeTabContext, recentEventsData] = await Promise.all([
+      apiCall('GET', '/context/summary'),
+      apiCall('GET', '/active-tab/context'),
+      apiCall('GET', '/events/recent?limit=5'),
+    ]);
+
+    const lines: string[] = [];
+    const activeWorkspace = activeTabContext.activeWorkspace;
+    const activeTab = activeTabContext.activeTab;
+    if (activeWorkspace) {
+      lines.push(`Active workspace: ${activeWorkspace.name} (${activeWorkspace.id})`);
+    }
+
+    if (activeTab) {
+      const parts = [
+        `Active tab: ${activeTab.title || 'Untitled'} — ${activeTab.url || ''} (${activeTab.id})`,
+        `workspace=${activeTab.workspaceName || activeTab.workspaceId || 'unknown'}`,
+        `source=${activeTab.source ?? 'unknown'}`,
+      ];
+      if (activeTab.actor?.id) {
+        parts.push(`actor=${activeTab.actor.id}`);
+      }
+      lines.push(parts.join(' | '));
+    } else {
+      lines.push('Active tab: none');
+    }
+
+    if (Array.isArray(recentEventsData.events) && recentEventsData.events.length > 0) {
+      const eventLines = recentEventsData.events.slice(0, 5).map((event: {
+        type?: string;
+        tabId?: string | null;
+        context?: {
+          source?: string | null;
+          workspace?: { id?: string | null; name?: string | null } | null;
+        } | null;
+      }) => {
+        const workspace = event.context?.workspace?.name || event.context?.workspace?.id || 'unknown';
+        const source = event.context?.source ?? 'unknown';
+        return `- ${event.type} | tab=${event.tabId || 'none'} | workspace=${workspace} | source=${source}`;
+      });
+      lines.push('Recent events:');
+      lines.push(...eventLines);
+    }
+
+    if (summary.text) {
+      lines.push('');
+      lines.push(summary.text);
+    }
+
+    return { contents: [{ uri: 'tandem://context', mimeType: 'text/plain', text: lines.join('\n') }] };
   }
 );
 
@@ -196,12 +286,15 @@ function startEventListener(): void {
             try {
               const event = JSON.parse(line.slice(6));
               // Send MCP notifications for meaningful events
-              if (['navigation', 'page-loaded', 'tab-focused'].includes(event.type)) {
+              if (['navigation', 'page-loaded', 'tab-focused', 'handoff-created', 'handoff-updated'].includes(event.type)) {
                 server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(e => log.warn('sendResourceUpdated page/current failed:', e instanceof Error ? e.message : e));
                 server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(e => log.warn('sendResourceUpdated context failed:', e instanceof Error ? e.message : e));
               }
               if (['tab-opened', 'tab-closed', 'tab-focused'].includes(event.type)) {
                 server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(e => log.warn('sendResourceUpdated tabs/list failed:', e instanceof Error ? e.message : e));
+              }
+              if (['handoff-created', 'handoff-updated'].includes(event.type)) {
+                server.server.sendResourceUpdated({ uri: 'tandem://handoffs/open' }).catch(e => log.warn('sendResourceUpdated handoffs/open failed:', e instanceof Error ? e.message : e));
               }
             } catch {
               // Ignore parse errors (comments, heartbeats)

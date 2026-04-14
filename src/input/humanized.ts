@@ -1,7 +1,68 @@
 import type { WebContents } from 'electron';
 import { behaviorReplay } from '../behavior/replay';
+import {
+  captureNavigationState,
+  confirmSelectorValue,
+  hasObservableInteractionEffect,
+  readPageState,
+  readSelectorState,
+  type InteractionElementState,
+  type NavigationState,
+  type PageState,
+  type WaitForNavigationOptions,
+} from '../interaction/page-state';
 
 const MAX_TYPED_CHARS = 10_000;
+const DEFAULT_CONFIRM_TIMEOUT_MS = 700;
+
+export interface HumanizedClickResult {
+  ok: boolean;
+  error?: string;
+  target: {
+    selector: string;
+    found: boolean;
+    tagName: string | null;
+    text: string | null;
+  };
+  completion: {
+    dispatchCompleted: boolean;
+    effectConfirmed: boolean;
+    mode: 'confirmed' | 'dispatched';
+    caveat?: string;
+  };
+  postAction?: {
+    page: PageState;
+    element: InteractionElementState | null;
+    navigation: NavigationState;
+  };
+}
+
+export interface HumanizedTypeResult {
+  ok: boolean;
+  error?: string;
+  target: {
+    selector: string;
+    found: boolean;
+    tagName: string | null;
+    text: string | null;
+  };
+  completion: {
+    dispatchCompleted: boolean;
+    effectConfirmed: boolean;
+    mode: 'confirmed' | 'dispatched';
+    caveat?: string;
+  };
+  postAction?: {
+    page: PageState;
+    element: InteractionElementState | null;
+    observedAfterMs: number;
+  };
+}
+
+export interface HumanizedInteractionOptions extends WaitForNavigationOptions {
+  confirm?: boolean;
+  confirmTimeoutMs?: number;
+}
 
 /**
  * Gaussian random number (Box-Muller transform).
@@ -29,6 +90,10 @@ function typingDelay(currentChar: string = '', nextChar: string = ''): Promise<v
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+function selectAllModifiers(): Electron.InputEvent['modifiers'] {
+  return process.platform === 'darwin' ? ['meta'] : ['control'];
+}
+
 /**
  * Get element position by selector via executeJavaScript.
  * Returns center coordinates of the element.
@@ -53,15 +118,136 @@ async function getElementPosition(wc: WebContents, selector: string): Promise<{ 
   return result;
 }
 
+async function prepareSelectorForTextEntry(
+  wc: WebContents,
+  selector: string,
+  replaceExisting: boolean,
+): Promise<{
+  found: boolean;
+  focused: boolean;
+  selectionPrepared: boolean;
+  existingTextLength: number;
+}> {
+  const result = await wc.executeJavaScript(`
+    (() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) {
+        return { found: false, focused: false, selectionPrepared: false, existingTextLength: 0 };
+      }
+
+      if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
+      }
+
+      if (typeof el.focus === 'function') {
+        try {
+          el.focus({ preventScroll: true });
+        } catch {
+          el.focus();
+        }
+      }
+
+      let selectionPrepared = false;
+      const valueLength = typeof el.value === 'string'
+        ? el.value.length
+        : typeof el.textContent === 'string'
+          ? el.textContent.length
+          : 0;
+
+      if (${replaceExisting ? 'true' : 'false'}) {
+        if (typeof el.select === 'function') {
+          try {
+            el.select();
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+
+        if (!selectionPrepared && typeof el.setSelectionRange === 'function' && typeof el.value === 'string') {
+          try {
+            el.setSelectionRange(0, el.value.length);
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+
+        if (!selectionPrepared && el.isContentEditable) {
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+      }
+
+      return {
+        found: true,
+        focused: document.activeElement === el,
+        selectionPrepared,
+        existingTextLength: valueLength,
+      };
+    })()
+  `) as {
+    found: boolean;
+    focused: boolean;
+    selectionPrepared: boolean;
+    existingTextLength: number;
+  };
+
+  return result;
+}
+
+async function sendSelectAllShortcut(wc: WebContents): Promise<void> {
+  const modifiers = selectAllModifiers();
+  wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers });
+  wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers });
+  await typingDelay();
+}
+
+async function clearSelectedText(wc: WebContents): Promise<void> {
+  wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
+  wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
+  await humanDelay(40, 80);
+}
+
 /**
  * Click an element using sendInputEvent (OS-level, Event.isTrusted = true).
  * Uses humanized delays and mouse movement.
  */
-export async function humanizedClick(wc: WebContents, selector: string): Promise<{ ok: boolean; error?: string; tag?: string; text?: string }> {
+export async function humanizedClick(
+  wc: WebContents,
+  selector: string,
+  options?: HumanizedInteractionOptions,
+): Promise<HumanizedClickResult> {
   const pos = await getElementPosition(wc, selector);
   if (!pos.found) {
-    return { ok: false, error: 'Element not found' };
+    return {
+      ok: false,
+      error: 'Element not found',
+      target: {
+        selector,
+        found: false,
+        tagName: null,
+        text: null,
+      },
+      completion: {
+        dispatchCompleted: false,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Selector could not be resolved before dispatch.',
+      },
+    };
   }
+
+  const beforePage = await readPageState(wc);
+  const beforeElement = await readSelectorState(wc, selector);
 
   // Small random offset within element (not dead center)
   const offsetX = gaussianRandom(0, 3);
@@ -112,17 +298,74 @@ export async function humanizedClick(wc: WebContents, selector: string): Promise
     clickCount: 1,
   });
 
-  return { ok: true, tag: pos.tag, text: pos.text };
+  const navigation = await captureNavigationState(wc, beforePage.url, options);
+  const afterPage = await readPageState(wc);
+  const afterElement = options?.confirm === false ? null : await readSelectorState(wc, selector);
+  const effectConfirmed = options?.confirm === false
+    ? false
+    : hasObservableInteractionEffect({
+        beforePage,
+        afterPage,
+        navigation,
+        beforeElement,
+        afterElement,
+      });
+
+  return {
+    ok: true,
+    target: {
+      selector,
+      found: true,
+      tagName: pos.tag ?? null,
+      text: pos.text ?? null,
+    },
+    completion: {
+      dispatchCompleted: true,
+      effectConfirmed,
+      mode: effectConfirmed ? 'confirmed' : 'dispatched',
+      caveat: effectConfirmed
+        ? undefined
+        : options?.confirm === false
+          ? 'Click dispatch was acknowledged without post-click confirmation.'
+          : 'Click dispatch finished, but no immediate focus, value, checked, or navigation change was observable.',
+    },
+    postAction: {
+      page: afterPage,
+      element: afterElement,
+      navigation,
+    },
+  };
 }
 
 /**
  * Type text using sendInputEvent character by character (Event.isTrusted = true).
  * Humanized typing rhythm with gaussian delays.
  */
-export async function humanizedType(wc: WebContents, selector: string, text: string, clear: boolean = false): Promise<{ ok: boolean; error?: string }> {
+export async function humanizedType(
+  wc: WebContents,
+  selector: string,
+  text: string,
+  clear: boolean = false,
+  options?: HumanizedInteractionOptions,
+): Promise<HumanizedTypeResult> {
   const pos = await getElementPosition(wc, selector);
   if (!pos.found) {
-    return { ok: false, error: 'Element not found' };
+    return {
+      ok: false,
+      error: 'Element not found',
+      target: {
+        selector,
+        found: false,
+        tagName: null,
+        text: null,
+      },
+      completion: {
+        dispatchCompleted: false,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Selector could not be resolved before typing began.',
+      },
+    };
   }
 
   // Click to focus the element first
@@ -133,17 +376,16 @@ export async function humanizedType(wc: WebContents, selector: string, text: str
   wc.sendInputEvent({ type: 'mouseUp', x: pos.x, y: pos.y, button: 'left', clickCount: 1 });
   await humanDelay(80, 200);
 
-  // Clear existing content if requested (Cmd+A then Backspace)
-  if (clear) {
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers: ['meta'] });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers: ['meta'] });
-    await typingDelay();
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
-    await humanDelay(80, 150);
+  const chars = Array.from(text).slice(0, MAX_TYPED_CHARS);
+  const preparation = await prepareSelectorForTextEntry(wc, selector, clear);
+
+  if (clear && preparation.found && preparation.existingTextLength > 0 && !preparation.selectionPrepared) {
+    await sendSelectAllShortcut(wc);
   }
 
-  const chars = Array.from(text).slice(0, MAX_TYPED_CHARS);
+  if (clear && chars.length === 0) {
+    await clearSelectedText(wc);
+  }
 
   // Type each character with humanized delays
   for (let i = 0; i < chars.length; i++) {
@@ -153,5 +395,55 @@ export async function humanizedType(wc: WebContents, selector: string, text: str
     await typingDelay(char, nextChar);
   }
 
-  return { ok: true };
+  if (options?.confirm === false) {
+    return {
+      ok: true,
+      target: {
+        selector,
+        found: true,
+        tagName: pos.tag ?? null,
+        text: pos.text ?? null,
+      },
+      completion: {
+        dispatchCompleted: true,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Typing dispatch finished without post-type value confirmation.',
+      },
+      postAction: {
+        page: await readPageState(wc),
+        element: await readSelectorState(wc, selector),
+        observedAfterMs: 0,
+      },
+    };
+  }
+
+  const confirmation = await confirmSelectorValue(
+    wc,
+    selector,
+    text,
+    options?.confirmTimeoutMs ?? DEFAULT_CONFIRM_TIMEOUT_MS,
+  );
+  const page = await readPageState(wc);
+
+  return {
+    ok: true,
+    target: {
+      selector,
+      found: true,
+      tagName: pos.tag ?? null,
+      text: pos.text ?? null,
+    },
+    completion: {
+      dispatchCompleted: true,
+      effectConfirmed: confirmation.confirmed,
+      mode: confirmation.confirmed ? 'confirmed' : 'dispatched',
+      caveat: confirmation.confirmed ? undefined : 'Typed text was dispatched, but the requested value was not observed before the confirmation window expired.',
+    },
+    postAction: {
+      page,
+      element: confirmation.state,
+      observedAfterMs: confirmation.observedAfterMs,
+    },
+  };
 }

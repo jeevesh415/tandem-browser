@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiCall, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 
 export function registerChatTools(server: McpServer): void {
@@ -11,7 +11,7 @@ export function registerChatTools(server: McpServer): void {
       text: z.string().describe('Message text to display'),
     },
     async ({ text }) => {
-      await apiCall('POST', '/chat', { text, from: 'claude' });
+      await apiCall('POST', '/chat', { text, from: getMcpSource() });
       return { content: [{ type: 'text', text: `Message sent: "${text.substring(0, 100)}"` }] };
     }
   );
@@ -77,7 +77,7 @@ export function registerChatTools(server: McpServer): void {
 
   server.tool(
     'tandem_wingman_alert',
-    'Show a native OS notification alert to the user via the Wingman system',
+    'Legacy compatibility alert: show a native Wingman alert and create an open needs_human handoff for the user',
     {
       message: z.string().describe('Alert message to display'),
       level: z.enum(['info', 'warning', 'error']).optional().describe('Alert level (default: info)'),

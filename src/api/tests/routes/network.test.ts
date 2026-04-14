@@ -34,18 +34,31 @@ describe('Network Routes', () => {
       const res = await request(app).get('/network/log');
 
       expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual({ kind: 'tab', tabId: 'tab-1', wcId: 100, source: 'active' });
       expect(res.body.entries).toEqual(fakeEntries);
       expect(res.body.count).toBe(1);
-      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith(100, undefined);
+      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith({
+        limit: 100,
+        domain: undefined,
+        type: undefined,
+        tabId: 'tab-1',
+        wcId: 100,
+      });
     });
 
-    it('parses limit and domain query params', async () => {
+    it('parses limit, domain, and type query params', async () => {
       vi.mocked(ctx.networkInspector.getLog).mockReturnValue([]);
 
-      const res = await request(app).get('/network/log?limit=50&domain=example.com');
+      const res = await request(app).get('/network/log?limit=50&domain=example.com&type=xhr');
 
       expect(res.status).toBe(200);
-      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith(50, 'example.com');
+      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith({
+        limit: 50,
+        domain: 'example.com',
+        type: 'xhr',
+        tabId: 'tab-1',
+        wcId: 100,
+      });
     });
 
     it('defaults limit to 100 when invalid', async () => {
@@ -54,7 +67,54 @@ describe('Network Routes', () => {
       const res = await request(app).get('/network/log?limit=abc');
 
       expect(res.status).toBe(200);
-      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith(100, undefined);
+      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith({
+        limit: 100,
+        domain: undefined,
+        type: undefined,
+        tabId: 'tab-1',
+        wcId: 100,
+      });
+    });
+
+    it('uses X-Tab-Id to target a background tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        { id: 'tab-2', webContentsId: 202, url: 'https://two.example', title: 'Two', active: false, source: 'wingman', partition: 'persist:tandem' } as any,
+      ]);
+      vi.mocked(ctx.networkInspector.getLog).mockReturnValue([]);
+
+      const res = await request(app)
+        .get('/network/log')
+        .set('X-Tab-Id', 'tab-2');
+
+      expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual({ kind: 'tab', tabId: 'tab-2', wcId: 202, source: 'header' });
+      expect(ctx.networkInspector.getLog).toHaveBeenCalledWith({
+        limit: 100,
+        domain: undefined,
+        type: undefined,
+        tabId: 'tab-2',
+        wcId: 202,
+      });
+    });
+
+    it('returns 404 when X-Tab-Id header refers to unknown tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app).get('/network/log').set('X-Tab-Id', 'tab-gone');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-gone not found');
+    });
+
+    it('returns empty entries when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+
+      const res = await request(app).get('/network/log');
+
+      expect(res.status).toBe(200);
+      expect(res.body.entries).toEqual([]);
+      expect(res.body.count).toBe(0);
+      expect(ctx.networkInspector.getLog).not.toHaveBeenCalled();
     });
 
     it('returns 500 when getLog throws', async () => {
@@ -77,7 +137,28 @@ describe('Network Routes', () => {
       const res = await request(app).get('/network/apis');
 
       expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual({ kind: 'tab', tabId: 'tab-1', wcId: 100, source: 'active' });
       expect(res.body.apis).toEqual(fakeApis);
+      expect(ctx.networkInspector.getApis).toHaveBeenCalledWith({ tabId: 'tab-1', wcId: 100 });
+    });
+
+    it('returns 404 when X-Tab-Id header refers to unknown tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app).get('/network/apis').set('X-Tab-Id', 'tab-gone');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-gone not found');
+    });
+
+    it('returns empty apis object when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+
+      const res = await request(app).get('/network/apis');
+
+      expect(res.status).toBe(200);
+      expect(res.body.apis).toEqual({});
+      expect(ctx.networkInspector.getApis).not.toHaveBeenCalled();
     });
 
     it('returns 500 when getApis throws', async () => {
@@ -100,7 +181,28 @@ describe('Network Routes', () => {
       const res = await request(app).get('/network/domains');
 
       expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual({ kind: 'tab', tabId: 'tab-1', wcId: 100, source: 'active' });
       expect(res.body.domains).toEqual(fakeDomains);
+      expect(ctx.networkInspector.getDomains).toHaveBeenCalledWith({ tabId: 'tab-1', wcId: 100 });
+    });
+
+    it('returns 404 when X-Tab-Id header refers to unknown tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app).get('/network/domains').set('X-Tab-Id', 'tab-gone');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-gone not found');
+    });
+
+    it('returns empty domains array when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+
+      const res = await request(app).get('/network/domains');
+
+      expect(res.status).toBe(200);
+      expect(res.body.domains).toEqual([]);
+      expect(ctx.networkInspector.getDomains).not.toHaveBeenCalled();
     });
 
     it('returns 500 when getDomains throws', async () => {
@@ -126,7 +228,13 @@ describe('Network Routes', () => {
       expect(res.body).toEqual(fakeHar);
       expect(res.headers['content-type']).toContain('application/json');
       expect(res.headers['content-disposition']).toContain('.har');
-      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith(100, undefined);
+      expect(res.headers['content-disposition']).toContain('tab-tab-1');
+      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith({
+        limit: 100,
+        domain: undefined,
+        tabId: 'tab-1',
+        wcId: 100,
+      });
     });
 
     it('parses limit and domain query params for har export', async () => {
@@ -135,8 +243,33 @@ describe('Network Routes', () => {
       const res = await request(app).get('/network/har?limit=25&domain=example.com');
 
       expect(res.status).toBe(200);
-      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith(25, 'example.com');
+      expect(ctx.networkInspector.toHar).toHaveBeenCalledWith({
+        limit: 25,
+        domain: 'example.com',
+        tabId: 'tab-1',
+        wcId: 100,
+      });
       expect(res.headers['content-disposition']).toContain('example.com');
+    });
+
+    it('returns 404 when X-Tab-Id header refers to unknown tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app).get('/network/har').set('X-Tab-Id', 'tab-gone');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-gone not found');
+    });
+
+    it('generates filename with tab-none when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+      const emptyHar = { log: { version: '1.2', creator: { name: 'Tandem Browser', version: '0.0.0' }, pages: [], entries: [] } };
+      vi.mocked(ctx.networkInspector.toHar).mockReturnValue(emptyHar as any);
+
+      const res = await request(app).get('/network/har');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-disposition']).toContain('tab-none');
     });
 
     it('returns 500 when har export throws', async () => {
@@ -156,8 +289,29 @@ describe('Network Routes', () => {
       const res = await request(app).delete('/network/clear');
 
       expect(res.status).toBe(200);
-      expect(res.body.ok).toBe(true);
-      expect(ctx.networkInspector.clear).toHaveBeenCalled();
+      expect(res.body).toEqual({
+        ok: true,
+        scope: { kind: 'tab', tabId: 'tab-1', wcId: 100, source: 'active' },
+      });
+      expect(ctx.networkInspector.clear).toHaveBeenCalledWith('tab-1');
+    });
+
+    it('returns 404 when X-Tab-Id header refers to unknown tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app).delete('/network/clear').set('X-Tab-Id', 'tab-gone');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-gone not found');
+    });
+
+    it('returns 404 when there is no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+
+      const res = await request(app).delete('/network/clear');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('No active tab');
     });
 
     it('returns 500 when clear throws', async () => {
