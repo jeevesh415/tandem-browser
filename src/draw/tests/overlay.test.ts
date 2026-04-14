@@ -124,6 +124,7 @@ describe('DrawOverlayManager screenshot modes', () => {
   });
 
   it('imports Apple Photos using an alias file reference when enabled', async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
     vi.useFakeTimers();
     configManager.getConfig.mockReturnValue({
       screenshots: {
@@ -132,19 +133,26 @@ describe('DrawOverlayManager screenshot modes', () => {
       },
     });
 
-    const manager = new DrawOverlayManager(win, configManager, googlePhotosManager);
-    await manager.captureApplicationScreenshot('https://example.com/demo');
-    vi.runAllTimers();
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
 
-    expect(execFileMock).toHaveBeenCalledWith(
-      'osascript',
-      expect.arrayContaining([
-        '-e',
-        '  set theFile to ((POSIX file importPath) as alias)',
-      ]),
-      expect.any(Function),
-    );
+    try {
+      const manager = new DrawOverlayManager(win, configManager, googlePhotosManager);
+      await manager.captureApplicationScreenshot('https://example.com/demo');
+      vi.runAllTimers();
 
-    vi.useRealTimers();
+      expect(execFileMock).toHaveBeenCalledWith(
+        'osascript',
+        expect.arrayContaining([
+          '-e',
+          '  set theFile to ((POSIX file importPath) as alias)',
+        ]),
+        expect.any(Function),
+      );
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(process, 'platform', platformDescriptor);
+      }
+      vi.useRealTimers();
+    }
   });
 });
