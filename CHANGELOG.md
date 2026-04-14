@@ -14,6 +14,10 @@ All notable changes to Tandem Browser will be documented in this file.
 - The Wingman handoff list now gives open cards enough vertical room for common two-item cases, removing the cramped internal scrollbar seen during live testing
 - Version metadata now stays aligned across `package.json`, `package-lock.json`, repo docs, the landing page, and the MCP server, with `scripts/check-consistency.js` extended to catch future drift automatically
 
+### Added
+
+- `ws://127.0.0.1:8765/watch/live` now streams an immediate watch snapshot plus incremental watch add/remove/check events to authenticated local clients, giving agents a real-time watch surface instead of polling `/watch/list`
+
 ## [v0.72.1] - 2026-04-14
 
 - fix: keep handoff attention visible when the Wingman panel is closed

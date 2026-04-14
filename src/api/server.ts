@@ -32,6 +32,7 @@ import { registerAwarenessRoutes } from './routes/awareness';
 import { registerClipboardRoutes } from './routes/clipboard';
 import { registerSecurityRoutes } from '../security/routes';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
+import { WatchLiveWebSocket } from '../watch/live-ws';
 import type { ExtensionRouteAccessDecision } from '../extensions/manager';
 import { createLogger } from '../utils/logger';
 import { createRateLimitMiddleware } from './rate-limit';
@@ -95,6 +96,7 @@ export interface TandemAPIOptions {
 export class TandemAPI {
   private app: express.Application;
   private server: http.Server | null = null;
+  private watchLiveWebSocket: WatchLiveWebSocket | null = null;
   private win: BrowserWindow;
   private authToken: string;
   private port: number;
@@ -172,6 +174,34 @@ export class TandemAPI {
     } catch {
       return false;
     }
+  }
+
+  private getWebSocketToken(req: http.IncomingMessage): string | null {
+    const url = new URL(req.url ?? '', 'http://localhost');
+    const queryToken = url.searchParams.get('token')?.trim();
+    if (queryToken) {
+      return queryToken;
+    }
+
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string') {
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (match?.[1]?.trim()) {
+        return match[1].trim();
+      }
+    }
+
+    const headerToken = req.headers['x-tandem-token'];
+    if (typeof headerToken === 'string' && headerToken.trim()) {
+      return headerToken.trim();
+    }
+
+    return null;
+  }
+
+  private authorizeWatchLiveRequest(req: http.IncomingMessage): boolean {
+    const token = this.getWebSocketToken(req);
+    return token ? this.isTokenValid(token) : false;
   }
 
   /** Shared validator for extension-authenticated HTTP and WebSocket bridges. */
@@ -442,6 +472,12 @@ export class TandemAPI {
   async start(): Promise<void> {
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, '127.0.0.1', () => {
+        if (this.server) {
+          this.watchLiveWebSocket?.close();
+          this.watchLiveWebSocket = new WatchLiveWebSocket(this.server, this.registry.watchManager, {
+            authorizeRequest: (req) => this.authorizeWatchLiveRequest(req),
+          });
+        }
         resolve();
       });
     });
@@ -452,6 +488,8 @@ export class TandemAPI {
   }
 
   stop(): void {
+    this.watchLiveWebSocket?.close();
+    this.watchLiveWebSocket = null;
     this.server?.close();
   }
 }
