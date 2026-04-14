@@ -2,9 +2,9 @@
 
 > "Two people, one vehicle, stronger together." — the tandem bicycle, and the philosophy behind this project.
 
-## What is Tandem?
+## What is Tandem Browser?
 
-Tandem is an Electron-based browser built for human-AI collaboration. Any AI
+Tandem Browser is an Electron-based browser built for human-AI collaboration. Any AI
 agent that speaks MCP or HTTP can control it. The name comes from the tandem
 bicycle: two riders, one machine, each contributing what the other can't do
 alone.
@@ -16,13 +16,18 @@ interaction, data extraction, automation, sessions, sync, extensions, and
 developer tooling. Websites see a normal Chrome browser on macOS. They don't see
 the AI.
 
+That distinction matters. Tandem Browser is not trying to be a generic automation shell,
+and it is not limited to sites that explicitly expose agent tools. It is the
+shared browser layer where a human and an AI can work together across the web as
+it exists today.
+
 Tandem was originally built for OpenClaw and continues to be maintained by an
 OpenClaw maintainer, but the MCP server makes it equally accessible to Claude
 Code, Cursor, Windsurf, or any other MCP-compatible agent.
 
-The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs an 8-layer security shield before anything reaches the page so agents can operate with stricter containment than a conventional browser automation stack.
+The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem Browser runs an 8-layer security shield before anything reaches the page so agents can operate with stricter containment than a conventional browser automation stack.
 
-Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
+Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem Browser without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
 **Current version:** `0.72.2`  
@@ -34,6 +39,14 @@ Data stays local. Sessions are isolated. Nothing leaves the machine through Tand
 ## Philosophy
 
 Human-AI symbiosis, not human-AI hierarchy. The goal isn't an AI that does things for you. It's a setup where both parties contribute what they're good at, and the result is better than either could produce alone.
+
+The clearest way to describe the category is this:
+
+- **WebMCP** helps websites become more agent-readable.
+- **Tandem Browser** helps humans and agents work together in the real browser.
+
+Those two ideas can complement each other, but they are not the same product
+story.
 
 In browser terms: the human handles ambiguity, judgment calls, authentication, and anything that requires a real person. The AI handles speed, memory, data extraction, parallel processing, and anything that would take the human too long. The browser is the shared workspace.
 
