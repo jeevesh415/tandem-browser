@@ -27,7 +27,7 @@ Last updated: April 14, 2026
 
 - [x] Update `skill/SKILL.md` so MCP-first clients, direct-HTTP clients, and the new durable handoff model are all documented with the current Tandem behavior
 - [ ] Remove the remaining legacy OpenClaw compatibility IPC and unused webhook chat code after the signed gateway-chat path has shipped for a release or two
-- [ ] `WebSocket /watch/live` for live watch updates
+- [x] `WebSocket /watch/live` for live watch updates
 - [ ] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
 - [x] Show a notification when the Wingman panel is closed and Wingman replies
 - [x] Google Photos upload support for screenshots; local OAuth client ID setup, connect/disconnect flow, and automatic upload path now exist

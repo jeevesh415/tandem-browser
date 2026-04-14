@@ -197,6 +197,8 @@ export function createMockContext(): RouteContext {
       listWatches: vi.fn().mockReturnValue([]),
       removeWatch: vi.fn().mockReturnValue(true),
       forceCheck: vi.fn().mockResolvedValue({ changed: false }),
+      subscribe: vi.fn().mockReturnValue(() => undefined),
+      getSnapshot: vi.fn().mockReturnValue({ type: 'snapshot', watches: [], emittedAt: 0 }),
     } as any,
 
     // ── headlessManager ─────────────────────────

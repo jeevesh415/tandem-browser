@@ -6,7 +6,11 @@ vi.mock('electron', () => ({
     show: false,
     webContents: {
       on: vi.fn(),
-      once: vi.fn(),
+      once: vi.fn().mockImplementation((event: string, cb: () => void) => {
+        if (event === 'did-finish-load') {
+          setTimeout(cb, 0);
+        }
+      }),
       loadURL: vi.fn().mockResolvedValue(undefined),
       executeJavaScript: vi.fn().mockResolvedValue('page text content'),
     },
@@ -138,6 +142,18 @@ describe('WatchManager', () => {
       const entry = result as { id: string; intervalMs: number };
       expect(entry.intervalMs).toBe(60000); // 1 minute minimum
     });
+
+    it('emits a watch-added event', () => {
+      const events: string[] = [];
+      const unsubscribe = wm.subscribe((event) => {
+        events.push(event.type);
+      });
+
+      wm.addWatch('https://events.com', 5);
+
+      expect(events).toContain('watch-added');
+      unsubscribe();
+    });
   });
 
   describe('removeWatch()', () => {
@@ -164,6 +180,27 @@ describe('WatchManager', () => {
       wm.addWatch('https://b.com', 10);
       const watches = wm.listWatches();
       expect(watches).toHaveLength(2);
+    });
+
+    it('returns cloned entries', () => {
+      wm.addWatch('https://clone.com', 5);
+      const watches = wm.listWatches();
+      watches[0].url = 'https://mutated.example';
+
+      expect(wm.listWatches()[0].url).toBe('https://clone.com');
+    });
+  });
+
+  describe('getSnapshot()', () => {
+    it('returns a live snapshot event', () => {
+      wm.addWatch('https://snapshot.com', 5);
+
+      const snapshot = wm.getSnapshot();
+
+      expect(snapshot.type).toBe('snapshot');
+      expect(snapshot.watches).toHaveLength(1);
+      snapshot.watches[0].url = 'https://mutated.example';
+      expect(wm.getSnapshot().watches[0].url).toBe('https://snapshot.com');
     });
   });
 

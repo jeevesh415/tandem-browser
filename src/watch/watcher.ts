@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { EventEmitter } from 'events';
 import { tandemDir } from '../utils/paths';
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
@@ -28,6 +29,49 @@ interface WatchState {
   watches: WatchEntry[];
 }
 
+export type WatchCheckReason = 'initial' | 'manual' | 'timer';
+
+export interface WatchSnapshotEvent {
+  type: 'snapshot';
+  watches: WatchEntry[];
+  emittedAt: number;
+}
+
+export interface WatchAddedEvent {
+  type: 'watch-added';
+  watch: WatchEntry;
+  emittedAt: number;
+}
+
+export interface WatchRemovedEvent {
+  type: 'watch-removed';
+  watch: WatchEntry;
+  emittedAt: number;
+}
+
+export interface WatchCheckStartedEvent {
+  type: 'watch-check-started';
+  watch: WatchEntry;
+  reason: WatchCheckReason;
+  emittedAt: number;
+}
+
+export interface WatchCheckedEvent {
+  type: 'watch-checked';
+  watch: WatchEntry;
+  reason: WatchCheckReason;
+  changed: boolean;
+  error?: string;
+  emittedAt: number;
+}
+
+export type WatchLiveEvent =
+  | WatchSnapshotEvent
+  | WatchAddedEvent
+  | WatchRemovedEvent
+  | WatchCheckStartedEvent
+  | WatchCheckedEvent;
+
 // ─── Manager ────────────────────────────────────────────────────────
 
 /**
@@ -37,7 +81,7 @@ interface WatchState {
  * Hashes page text content and compares with previous check.
  * Alerts the human/wingman when something changes.
  */
-export class WatchManager {
+export class WatchManager extends EventEmitter {
 
   // === 1. Private state ===
 
@@ -52,6 +96,7 @@ export class WatchManager {
   // === 2. Constructor ===
 
   constructor() {
+    super();
     const baseDir = tandemDir();
     if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
 
@@ -88,9 +133,14 @@ export class WatchManager {
     this.state.watches.push(watch);
     this.save();
     this.startTimer(watch);
+    this.emitWatchEvent({
+      type: 'watch-added',
+      watch: this.cloneWatch(watch),
+      emittedAt: Date.now(),
+    });
 
     // Do an initial check
-    this.checkUrl(watch.id).catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
+    this.checkUrl(watch.id, 'initial').catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
 
     return watch;
   }
@@ -104,12 +154,17 @@ export class WatchManager {
     this.stopTimer(watch.id);
     this.state.watches.splice(idx, 1);
     this.save();
+    this.emitWatchEvent({
+      type: 'watch-removed',
+      watch: this.cloneWatch(watch),
+      emittedAt: Date.now(),
+    });
     return true;
   }
 
   /** List all watches */
   listWatches(): WatchEntry[] {
-    return this.state.watches;
+    return this.state.watches.map(watch => this.cloneWatch(watch));
   }
 
   /** Force check a specific watch or all watches */
@@ -120,20 +175,26 @@ export class WatchManager {
 
     const results: { id: string; changed: boolean; error?: string }[] = [];
     for (const watch of targets) {
-      const result = await this.checkUrl(watch.id);
+      const result = await this.checkUrl(watch.id, 'manual');
       results.push({ id: watch.id, ...result });
     }
     return { results };
   }
 
   /** Check a single URL for changes */
-  async checkUrl(watchId: string): Promise<{ changed: boolean; error?: string }> {
+  async checkUrl(watchId: string, reason: WatchCheckReason = 'manual'): Promise<{ changed: boolean; error?: string }> {
     const watch = this.state.watches.find(w => w.id === watchId);
     if (!watch) return { changed: false, error: 'Watch not found' };
 
     // Prevent concurrent checks
     if (this.checking) return { changed: false, error: 'Already checking' };
     this.checking = true;
+    this.emitWatchEvent({
+      type: 'watch-check-started',
+      watch: this.cloneWatch(watch),
+      reason,
+      emittedAt: Date.now(),
+    });
 
     try {
       const win = await this.getHiddenWindow();
@@ -180,6 +241,13 @@ export class WatchManager {
 
       watch.lastHash = newHash;
       this.save();
+      this.emitWatchEvent({
+        type: 'watch-checked',
+        watch: this.cloneWatch(watch),
+        reason,
+        changed,
+        emittedAt: Date.now(),
+      });
 
       return { changed };
     } catch (e) {
@@ -187,10 +255,35 @@ export class WatchManager {
       watch.lastCheck = Date.now();
       watch.lastError = message;
       this.save();
+      this.emitWatchEvent({
+        type: 'watch-checked',
+        watch: this.cloneWatch(watch),
+        reason,
+        changed: false,
+        error: message,
+        emittedAt: Date.now(),
+      });
       return { changed: false, error: message };
     } finally {
       this.checking = false;
     }
+  }
+
+  /** Subscribe to live watch events. Returns an unsubscribe function. */
+  subscribe(cb: (event: WatchLiveEvent) => void): () => void {
+    this.on('watch-event', cb);
+    return () => {
+      this.off('watch-event', cb);
+    };
+  }
+
+  /** Build a current-state snapshot for newly connected live clients. */
+  getSnapshot(): WatchSnapshotEvent {
+    return {
+      type: 'snapshot',
+      watches: this.listWatches(),
+      emittedAt: Date.now(),
+    };
   }
 
   // === 6. Cleanup ===
@@ -257,11 +350,19 @@ export class WatchManager {
     return crypto.createHash('sha256').update(text).digest('hex').substring(0, 16);
   }
 
+  private cloneWatch(watch: WatchEntry): WatchEntry {
+    return { ...watch };
+  }
+
+  private emitWatchEvent(event: WatchLiveEvent): void {
+    this.emit('watch-event', event);
+  }
+
   /** Start timer for a single watch */
   private startTimer(watch: WatchEntry): void {
     this.stopTimer(watch.id);
     const timer = setInterval(() => {
-      this.checkUrl(watch.id).catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
+      this.checkUrl(watch.id, 'timer').catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
     }, watch.intervalMs);
     this.timers.set(watch.id, timer);
   }
