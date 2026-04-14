@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: April 13, 2026
+Last updated: April 14, 2026
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Last updated: April 13, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.70.0`
+- Current app version: `0.72.2`
 - MCP server: 248 tools (full API parity + awareness)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
@@ -25,7 +25,7 @@ Last updated: April 13, 2026
 
 ### Product Features
 
-- [ ] Update `skill/SKILL.md` to document MCP as a first-class connection method alongside direct HTTP, with examples for Claude Code, Cursor, and other MCP clients
+- [x] Update `skill/SKILL.md` so MCP-first clients, direct-HTTP clients, and the new durable handoff model are all documented with the current Tandem behavior
 - [ ] Remove the remaining legacy OpenClaw compatibility IPC and unused webhook chat code after the signed gateway-chat path has shipped for a release or two
 - [ ] `WebSocket /watch/live` for live watch updates
 - [ ] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
@@ -90,6 +90,8 @@ Last updated: April 13, 2026
 
 ## Recently Completed
 
+- [x] Version consistency sweep: package metadata, MCP server version reporting, README / PROJECT / landing-page version labels, and the consistency checker now stay aligned so startup and docs stop lagging behind the changelog
+- [x] Closed-panel Wingman handoff attention state: open handoffs now keep a durable toolbar/toggle cue with count, status-derived urgency, and a non-spammy delayed escalation state so "the agent still needs you" stays visible after the transient popup disappears
 - [x] Explicit human↔agent handoffs: durable handoff records with statuses (`needs_human`, `blocked`, `waiting_approval`, `ready_to_resume`, `completed_review`, `resolved`) now exist across HTTP API, MCP tools, live event surfaces, and the Wingman Activity inbox, with workspace/tab targeting and resolve/resume actions
 - [x] Interaction reliability follow-up: snapshot fill now replaces populated field values deterministically, keyboard completion confirmation recognizes active-element focus shifts, and label locators have a runtime fallback for simple `label[for]` associations
 - [x] Interaction completion semantics: selector, snapshot-ref, locator, and keyboard actions now return explicit tab scope, target resolution, completion mode, and lightweight post-action state across HTTP API and MCP

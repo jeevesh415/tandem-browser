@@ -2,11 +2,14 @@ import type { Request, Response, Router } from 'express';
 import type { RouteContext } from '../context';
 import type { Handoff, HandoffStatus, UpdateHandoffInput } from '../../handoffs/manager';
 import { HANDOFF_STATUSES } from '../../handoffs/manager';
+import type { HandoffAttentionLevel } from '../../handoffs/attention';
+import { getHandoffAttentionLevel } from '../../handoffs/attention';
 import { wingmanAlert } from '../../notifications/alert';
 import { handleRouteError } from '../../utils/errors';
 
 interface SerializedHandoff extends Handoff {
   actionable: boolean;
+  attentionLevel: HandoffAttentionLevel;
   workspaceName: string | null;
   tabTitle: string | null;
   tabUrl: string | null;
@@ -43,6 +46,7 @@ function serializeHandoff(ctx: RouteContext, handoff: Handoff): SerializedHandof
   return {
     ...handoff,
     actionable: handoff.open,
+    attentionLevel: getHandoffAttentionLevel(handoff),
     workspaceName: workspace?.name ?? null,
     tabTitle: tab?.title ?? null,
     tabUrl: tab?.url ?? null,

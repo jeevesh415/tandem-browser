@@ -163,20 +163,32 @@ export class TaskHandoffCoordinator {
   }
 
   approve(handoffId: string): Handoff | null {
-    const handoff = this.requireTaskLinkedHandoff(handoffId, 'approve');
+    const handoff = this.requireHandoff(handoffId);
     if (!handoff) {
       return null;
     }
+
+    if (!handoff.taskId || !handoff.stepId) {
+      return this.resolveStandaloneApproval(handoff, true);
+    }
+
+    this.requireTaskLinkedHandoff(handoffId, 'approve');
 
     this.taskManager.respondToApproval(handoff.taskId as string, handoff.stepId as string, true);
     return this.handoffManager.get(handoffId);
   }
 
   reject(handoffId: string): Handoff | null {
-    const handoff = this.requireTaskLinkedHandoff(handoffId, 'reject');
+    const handoff = this.requireHandoff(handoffId);
     if (!handoff) {
       return null;
     }
+
+    if (!handoff.taskId || !handoff.stepId) {
+      return this.resolveStandaloneApproval(handoff, false);
+    }
+
+    this.requireTaskLinkedHandoff(handoffId, 'reject');
 
     this.taskManager.respondToApproval(handoff.taskId as string, handoff.stepId as string, false);
     return this.handoffManager.get(handoffId);
@@ -196,6 +208,23 @@ export class TaskHandoffCoordinator {
 
   private requireHandoff(handoffId: string): Handoff | null {
     return this.handoffManager.get(handoffId);
+  }
+
+  private resolveStandaloneApproval(handoff: Handoff, approved: boolean): Handoff | null {
+    const updated = this.handoffManager.update(handoff.id, {
+      status: 'resolved',
+      open: false,
+      actionLabel: approved ? 'Approved' : 'Rejected',
+      body: appendHandoffNote(
+        handoff.body,
+        approved ? 'Human approved this handoff.' : 'Human rejected this handoff.',
+      ),
+    });
+    if (!updated) {
+      return null;
+    }
+    this.syncHandoffState(updated);
+    return updated;
   }
 
   private requireTaskLinkedHandoff(handoffId: string, verb: string): Handoff | null {

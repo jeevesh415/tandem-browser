@@ -201,7 +201,8 @@ contributors, not yet a polished mass-user release.
 - Secondary platform: Linux
 - Windows: not actively validated
 - Binaries: not published yet (source-only)
-- Current version: see [package.json](package.json)
+- Current version: `0.72.2`
+- Package metadata: [package.json](package.json)
 
 ## Community
 
