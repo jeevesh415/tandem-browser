@@ -273,6 +273,76 @@ describe('Handoff Routes', () => {
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Handoff not found');
     });
+
+    it('returns 400 when title is empty or reason/body types are invalid', async () => {
+      const emptyTitle = await request(app)
+        .patch('/handoffs/handoff-3')
+        .send({ title: '   ' });
+      expect(emptyTitle.status).toBe(400);
+      expect(emptyTitle.body.error).toBe('title must be a non-empty string');
+
+      const badBody = await request(app)
+        .patch('/handoffs/handoff-3')
+        .send({ body: 42 });
+      expect(badBody.status).toBe(400);
+      expect(badBody.body.error).toBe('body must be a string');
+
+      const badReason = await request(app)
+        .patch('/handoffs/handoff-3')
+        .send({ reason: 42 });
+      expect(badReason.status).toBe(400);
+      expect(badReason.body.error).toBe('reason must be a string');
+    });
+
+    it('validates optional metadata fields and syncs patched task-linked handoffs', async () => {
+      vi.mocked(ctx.workspaceManager.getWorkspaceIdForTab).mockReturnValue('ws-1');
+      vi.mocked(ctx.workspaceManager.get).mockReturnValue({
+        id: 'ws-1',
+        name: 'AI Workspace',
+        icon: 'sparkles',
+        color: '#fff',
+        tabIds: [100],
+      } as any);
+      vi.mocked(ctx.handoffManager.update).mockReturnValue({
+        id: 'handoff-3',
+        status: 'blocked',
+        title: 'Updated',
+        body: 'Updated body',
+        reason: 'human_help',
+        workspaceId: 'ws-1',
+        tabId: 'tab-1',
+        agentId: null,
+        source: null,
+        actionLabel: null,
+        taskId: 'task-1',
+        stepId: 'step-1',
+        open: true,
+        createdAt: 1,
+        updatedAt: 2,
+      } as any);
+
+      const res = await request(app)
+        .patch('/handoffs/handoff-3')
+        .send({ workspaceId: 'ws-1', tabId: 'tab-1', source: '  ', agentId: '  ' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.handoffManager.update).toHaveBeenCalledWith('handoff-3', expect.objectContaining({
+        workspaceId: 'ws-1',
+        tabId: 'tab-1',
+        source: null,
+        agentId: null,
+      }));
+      expect(ctx.taskHandoffCoordinator.syncHandoffState).toHaveBeenCalledWith(expect.objectContaining({
+        taskId: 'task-1',
+        stepId: 'step-1',
+      }));
+
+      const badSource = await request(app)
+        .patch('/handoffs/handoff-3')
+        .send({ source: 42 });
+      expect(badSource.status).toBe(400);
+      expect(badSource.body.error).toBe('source must be a string when provided');
+    });
   });
 
   describe('POST /handoffs/:id/resolve', () => {
@@ -343,6 +413,20 @@ describe('Handoff Routes', () => {
       expect(ctx.taskHandoffCoordinator.markReady).toHaveBeenCalledWith('handoff-ready');
       expect(res.body.status).toBe('ready_to_resume');
     });
+
+    it('returns 404 and surfaces coordinator errors for ready actions', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.markReady).mockReturnValueOnce(null);
+      const missing = await request(app).post('/handoffs/missing/ready');
+      expect(missing.status).toBe(404);
+      expect(missing.body.error).toBe('Handoff not found');
+
+      vi.mocked(ctx.taskHandoffCoordinator.markReady).mockImplementationOnce(() => {
+        throw new Error('handoff not resumable yet');
+      });
+      const failing = await request(app).post('/handoffs/handoff-ready/ready');
+      expect(failing.status).toBe(500);
+      expect(failing.body.error).toBe('handoff not resumable yet');
+    });
   });
 
   describe('POST /handoffs/:id/resume', () => {
@@ -372,6 +456,19 @@ describe('Handoff Routes', () => {
       expect(ctx.taskHandoffCoordinator.resume).toHaveBeenCalledWith('handoff-resume');
       expect(res.body.status).toBe('resolved');
     });
+
+    it('returns 404 and 500 variants for resume actions', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.resume).mockReturnValueOnce(null);
+      const missing = await request(app).post('/handoffs/missing/resume');
+      expect(missing.status).toBe(404);
+
+      vi.mocked(ctx.taskHandoffCoordinator.resume).mockImplementationOnce(() => {
+        throw new Error('Task task-1 step step-1 is not resumable');
+      });
+      const failing = await request(app).post('/handoffs/handoff-resume/resume');
+      expect(failing.status).toBe(500);
+      expect(failing.body.error).toContain('not resumable');
+    });
   });
 
   describe('POST /handoffs/:id/approve', () => {
@@ -400,6 +497,12 @@ describe('Handoff Routes', () => {
       expect(res.status).toBe(200);
       expect(ctx.taskHandoffCoordinator.approve).toHaveBeenCalledWith('handoff-approve');
     });
+
+    it('returns 404 when approval handoff is missing', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.approve).mockReturnValueOnce(null);
+      const res = await request(app).post('/handoffs/missing/approve');
+      expect(res.status).toBe(404);
+    });
   });
 
   describe('POST /handoffs/:id/reject', () => {
@@ -427,6 +530,12 @@ describe('Handoff Routes', () => {
 
       expect(res.status).toBe(200);
       expect(ctx.taskHandoffCoordinator.reject).toHaveBeenCalledWith('handoff-reject');
+    });
+
+    it('returns 404 when rejection handoff is missing', async () => {
+      vi.mocked(ctx.taskHandoffCoordinator.reject).mockReturnValueOnce(null);
+      const res = await request(app).post('/handoffs/missing/reject');
+      expect(res.status).toBe(404);
     });
   });
 
