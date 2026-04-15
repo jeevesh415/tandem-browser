@@ -18,6 +18,7 @@ import { DevToolsManager } from '../devtools/manager';
 import { DeviceEmulator } from '../device/emulator';
 import { DownloadManager } from '../downloads/manager';
 import { EventStreamManager } from '../events/stream';
+import { getHandoffAttentionLevel } from '../handoffs/attention';
 import { HandoffManager, type Handoff } from '../handoffs/manager';
 import { ChromeImporter } from '../import/chrome-importer';
 import type { Logger } from '../utils/logger';
@@ -116,7 +117,13 @@ function wireHandoffManagerEvents(
     });
 
     if (canUseWindow(win)) {
-      win.webContents.send(IpcChannels.HANDOFF_UPDATED, { kind, handoff });
+      win.webContents.send(IpcChannels.HANDOFF_UPDATED, {
+        kind,
+        handoff: {
+          ...handoff,
+          attentionLevel: getHandoffAttentionLevel(handoff),
+        },
+      });
     }
   };
 

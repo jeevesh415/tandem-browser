@@ -54,7 +54,9 @@
         document.getElementById('panel-screenshots').style.display = 'none';
         document.getElementById('panel-claronote').style.display = 'flex';
 
-        if (!document.getElementById('wingman-panel').classList.contains('open')) {
+        if (typeof window.openWingmanPanel === 'function') {
+          window.openWingmanPanel();
+        } else if (!document.getElementById('wingman-panel').classList.contains('open')) {
           document.getElementById('wingman-panel').classList.add('open');
           if (typeof window.updatePanelLayout === 'function') {
             window.updatePanelLayout();

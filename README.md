@@ -7,18 +7,23 @@
 [![Coverage](https://codecov.io/gh/hydro13/tandem-browser/branch/main/graph/badge.svg)](https://codecov.io/gh/hydro13/tandem-browser)
 [![Ask a question](https://img.shields.io/badge/discussions-Q%26A-blue)](https://github.com/hydro13/tandem-browser/discussions/categories/q-a)
 
-**248 MCP tools. Plug in any AI. No scraping. No API wrangling.**
+**The human-AI symbiotic browser. Shared browser context for humans and agents.**
 
-Tandem is a local-first Electron browser where a human and an AI agent browse
+Tandem Browser is a local-first Electron browser where a human and an AI agent browse
 together. The agent sees what you see, navigates your tabs, reads your pages,
-and operates inside your authenticated sessions — while an 8-layer security
+and operates inside your authenticated sessions, while an 8-layer security
 model keeps web content from attacking the agent layer.
 
-Connect via **MCP** (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama, any
-MCP client) or a **300+ endpoint HTTP API**. Works with any AI that speaks
-either protocol.
+Tandem Browser is built for the web that already exists. It does not require sites to
+ship special agent integrations before a human and an AI can work together in
+the same real browser.
 
-Tandem is the local-first browser layer for real human-AI collaboration, not a wrapper or an automation toy.
+Connect via **MCP** (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama, any
+MCP client) or a **300+ endpoint HTTP API**. Those are connection layers, not
+the product story. The core idea is shared browser context, human oversight,
+and security around real browser work.
+
+Tandem Browser is the local-first browser layer for real human-AI collaboration, not a wrapper or an automation toy.
 
 Want the fastest path in?
 - **Try Tandem locally** -> [Quick Start](#quick-start)
@@ -50,11 +55,11 @@ Want the fastest path in?
 | **System** | 6 | Browser status, headless mode, Google Photos, security overrides |
 | **Awareness** | 2 | Activity digest, real-time focus detection — the AI knows what you're doing |
 
-**248 tools total** — full parity with the HTTP API.
+**250 tools total** — full parity with the HTTP API.
 
 ## Why Not Just Use Playwright?
 
-Playwright gives you a headless browser that you control. Tandem gives you
+Playwright gives you a headless browser that you control. Tandem Browser gives you
 the user's **real browser** — their tabs, their sessions, their cookies,
 their extensions. The agent doesn't start from scratch; it joins what's
 already there.
@@ -68,6 +73,28 @@ Plus:
 - **Background tabs**: operate on any tab without stealing focus
 - **Human-in-the-loop**: captchas, risky actions, and ambiguous cases go
   back to the human
+
+## Tandem Browser vs WebMCP
+
+WebMCP is an important new idea, but it solves a different layer of the stack.
+
+| | WebMCP | Tandem Browser |
+|---|---|---|
+| Primary scope | Makes individual websites more agent-ready | Makes the real browser a shared workspace for humans and agents |
+| Where it runs | Site/page level, via tools exposed by the site | Browser-wide, across tabs, sessions, workspaces, and existing sites |
+| Adoption model | Requires site support | Works on the web as it exists today |
+| Strength | Structured, site-defined actions | Shared context, authenticated sessions, security, and human handoffs |
+| Best fit | Sites that want to expose cleaner agent tooling | Users and teams that want humans and agents working together in the same browser |
+
+WebMCP helps websites become more agent-readable.
+Tandem Browser helps humans and agents work together in the real browser, across the web.
+
+These ideas can coexist. Tandem Browser is not anti-WebMCP. If more sites expose
+cleaner agent surfaces, great. But Tandem Browser's job is broader: shared human-AI
+browser work, local-first control, and governance around what the agent is
+doing.
+
+For the longer version, see [docs/tandem-browser-vs-webmcp.md](docs/tandem-browser-vs-webmcp.md).
 
 ## Quick Start
 
@@ -121,7 +148,7 @@ Add to your MCP configuration:
 }
 ```
 
-Start Tandem, and 248 tools are available immediately.
+Start Tandem, and 250 tools are available immediately.
 
 ### Cursor / Windsurf / Other MCP Clients
 
@@ -142,7 +169,7 @@ curl -sS http://127.0.0.1:8765/tabs/list \
 
 ## Security Model
 
-Tandem treats security as core architecture, not an afterthought. When an AI
+Tandem Browser treats security as core architecture, not an afterthought. When an AI
 has access to your browser, every ad network, tracking pixel, and malicious
 domain is in the agent's attack surface.
 
@@ -162,7 +189,7 @@ the agent layer. That's not something you bolt onto Chrome after the fact.
 
 ## The Browser
 
-Beyond the agent layer, Tandem is a full daily-driver browser:
+Beyond the agent layer, Tandem Browser is a full daily-driver browser:
 
 - **Left sidebar**: Telegram, WhatsApp, Discord, Slack, Gmail, Calendar,
   Instagram, X — all in isolated sessions alongside your browsing
@@ -201,11 +228,12 @@ contributors, not yet a polished mass-user release.
 - Secondary platform: Linux
 - Windows: not actively validated
 - Binaries: not published yet (source-only)
-- Current version: see [package.json](package.json)
+- Current version: `0.73.0`
+- Package metadata: [package.json](package.json)
 
 ## Community
 
-Have a question, idea, or want to show what you've built with Tandem?
+Have a question, idea, or want to show what you've built with Tandem Browser?
 Join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions).
 
 - **Q&A** — troubleshooting, "how do I…" questions
@@ -215,7 +243,7 @@ Join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions)
 For bugs and concrete feature requests, open an
 [issue](https://github.com/hydro13/tandem-browser/issues).
 
-If Tandem is useful to you, or relevant to your company, sponsorship directly funds continued development and security work: [GitHub Sponsors](https://github.com/sponsors/hydro13).
+If Tandem Browser is useful to you, or relevant to your company, sponsorship directly funds continued development and security work: [GitHub Sponsors](https://github.com/sponsors/hydro13).
 
 ## Contributing
 

@@ -201,17 +201,57 @@ describe('TaskHandoffCoordinator', () => {
     expect(taskManager.respondToApproval).toHaveBeenNthCalledWith(2, 'task-1', 'step-1', false);
   });
 
+  it('approves and rejects standalone waiting handoffs by resolving them directly', () => {
+    const standalone = createHandoff({
+      status: 'waiting_approval',
+      reason: 'approval_required',
+      taskId: null,
+      stepId: null,
+      body: 'Please decide',
+    });
+    handoffManager.get.mockReturnValue(standalone);
+    handoffManager.update
+      .mockReturnValueOnce(createHandoff({
+        status: 'resolved',
+        open: false,
+        taskId: null,
+        stepId: null,
+        actionLabel: 'Approved',
+        body: 'Please decide\n\nHuman approved this handoff.',
+        resolvedAt: 3,
+      }))
+      .mockReturnValueOnce(createHandoff({
+        status: 'resolved',
+        open: false,
+        taskId: null,
+        stepId: null,
+        actionLabel: 'Rejected',
+        body: 'Please decide\n\nHuman rejected this handoff.',
+        resolvedAt: 4,
+      }));
+
+    const approved = coordinator.approve('handoff-1');
+    const rejected = coordinator.reject('handoff-1');
+
+    expect(taskManager.respondToApproval).not.toHaveBeenCalled();
+    expect(handoffManager.update).toHaveBeenNthCalledWith(1, 'handoff-1', expect.objectContaining({
+      status: 'resolved',
+      open: false,
+      actionLabel: 'Approved',
+    }));
+    expect(handoffManager.update).toHaveBeenNthCalledWith(2, 'handoff-1', expect.objectContaining({
+      status: 'resolved',
+      open: false,
+      actionLabel: 'Rejected',
+    }));
+    expect(approved?.status).toBe('resolved');
+    expect(rejected?.status).toBe('resolved');
+  });
+
   it('returns null when approve cannot find a handoff', () => {
     handoffManager.get.mockReturnValue(null);
 
     expect(coordinator.approve('handoff-missing')).toBeNull();
-  });
-
-  it('throws when approve/reject target is not linked to a task step', () => {
-    handoffManager.get.mockReturnValue(createHandoff({ taskId: null, stepId: null }));
-
-    expect(() => coordinator.approve('handoff-1')).toThrow('Cannot approve a handoff that is not linked to a task step');
-    expect(() => coordinator.reject('handoff-1')).toThrow('Cannot reject a handoff that is not linked to a task step');
   });
 
   it('throws when approve/reject target task step is missing', () => {

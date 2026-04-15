@@ -127,6 +127,8 @@ export function createMockContext(): RouteContext {
     drawManager: {
       getLastScreenshot: vi.fn().mockReturnValue(null),
       captureAnnotated: vi.fn().mockResolvedValue({ ok: true }),
+      captureApplicationScreenshot: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/application.png' }),
+      captureRegionScreenshot: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/region.png' }),
       toggleDrawMode: vi.fn().mockReturnValue(true),
       listScreenshots: vi.fn().mockReturnValue([]),
     } as any,
@@ -193,10 +195,12 @@ export function createMockContext(): RouteContext {
 
     // ── watchManager ────────────────────────────
     watchManager: {
-      addWatch: vi.fn().mockReturnValue({ id: 'w1', url: '', intervalMinutes: 30 }),
+      addWatch: vi.fn().mockReturnValue({ id: 'w1', url: '', intervalMinutes: 30, diffMode: 'content' }),
       listWatches: vi.fn().mockReturnValue([]),
       removeWatch: vi.fn().mockReturnValue(true),
       forceCheck: vi.fn().mockResolvedValue({ changed: false }),
+      subscribe: vi.fn().mockReturnValue(() => undefined),
+      getSnapshot: vi.fn().mockReturnValue({ type: 'snapshot', watches: [], emittedAt: 0 }),
     } as any,
 
     // ── headlessManager ─────────────────────────

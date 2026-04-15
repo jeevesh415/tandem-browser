@@ -5,25 +5,31 @@ repository to the public.
 
 ## GitHub Repository Description
 
-Agent-first browser for human-AI collaboration — 248 MCP tools, 300+ HTTP endpoints, built-in security.
+The human-AI symbiotic browser. Shared browser context for humans and agents.
 
 ## Short Tagline
 
-An agent-first browser for human-AI collaboration.
+The local-first browser for shared human-AI browser context.
 
 ## Social / Announcement One-Liner
 
-Tandem Browser is now public: an agent-first browser for human-AI collaboration with 248 MCP tools and 300+ HTTP endpoints, released as a developer preview.
+Tandem Browser is now public: the local-first browser for shared human-AI browser context, released as a developer preview.
 
 ## Launch Post
 
 Tandem Browser is now public.
 
-Tandem is an agent-first browser built for human-AI collaboration on the local
-machine. The human browses normally. Any AI agent that speaks MCP (248 tools) or
-HTTP (300+ endpoints) gets full browser control for navigation, extraction,
-automation, screenshots, session work, and observability, while websites
-continue to see a normal Chromium browser instead of an "AI browser" fingerprint.
+Tandem Browser is a local-first browser built for human-AI collaboration on the local
+machine. The human browses normally. Any AI agent that speaks MCP (250 tools) or
+HTTP (300+ endpoints) can operate inside the same real browser context for
+navigation, extraction, automation, screenshots, session work, and observability,
+while websites continue to see a normal Chromium browser instead of an "AI
+browser" fingerprint.
+
+That is the point of Tandem Browser's positioning: not generic browser automation, and
+not a bet on waiting for every site to become agent-ready. Tandem Browser is the shared
+browser layer where humans and agents can work together on the web that already
+exists.
 
 This is a public developer preview, not a polished end-user release yet.
 macOS is the primary platform today, Linux is secondary, and there are still
@@ -34,9 +40,9 @@ The point of publishing this is also to let other contributors help improve the
 browser. If you care about agent workflows, local-first browsing, MCP tooling, security,
 or agent-facing browser infrastructure, contributions are welcome.
 
-If you maintain MCP-compatible agents, browser automation systems, Electron
+If you maintain MCP-compatible agents, browser tooling, Electron
 infrastructure, or local-first agent products, this is the layer where those
-concerns meet a real browser shell.
+concerns meet a real browser used by a real human.
 
 Repository:
 `https://github.com/hydro13/tandem-browser`
@@ -58,9 +64,10 @@ Repository:
 
 ## Maintainer Notes
 
-- Position Tandem as an agent-first browser for human-AI collaboration.
+- Position Tandem Browser as the human-AI symbiotic browser and shared browser context layer.
 - OpenClaw is the origin story and Wingman integration, not the exclusive focus.
 - Keep the wording `developer preview` until packaging and remaining product
   rough edges are addressed.
-- Avoid framing Tandem as a gimmick, wrapper, or generic browser shell with AI
+- Avoid framing Tandem Browser as a gimmick, wrapper, or generic browser shell with AI
   chat bolted on later.
+- Avoid framing Tandem Browser as just an MCP tool count or API surface.

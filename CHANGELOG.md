@@ -2,6 +2,38 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.73.0] - 2026-04-14
+
+- feat: expand live watch and screenshot automation surfaces
+
+### Fixed
+
+- `POST /wingman-alert` no longer pulls the human out of their current workspace by default, while explicit context activation remains available for the few flows that really need it
+- Opening the Wingman panel with open handoffs now lands on `Activity` instead of `Chat`, so the user sees the actionable inbox immediately when responding to a handoff cue
+- Standalone `waiting_approval` handoffs now resolve correctly on `Approve` and `Reject` even when they are not linked to a paused task step, so generic approval requests no longer appear to do nothing
+- The Wingman handoff list now gives open cards enough vertical room for common two-item cases, removing the cramped internal scrollbar seen during live testing
+- Version metadata now stays aligned across `package.json`, `package-lock.json`, repo docs, the landing page, and the MCP server, with `scripts/check-consistency.js` extended to catch future drift automatically
+- Apple Photos screenshot import now passes a real file `alias` into the Photos AppleScript flow instead of a raw POSIX file URL, fixing the blank-name / "Cannot Import Item" failure seen after application captures
+
+### Added
+
+- `ws://127.0.0.1:8765/watch/live` now streams an immediate watch snapshot plus incremental watch add/remove/check events to authenticated local clients, giving agents a real-time watch surface instead of polling `/watch/list`
+- Watches now support configurable diff modes for change detection: `content`, `title`, `title-or-content`, and `text-length`, exposed through both the HTTP API and MCP watch-add flow
+- New HTTP screenshot capture routes: `POST /screenshot/application` saves a fresh full-window capture, and `POST /screenshot/region` saves a fresh application-region capture without requiring renderer IPC or clipboard round-trips
+- Matching MCP media tools now expose the same capture modes for MCP-first clients, bringing the server tool count to 250 while keeping screenshot capture parity with the local HTTP API
+
+## [v0.72.1] - 2026-04-14
+
+- fix: keep handoff attention visible when the Wingman panel is closed
+
+### Changed
+
+- The closed Wingman badge and panel toggle now enter a durable handoff attention state with a visible count whenever open handoffs still need action, so the UI keeps saying "the agent still needs you" after the transient popup expires
+- New handoffs escalate in layers instead of replaying popup/audio loops: the existing popup + sound still fire once, while the closed-panel affordances keep a calmer persistent state and strengthen visually after roughly 12 seconds if the handoff remains unseen
+- Opening the Wingman panel now acknowledges current handoffs and resets the stronger alert state, while unresolved handoffs still remain visible in a quieter pending style when the panel is closed again
+- Handoff serialization and renderer IPC now include a derived `attentionLevel` (`review`, `action`, `urgent`) so UI policy can stay explicit without changing the durable handoff persistence model
+- Added focused unit coverage for the new handoff attention-level mapping and extended route assertions so the extra metadata remains stable across the API surface
+
 ## [v0.72.0] - 2026-04-13
 
 - feat: add explicit human↔agent handoffs across API, MCP, events, and Wingman UI
@@ -22,6 +54,7 @@ All notable changes to Tandem Browser will be documented in this file.
 - Wingman Activity logging now records handoff lifecycle updates so the user can see when a handoff was created, updated, or resolved
 - Handoff metadata normalization now treats blank titles/reasons as defaults, and focused route/MCP/manager tests cover the new handoff lifecycle more thoroughly so coverage matches the added product surface
 - The Wingman Activity inbox now surfaces status-aware actions: approval handoffs show `Approve` / `Reject`, human-blocked handoffs show `Mark Ready`, and `ready_to_resume` handoffs show `Resume Agent`
+- `skill/SKILL.md` now teaches agents the real runtime model more explicitly: Tandem must already be running, some clients are effectively MCP-first, durable handoffs are preferred over transient alerts for resumable blockers, interaction completion should be verified explicitly, and DevTools/network observation should stay tab-aware
 
 ## [v0.71.4] - 2026-04-13
 

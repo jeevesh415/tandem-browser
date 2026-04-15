@@ -109,6 +109,98 @@
       color: var(--text);
     }
 
+    .wingman-badge.has-open-handoffs,
+    .wingman-panel-toggle.has-open-handoffs {
+      position: relative;
+      overflow: visible;
+    }
+
+    .wingman-badge.has-open-handoffs::after,
+    .wingman-panel-toggle.has-open-handoffs::after {
+      content: attr(data-handoff-count);
+      position: absolute;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 14px;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .wingman-badge.has-open-handoffs::after {
+      top: -7px;
+      right: -9px;
+    }
+
+    .wingman-panel-toggle.has-open-handoffs::after {
+      top: -6px;
+      right: -8px;
+    }
+
+    .wingman-badge.attention-pending,
+    .wingman-panel-toggle.attention-pending {
+      border-color: rgba(251, 191, 36, 0.42);
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.18);
+    }
+
+    .wingman-badge.attention-active,
+    .wingman-panel-toggle.attention-active {
+      color: var(--text);
+      border-color: rgba(233, 69, 96, 0.62);
+      background: rgba(233, 69, 96, 0.18);
+      box-shadow: 0 0 0 1px rgba(233, 69, 96, 0.2), 0 0 22px rgba(233, 69, 96, 0.14);
+      animation: wingmanAttentionPulse 2.6s ease-in-out infinite;
+    }
+
+    .wingman-badge.attention-escalated,
+    .wingman-panel-toggle.attention-escalated {
+      color: var(--text);
+      border-color: rgba(251, 191, 36, 0.78);
+      background: rgba(251, 191, 36, 0.2);
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.24), 0 0 26px rgba(251, 191, 36, 0.18);
+      animation: wingmanAttentionPulseUrgent 1.8s ease-in-out infinite;
+    }
+
+    .wingman-badge.attention-level-review::after,
+    .wingman-panel-toggle.attention-level-review::after {
+      background: rgba(16, 185, 129, 0.92);
+    }
+
+    .wingman-badge.attention-level-action::after,
+    .wingman-panel-toggle.attention-level-action::after {
+      background: rgba(233, 69, 96, 0.94);
+    }
+
+    .wingman-badge.attention-level-urgent::after,
+    .wingman-panel-toggle.attention-level-urgent::after {
+      background: rgba(251, 191, 36, 0.96);
+      color: #1f2937;
+    }
+
+    @keyframes wingmanAttentionPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 1px rgba(233, 69, 96, 0.2), 0 0 18px rgba(233, 69, 96, 0.12);
+      }
+      50% {
+        box-shadow: 0 0 0 1px rgba(233, 69, 96, 0.28), 0 0 30px rgba(233, 69, 96, 0.22);
+      }
+    }
+
+    @keyframes wingmanAttentionPulseUrgent {
+      0%, 100% {
+        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.26), 0 0 22px rgba(251, 191, 36, 0.18);
+      }
+      50% {
+        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.4), 0 0 34px rgba(251, 191, 36, 0.26);
+      }
+    }
+
     .panel-resize-handle {
       position: absolute;
       top: 0;
@@ -260,7 +352,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 310px;
+      max-height: 460px;
       overflow-y: auto;
       padding-right: 2px;
     }

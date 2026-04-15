@@ -148,19 +148,221 @@
 
     const wingmanPanel = document.getElementById('wingman-panel');
     const panelBody = document.getElementById('panel-body');
+    const panelToggleBtn = document.getElementById('wingman-panel-toggle');
+    const activityEl = document.getElementById('activity-feed');
+    const handoffListEl = document.getElementById('handoff-list');
+    const handoffEmptyEl = document.getElementById('handoff-empty');
+    const handoffCountEl = document.getElementById('handoff-count');
+    const activityTabButton = document.querySelector('[data-panel-tab="activity"]');
+    const openHandoffs = new Map();
+    const unacknowledgedHandoffs = new Set();
+    const HANDOFF_ATTENTION_ESCALATION_MS = 12_000;
+    let handoffAttentionEscalationTimer = null;
+    let handoffAttentionEscalated = false;
+
+    function formatHandoffStatus(status) {
+      const labels = {
+        needs_human: 'Needs Human',
+        blocked: 'Blocked',
+        waiting_approval: 'Waiting Approval',
+        ready_to_resume: 'Ready To Resume',
+        completed_review: 'Completed Review',
+        resolved: 'Resolved',
+      };
+      return labels[status] || status;
+    }
+
+    function formatHandoffTime(timestamp) {
+      if (!timestamp) return '';
+      return new Date(timestamp).toLocaleTimeString('nl-BE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+    }
+
+    function isWingmanPanelOpen() {
+      return wingmanPanel.classList.contains('open');
+    }
+
+    function getHandoffAttentionLevel(handoff) {
+      if (!handoff || !handoff.open || handoff.status === 'resolved') return 'none';
+      if (typeof handoff.attentionLevel === 'string') return handoff.attentionLevel;
+      if (handoff.status === 'blocked' || handoff.status === 'waiting_approval') return 'urgent';
+      if (handoff.status === 'needs_human') return 'action';
+      if (handoff.status === 'ready_to_resume' || handoff.status === 'completed_review') return 'review';
+      return 'action';
+    }
+
+    function getHandoffAttentionRank(handoff) {
+      const level = getHandoffAttentionLevel(handoff);
+      return level === 'urgent' ? 3 : level === 'action' ? 2 : level === 'review' ? 1 : 0;
+    }
+
+    function getSortedOpenHandoffs() {
+      return Array.from(openHandoffs.values())
+        .sort((a, b) => {
+          const rankDelta = getHandoffAttentionRank(b) - getHandoffAttentionRank(a);
+          if (rankDelta !== 0) return rankDelta;
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        });
+    }
+
+    function clearHandoffAttentionTimer() {
+      if (handoffAttentionEscalationTimer) {
+        clearTimeout(handoffAttentionEscalationTimer);
+        handoffAttentionEscalationTimer = null;
+      }
+    }
+
+    function updateActivityTabBadge() {
+      const count = openHandoffs.size;
+      if (handoffCountEl) {
+        handoffCountEl.textContent = String(count);
+      }
+      if (activityTabButton) {
+        activityTabButton.textContent = count > 0 ? `Activity (${count})` : 'Activity';
+      }
+    }
+
+    function updateWingmanAttentionUI() {
+      const count = openHandoffs.size;
+      const isOpen = isWingmanPanelOpen();
+      const topHandoff = getSortedOpenHandoffs()[0] || null;
+      const topLevel = topHandoff ? getHandoffAttentionLevel(topHandoff) : 'none';
+      const closedState = count === 0
+        ? 'idle'
+        : unacknowledgedHandoffs.size > 0
+          ? (handoffAttentionEscalated ? 'escalated' : 'active')
+          : 'pending';
+
+      const baseTitle = count === 0
+        ? null
+        : count === 1
+          ? `1 open handoff${topHandoff?.title ? `: ${topHandoff.title}` : ''}`
+          : `${count} open handoffs${topHandoff?.title ? ` — ${topHandoff.title}` : ''}`;
+
+      for (const element of [wingmanBadge, panelToggleBtn]) {
+        if (!element) continue;
+        element.classList.remove(
+          'has-open-handoffs',
+          'attention-pending',
+          'attention-active',
+          'attention-escalated',
+          'attention-level-review',
+          'attention-level-action',
+          'attention-level-urgent',
+        );
+        if (count > 0 && !isOpen) {
+          element.classList.add('has-open-handoffs', `attention-${closedState}`, `attention-level-${topLevel}`);
+          element.dataset.handoffCount = String(count);
+        } else {
+          delete element.dataset.handoffCount;
+        }
+      }
+
+      const badgeTitle = count === 0
+        ? 'Right-click for settings'
+        : isOpen
+          ? `${baseTitle}. Wingman panel is open.`
+          : closedState === 'escalated'
+            ? `${baseTitle}. Wingman is still waiting for you.`
+            : closedState === 'active'
+              ? `${baseTitle}. Wingman needs you.`
+              : `${baseTitle}. Open when you are ready.`;
+      wingmanBadge.title = badgeTitle;
+      if (panelToggleBtn) {
+        panelToggleBtn.title = count === 0 ? 'Toggle Wingman panel' : badgeTitle;
+      }
+    }
+
+    function scheduleHandoffAttentionEscalation() {
+      clearHandoffAttentionTimer();
+
+      if (isWingmanPanelOpen() || unacknowledgedHandoffs.size === 0) {
+        handoffAttentionEscalated = false;
+        updateWingmanAttentionUI();
+        return;
+      }
+
+      const tracked = Array.from(unacknowledgedHandoffs)
+        .map(id => openHandoffs.get(id))
+        .filter(Boolean);
+
+      if (tracked.length === 0) {
+        handoffAttentionEscalated = false;
+        updateWingmanAttentionUI();
+        return;
+      }
+
+      const now = Date.now();
+      const oldestAge = tracked.reduce((maxAge, handoff) => {
+        const age = Math.max(0, now - (handoff.updatedAt || handoff.createdAt || now));
+        return Math.max(maxAge, age);
+      }, 0);
+      const remaining = HANDOFF_ATTENTION_ESCALATION_MS - oldestAge;
+
+      if (remaining <= 0) {
+        handoffAttentionEscalated = true;
+        updateWingmanAttentionUI();
+        return;
+      }
+
+      handoffAttentionEscalated = false;
+      updateWingmanAttentionUI();
+      handoffAttentionEscalationTimer = setTimeout(() => {
+        handoffAttentionEscalated = true;
+        updateWingmanAttentionUI();
+        scheduleHandoffAttentionEscalation();
+      }, remaining);
+    }
+
+    function acknowledgeVisibleHandoffs() {
+      for (const handoffId of openHandoffs.keys()) {
+        unacknowledgedHandoffs.delete(handoffId);
+      }
+      handoffAttentionEscalated = false;
+      scheduleHandoffAttentionEscalation();
+    }
+
+    function setActivePanelTab(tab) {
+      document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
+      const targetButton = document.querySelector(`[data-panel-tab="${tab}"]`);
+      if (targetButton) {
+        targetButton.classList.add('active');
+      }
+      document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
+      document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+      if (tab === 'chat') {
+        window.chatRouter?.ensureConnected();
+      }
+      document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
+    }
+
+    function getPreferredPanelTabOnOpen() {
+      return openHandoffs.size > 0 ? 'activity' : 'chat';
+    }
+
+    function openWingmanPanel(preferredTab) {
+      if (!wingmanPanel.classList.contains('open')) {
+        wingmanPanel.classList.add('open');
+      }
+      setActivePanelTab(preferredTab || getPreferredPanelTabOnOpen());
+      updatePanelLayout();
+      acknowledgeVisibleHandoffs();
+    }
 
     // Panel tab switching
     document.querySelectorAll('.panel-tab').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const tab = btn.dataset.panelTab;
-        document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
-        document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
-        if (tab === 'chat') {
-          window.chatRouter?.ensureConnected();
-        }
-        document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
+        setActivePanelTab(btn.dataset.panelTab);
         // ClaroNote disabled — decoupled, coming in a later update
         // document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
         // if (tab === 'claronote') { window.initClaroNote?.(); }
@@ -171,58 +373,13 @@
     if (window.tandem) {
       window.tandem.onPanelToggle((data) => {
         if (data.open) {
-          wingmanPanel.classList.add('open');
+          openWingmanPanel();
         } else {
           wingmanPanel.classList.remove('open');
+          updatePanelLayout();
+          scheduleHandoffAttentionEscalation();
         }
-        updatePanelLayout();
       });
-
-      // Activity events
-      const activityEl = document.getElementById('activity-feed');
-      const handoffListEl = document.getElementById('handoff-list');
-      const handoffEmptyEl = document.getElementById('handoff-empty');
-      const handoffCountEl = document.getElementById('handoff-count');
-      const activityTabButton = document.querySelector('[data-panel-tab="activity"]');
-      const openHandoffs = new Map();
-
-      function formatHandoffStatus(status) {
-        const labels = {
-          needs_human: 'Needs Human',
-          blocked: 'Blocked',
-          waiting_approval: 'Waiting Approval',
-          ready_to_resume: 'Ready To Resume',
-          completed_review: 'Completed Review',
-          resolved: 'Resolved',
-        };
-        return labels[status] || status;
-      }
-
-      function formatHandoffTime(timestamp) {
-        if (!timestamp) return '';
-        return new Date(timestamp).toLocaleTimeString('nl-BE', {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-      }
-
-      function escapeHtml(s) {
-        return String(s)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\n/g, '<br>');
-      }
-
-      function updateActivityTabBadge() {
-        const count = openHandoffs.size;
-        if (handoffCountEl) {
-          handoffCountEl.textContent = String(count);
-        }
-        if (activityTabButton) {
-          activityTabButton.textContent = count > 0 ? `Activity (${count})` : 'Activity';
-        }
-      }
 
       async function activateHandoff(handoffId) {
         await fetch(`http://localhost:8765/handoffs/${handoffId}/activate`, { method: 'POST' });
@@ -272,8 +429,7 @@
         if (!handoffListEl || !handoffEmptyEl) return;
         handoffListEl.innerHTML = '';
 
-        const handoffs = Array.from(openHandoffs.values())
-          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        const handoffs = getSortedOpenHandoffs();
 
         handoffEmptyEl.style.display = handoffs.length === 0 ? 'block' : 'none';
 
@@ -375,6 +531,7 @@
         }
 
         updateActivityTabBadge();
+        updateWingmanAttentionUI();
       }
 
       async function applyHandoffUpdate(handoff) {
@@ -382,10 +539,17 @@
         const hydrated = await hydrateHandoff(handoff);
         if (hydrated.open) {
           openHandoffs.set(hydrated.id, hydrated);
+          if (isWingmanPanelOpen()) {
+            unacknowledgedHandoffs.delete(hydrated.id);
+          } else {
+            unacknowledgedHandoffs.add(hydrated.id);
+          }
         } else {
           openHandoffs.delete(hydrated.id);
+          unacknowledgedHandoffs.delete(hydrated.id);
         }
         renderHandoffs();
+        scheduleHandoffAttentionEscalation();
       }
 
       async function loadOpenHandoffs() {
@@ -393,12 +557,14 @@
           const response = await fetch('http://localhost:8765/handoffs?openOnly=true');
           const data = await response.json();
           openHandoffs.clear();
+          unacknowledgedHandoffs.clear();
           for (const handoff of data.handoffs || []) {
             if (handoff.open) {
               openHandoffs.set(handoff.id, handoff);
             }
           }
           renderHandoffs();
+          scheduleHandoffAttentionEscalation();
         } catch (e) {
           console.error('loadOpenHandoffs failed:', e);
         }
@@ -1412,7 +1578,6 @@
 
     // Panel resize
     const resizeHandle = document.getElementById('panel-resize');
-    const panelToggleBtn = document.getElementById('wingman-panel-toggle');
     const webviewContainer = document.getElementById('webview-container');
     let resizing = false;
 
@@ -1446,8 +1611,13 @@
 
     // Toggle panel function
     function toggleWingmanPanel() {
-      wingmanPanel.classList.toggle('open');
-      updatePanelLayout();
+      if (wingmanPanel.classList.contains('open')) {
+        wingmanPanel.classList.remove('open');
+        updatePanelLayout();
+        scheduleHandoffAttentionEscalation();
+      } else {
+        openWingmanPanel();
+      }
     }
 
     // Listen for transition end to update layout smoothly
@@ -1492,6 +1662,7 @@
 
     window.chatRouter = chatRouter;
     window.dismissAlert = dismissAlert;
+    window.openWingmanPanel = openWingmanPanel;
     window.toggleWingmanPanel = toggleWingmanPanel;
     window.updatePanelLayout = updatePanelLayout;
 })();
